@@ -25,5 +25,9 @@
     "rules": {
       "camelcase": 0
     }
+  },
+  "dependencies": {
+    "browserify": "^17.0.1",
+    "budo": "^11.8.4"
   }
 }
