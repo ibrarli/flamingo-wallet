@@ -1,0 +1,35 @@
+{
+  "name": "flamingo-wallet",
+  "version": "0.0.1",
+<<<<<<< HEAD
+  "description": "transaction history component",
+=======
+  "description": "total wealth component",
+>>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
+  "main": "src/index.js",
+  "scripts": {
+    "start": "budo web/boot.js:bundle.js --dir ./ --live --open",
+    "build": "browserify web/boot.js > bundle.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibrarli/flamingo-wallet.git"
+  },
+  "author": "Ibrar",
+  "license": "MIT",
+<<<<<<< HEAD
+
+=======
+  "bugs": {
+    "url": "https://github.com/ibrarli/flamingo-wallet/issues"
+  },
+  "homepage": "https://github.com/ibrarli/flamingo-wallet#readme",
+>>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
+  "dependencies": {
+    "budo": "^11.8.4"
+  },
+  "devDependencies": {
+    "browserify": "^17.0.1"
+  }
+}
