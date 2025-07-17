@@ -6,15 +6,9 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-<<<<<<< HEAD
 module.exports = transaction_history
 
 async function transaction_history (opts = {},  ) {
-=======
-module.exports = total_wealth
-
-async function total_wealth (opts = {}, protocol) {
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
   const { id, sdb } = await get(opts.sid)
   
   const {drive} = sdb
@@ -28,7 +22,6 @@ async function total_wealth (opts = {}, protocol) {
   const shadow =  el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-<<<<<<< HEAD
     <div class="transaction-history-container">
       <div class="transaction-history-header">Transaction history</div>
       <div class="transaction-date">
@@ -47,19 +40,6 @@ async function total_wealth (opts = {}, protocol) {
         <div class="transaction-amount">
           <span>0.0000</span>
         </div>   
-=======
-    <div class="total-wealth-container">
-      <div class="total-wealth-header">Total wealth</div>
-      <div class="total-wealth-value">
-        <span>₿ 0.0000</span>
-        <div class="total-wealth-usd">= $0</div>
-      </div>
-      <div class="wallet-row">
-        Lightning Wallet <span>0.0000</span>
-      </div>
-      <div class="wallet-row">
-        Bitcoin Wallet <span>0.0000</span>
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
       </div>
     </div>
     <style></style>
@@ -92,7 +72,6 @@ async function total_wealth (opts = {}, protocol) {
   }
   
 
-<<<<<<< HEAD
   function renderValues({ date = " ", tid = 0, ttime = "00:00", tamount = "↑ 0.00000" }) {
   shadow.querySelector('.transaction-date span').textContent = date.toString()
   shadow.querySelector('.transaction-id').textContent = `${tid.toString()} ₿`
@@ -100,14 +79,6 @@ async function total_wealth (opts = {}, protocol) {
   shadow.querySelector('.transaction-amount').textContent = tamount.toString()
   }
 
-=======
-  function renderValues({ total = 0, usd = 1000, lightning = 0, bitcoin = 0 }) {
-    shadow.querySelector('.total-wealth-value span').textContent = `₿ ${total.toFixed(4)}`
-    shadow.querySelector('.total-wealth-usd').textContent = `= $${usd.toLocaleString()}`
-    shadow.querySelectorAll('.wallet-row')[0].querySelector('span').textContent = lightning.toFixed(4)
-    shadow.querySelectorAll('.wallet-row')[1].querySelector('span').textContent = bitcoin.toFixed(4)
-  }
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
 }
 
 // ============ Fallback Setup for STATE ============
@@ -121,13 +92,8 @@ function fallback_module () {
     return {
       drive: {
         'style/': {
-<<<<<<< HEAD
           'transaction_history.css': {
            '$ref':'transaction_history.css'
-=======
-          'total_wealth.css': {
-           '$ref':'total_wealth.css'
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
           }
         },
         'data/': {
@@ -140,11 +106,7 @@ function fallback_module () {
   }
 }
 
-<<<<<<< HEAD
-}).call(this)}).call(this,"/lib/node_modules/transaction_history/transaction_history.js")
-=======
-}).call(this)}).call(this,"/lib/node_modules/total_wealth/total_wealth.js")
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
+}).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
 },{"STATE":1}],3:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
@@ -159,16 +121,11 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
 })
 },{"./page":4}],4:[function(require,module,exports){
 (function (__filename){(function (){
-const STATE = require('../lib/node_modules/STATE')
+const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-<<<<<<< HEAD
-const totalWealth = require('../lib/node_modules/transaction_history')
-=======
-const totalWealth = require('../lib/node_modules/total_wealth') // Imports src/index.js
-
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
+const totalWealth = require('../src/node_modules/transaction_history')
 const state = {}
 
 function protocol (message, notify) {
@@ -216,20 +173,12 @@ async function main () {
 
 
   const component = await totalWealth(subs[0], protocol)
-<<<<<<< HEAD
-=======
-  console.log("🔧 totalWealth returned component:", component)
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
 
  
 
   const page = document.createElement('div')
   page.innerHTML = `
-<<<<<<< HEAD
     <div>
-=======
-    <div style="display: flex; flex-direction: column; gap: 20px; padding: 20px;">
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
       <container></container>
     </div>
   `
@@ -247,8 +196,7 @@ function fallback_module () {
   return {
     drive: {},
     _: {
-<<<<<<< HEAD
-      '../lib/node_modules/transaction_history': {
+      '../src/node_modules/transaction_history': {
         $: '',
         0: {
           value: {
@@ -256,16 +204,6 @@ function fallback_module () {
             tid: "1FfmbHfn...455p",
             ttime: "11:30 AM",
             tamount: "↑ 0.02456"
-=======
-      '../lib/node_modules/total_wealth': {
-        $: '',
-        0: {
-          value: {
-            total: 1.999,
-            usd: 105952,
-            lightning: 0.9,
-            bitcoin: 0.9862
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
           }
         },
         mapping: {
@@ -278,8 +216,4 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/web/page.js")
-<<<<<<< HEAD
-},{"../lib/node_modules/STATE":1,"../lib/node_modules/transaction_history":2}]},{},[3]);
-=======
-},{"../lib/node_modules/STATE":1,"../lib/node_modules/total_wealth":2}]},{},[3]);
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
+},{"../src/node_modules/STATE":1,"../src/node_modules/transaction_history":2}]},{},[3]);

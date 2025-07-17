@@ -1,17 +1,8 @@
-<<<<<<< HEAD
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const totalWealth = require('../src/node_modules/transaction_history')
-=======
-const STATE = require('../lib/node_modules/STATE')
-const statedb = STATE(__filename)
-const { sdb, get } = statedb(fallback_module)
-
-const totalWealth = require('../lib/node_modules/total_wealth') // Imports src/index.js
-
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
 const state = {}
 
 function protocol (message, notify) {
@@ -59,20 +50,12 @@ async function main () {
 
 
   const component = await totalWealth(subs[0], protocol)
-<<<<<<< HEAD
-=======
-  console.log("🔧 totalWealth returned component:", component)
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
 
  
 
   const page = document.createElement('div')
   page.innerHTML = `
-<<<<<<< HEAD
     <div>
-=======
-    <div style="display: flex; flex-direction: column; gap: 20px; padding: 20px;">
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
       <container></container>
     </div>
   `
@@ -90,7 +73,6 @@ function fallback_module () {
   return {
     drive: {},
     _: {
-<<<<<<< HEAD
       '../src/node_modules/transaction_history': {
         $: '',
         0: {
@@ -99,16 +81,6 @@ function fallback_module () {
             tid: "1FfmbHfn...455p",
             ttime: "11:30 AM",
             tamount: "↑ 0.02456"
-=======
-      '../lib/node_modules/total_wealth': {
-        $: '',
-        0: {
-          value: {
-            total: 1.999,
-            usd: 105952,
-            lightning: 0.9,
-            bitcoin: 0.9862
->>>>>>> a0bd15cdaa6c3f81c056877e3c9671aa4f486383
           }
         },
         mapping: {
