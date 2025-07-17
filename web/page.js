@@ -77,10 +77,10 @@ function fallback_module () {
         $: '',
         0: {
           value: {
-            date: "Jun 12",
-            tid: "1FfmbHfn...455p",
+            date: "Today",
+            tid: "Luis fedrick",
             ttime: "11:30 AM",
-            tamount: "↑ 0.02456"
+            tamount: "+ 0.02456"
           }
         },
         mapping: {
