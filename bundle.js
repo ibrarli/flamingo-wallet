@@ -33,7 +33,7 @@ async function transaction_history (opts = {},  ) {
             <img src="https://tse3.mm.bing.net/th/id/OIP.ut50yZEBEJYocBBFj3t30gHaFv?rs=1&pid=ImgDetMain&o=7&rm=3" alt="avatar" />
           </div>
           <div class="transaction-data">
-            <div class="transaction-id">0 ₿</div>
+            <div class="transaction-id">0</div>
             <div class="transaction-time">00:00 AM</div>
           </div>
         </div>  
@@ -72,12 +72,12 @@ async function transaction_history (opts = {},  ) {
   }
   
 
-  function renderValues({ date = " ", tid = 0, ttime = "00:00", tamount = "↑ 0.00000" }) {
+  function renderValues({ date = " ", tid = 0, ttime = "00:00", tamount = "+ 0.00000" }) {
   shadow.querySelector('.transaction-date span').textContent = date.toString()
-  shadow.querySelector('.transaction-id').textContent = `${tid.toString()} ₿`
+  shadow.querySelector('.transaction-id').textContent = `${tid.toString()} `
   shadow.querySelector('.transaction-time').textContent = ttime.toString()
-  shadow.querySelector('.transaction-amount').textContent = tamount.toString()
-  }
+  shadow.querySelector('.transaction-amount').textContent = `${tamount.toString()} ₿`  
+}
 
 }
 
@@ -200,10 +200,10 @@ function fallback_module () {
         $: '',
         0: {
           value: {
-            date: "Jun 12",
-            tid: "1FfmbHfn...455p",
+            date: "Today",
+            tid: "Luis fedrick",
             ttime: "11:30 AM",
-            tamount: "↑ 0.02456"
+            tamount: "+ 0.02456"
           }
         },
         mapping: {
