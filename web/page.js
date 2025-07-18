@@ -76,13 +76,82 @@ function fallback_module () {
       '../src/node_modules/transaction_history': {
         $: '',
         0: {
-          value: {
-            date: "Today",
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456"
-          }
-        },
+    value: [
+      {
+        date: "Today",
+        tid: "Luis fedrick",
+        ttime: "11:30 AM",
+        tamount: "+ 0.02456"
+      },
+      {
+        date: "Today",
+        tid: "3TgmbHfn...455p",
+        ttime: "02:15 PM",
+        tamount: "+ 0.03271"
+      },
+      {
+        date: "Today",
+        tid: "Mark Kevin",
+        ttime: "03:45 PM",
+        tamount: "- 0.00421"
+      },
+      {
+        date: "Today",
+        tid: "7RwmbHfn...455p",
+        ttime: "04:45 PM",
+        tamount: "- 0.03791"
+      },
+      {
+        date: "Yesterday",
+        tid: "Luis fedrick",
+        ttime: "11:30 AM",
+        tamount: "+ 0.02456"
+      },
+      {
+        date: "Yesterday",
+        tid: "3TgmbHfn...455p",
+        ttime: "02:15 PM",
+        tamount: "+ 0.03271"
+      },
+      {
+        date: "Yesterday",
+        tid: "Mark Kevin",
+        ttime: "03:45 PM",
+        tamount: "- 0.00421"
+      },
+      {
+        date: "Yesterday",
+        tid: "7RwmbHfn...455p",
+        ttime: "04:45 PM",
+        tamount: "- 0.03791"
+      },
+      {
+        date: "Dec 09",
+        tid: "Luis fedrick",
+        ttime: "11:30 AM",
+        tamount: "+ 0.02456"
+      },
+      {
+        date: "Dec 09",
+        tid: "3TgmbHfn...455p",
+        ttime: "02:15 PM",
+        tamount: "+ 0.03271"
+      },
+      {
+        date: "Dec 09",
+        tid: "Mark Kevin",
+        ttime: "03:45 PM",
+        tamount: "- 0.00421"
+      },
+      {
+        date: "Dec 09",
+        tid: "7RwmbHfn...455p",
+        ttime: "04:45 PM",
+        tamount: "- 0.03791"
+      },
+
+    ]
+  },
         mapping: {
           style: 'style',
           data: 'data'
