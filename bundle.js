@@ -8,6 +8,8 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = transaction_history
 
+const createTransactionRow = require('transaction_row')
+
 async function transaction_history (opts = {},  ) {
   const { id, sdb } = await get(opts.sid)
   
@@ -23,24 +25,7 @@ async function transaction_history (opts = {},  ) {
 
   shadow.innerHTML = `
     <div class="transaction-history-container">
-      <div class="transaction-history-header">Transaction history</div>
-      <div class="transaction-date">
-        <span>Date</span>
-      </div>
-      <div class="transaction-row">
-        <div class="transaction-detail">
-          <div class="transaction-avatar">
-            <img src="https://tse3.mm.bing.net/th/id/OIP.ut50yZEBEJYocBBFj3t30gHaFv?rs=1&pid=ImgDetMain&o=7&rm=3" alt="avatar" />
-          </div>
-          <div class="transaction-data">
-            <div class="transaction-id">0</div>
-            <div class="transaction-time">00:00 AM</div>
-          </div>
-        </div>  
-        <div class="transaction-amount">
-          <span>0.0000</span>
-        </div>   
-      </div>
+      
     </div>
     <style></style>
   `
@@ -72,13 +57,40 @@ async function transaction_history (opts = {},  ) {
   }
   
 
-  function renderValues({ date = " ", tid = 0, ttime = "00:00", tamount = "+ 0.00000" }) {
-  shadow.querySelector('.transaction-date span').textContent = date.toString()
-  shadow.querySelector('.transaction-id').textContent = `${tid.toString()} `
-  shadow.querySelector('.transaction-time').textContent = ttime.toString()
-  shadow.querySelector('.transaction-amount').textContent = `${tamount.toString()} ₿`  
-}
+  function renderValues(dataList) {
+    const container = document.createElement('div')
 
+    if (!Array.isArray(dataList)) dataList = [dataList]
+
+    // Group by date
+    const grouped = {}
+    for (const item of dataList) {
+      const { date = "Unknown" } = item
+      if (!grouped[date]) grouped[date] = []
+      grouped[date].push(item)
+    }
+
+    // Render
+    for (const date in grouped) {
+      const dateEl = document.createElement('div')
+      dateEl.className = 'transaction-date'
+      dateEl.innerHTML = `<span>${date}</span>`
+      container.appendChild(dateEl)
+
+      for (const tx of grouped[date]) {
+        const { tid, ttime, tamount } = tx
+        const row = createTransactionRow({ tid, ttime, tamount })
+        container.appendChild(row)
+      }
+    }
+
+    // Clear previous entries
+    const containerEl = shadow.querySelector('.transaction-history-container')
+    containerEl.innerHTML = `
+      <div class="transaction-history-header">Transaction history</div>
+    `
+    containerEl.appendChild(container)
+  }
 }
 
 // ============ Fallback Setup for STATE ============
@@ -105,9 +117,29 @@ function fallback_module () {
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1}],3:[function(require,module,exports){
+},{"STATE":1,"transaction_row":3}],3:[function(require,module,exports){
+module.exports = function createTransactionRow({ tid = "", ttime = "", tamount = "" }) {
+  const row = document.createElement('div')
+  row.className = 'transaction-row'
+  row.innerHTML = `
+    <div class="transaction-detail">
+      <div class="transaction-avatar">
+        <img src="https://tse3.mm.bing.net/th/id/OIP.ut50yZEBEJYocBBFj3t30gHaFv?rs=1&pid=ImgDetMain&o=7&rm=3" alt="avatar" />
+      </div>
+      <div class="transaction-data">
+        <div class="transaction-id">${tid}</div>
+        <div class="transaction-time">${ttime}</div>
+      </div>
+    </div>  
+    <div class="transaction-amount">
+      <span>${tamount} ₿</span>
+    </div>   
+  `
+  return row
+}
+
+},{}],4:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -119,7 +151,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":4}],4:[function(require,module,exports){
+},{"./page":5}],5:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -199,13 +231,82 @@ function fallback_module () {
       '../src/node_modules/transaction_history': {
         $: '',
         0: {
-          value: {
-            date: "Today",
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456"
-          }
-        },
+    value: [
+      {
+        date: "Today",
+        tid: "Luis fedrick",
+        ttime: "11:30 AM",
+        tamount: "+ 0.02456"
+      },
+      {
+        date: "Today",
+        tid: "3TgmbHfn...455p",
+        ttime: "02:15 PM",
+        tamount: "+ 0.03271"
+      },
+      {
+        date: "Today",
+        tid: "Mark Kevin",
+        ttime: "03:45 PM",
+        tamount: "- 0.00421"
+      },
+      {
+        date: "Today",
+        tid: "7RwmbHfn...455p",
+        ttime: "04:45 PM",
+        tamount: "- 0.03791"
+      },
+      {
+        date: "Yesterday",
+        tid: "Luis fedrick",
+        ttime: "11:30 AM",
+        tamount: "+ 0.02456"
+      },
+      {
+        date: "Yesterday",
+        tid: "3TgmbHfn...455p",
+        ttime: "02:15 PM",
+        tamount: "+ 0.03271"
+      },
+      {
+        date: "Yesterday",
+        tid: "Mark Kevin",
+        ttime: "03:45 PM",
+        tamount: "- 0.00421"
+      },
+      {
+        date: "Yesterday",
+        tid: "7RwmbHfn...455p",
+        ttime: "04:45 PM",
+        tamount: "- 0.03791"
+      },
+      {
+        date: "Dec 09",
+        tid: "Luis fedrick",
+        ttime: "11:30 AM",
+        tamount: "+ 0.02456"
+      },
+      {
+        date: "Dec 09",
+        tid: "3TgmbHfn...455p",
+        ttime: "02:15 PM",
+        tamount: "+ 0.03271"
+      },
+      {
+        date: "Dec 09",
+        tid: "Mark Kevin",
+        ttime: "03:45 PM",
+        tamount: "- 0.00421"
+      },
+      {
+        date: "Dec 09",
+        tid: "7RwmbHfn...455p",
+        ttime: "04:45 PM",
+        tamount: "- 0.03791"
+      },
+
+    ]
+  },
         mapping: {
           style: 'style',
           data: 'data'
@@ -214,6 +315,5 @@ function fallback_module () {
     }
   }
 }
-
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/transaction_history":2}]},{},[3]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/transaction_history":2}]},{},[4]);
