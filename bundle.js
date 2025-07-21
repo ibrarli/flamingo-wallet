@@ -6,118 +6,11 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-module.exports = transaction_history
-
-const createTransactionRow = require('transaction_row')
-
-async function transaction_history (opts = {}) {
-  console.log("hello hello ")
-  const { id, sdb } = await get(opts.sid)
-  const { drive } = sdb
-
-  const on = {
-    style: inject,
-    data: ondata
-  }
-
-  const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
-
-  shadow.innerHTML = `
-    <div class="transaction-history-container"></div>
-    <style></style>
-  `
-
-  const style = shadow.querySelector('style')
-  await sdb.watch(onbatch)
-
-  return el
-
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  async function onbatch (batch) {
-    for (const { type, paths } of batch){
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
-      const func = on[type] || fail
-      await func(data, type)
-    }
-  }
-
-  function inject (data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata(data) {
-    await renderValues(data[0]?.value || {})
-  }
-
-  async function renderValues(dataList) {
-    const container = document.createElement('div')
-
-    if (!Array.isArray(dataList)) dataList = [dataList]
-
-    const grouped = {}
-    for (const item of dataList) {
-      const { date = "Unknown" } = item
-      if (!grouped[date]) grouped[date] = []
-      grouped[date].push(item)
-    }
-
-    for (const date in grouped) {
-      const dateEl = document.createElement('div')
-      dateEl.className = 'transaction-date'
-      dateEl.innerHTML = `<span>${date}</span>`
-      container.appendChild(dateEl)
-
-      for (const tx of grouped[date]) {
-        const { tid, ttime, tamount, avatar } = tx
-        const row = await createTransactionRow({ tid, ttime, tamount, avatar })
-        container.appendChild(row)
-      }
-    }
-
-    const containerEl = shadow.querySelector('.transaction-history-container')
-    containerEl.innerHTML = `<div class="transaction-history-header">Transaction history</div>`
-    containerEl.appendChild(container)
-  }
-}
-
-function fallback_module () {
-  return {
-    api (opts = {}) {
-      return {
-        drive: {
-          'style/': {
-            'transaction_history.css': {
-              '$ref': 'transaction_history.css'
-            }
-          },
-          'data/': {
-            'opts.json': {
-              raw: opts
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-}).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":4}],3:[function(require,module,exports){
-(function (__filename){(function (){
-const STATE = require('STATE')
-const statedb = STATE(__filename)
-const { sdb, get } = statedb(fallback_module)
-
 module.exports = transaction_list
 
 const createTransactionRow = require('transaction_row')
 
-async function transaction_list (opts = {}) {
-  console.log("hello hello ")
+async function transaction_list(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -130,7 +23,7 @@ async function transaction_list (opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="transaction-history-container"></div>
+    <div class="transaction-list-container"></div>
     <style></style>
   `
 
@@ -143,16 +36,18 @@ async function transaction_list (opts = {}) {
     throw new Error('invalid message', { cause: { data, type } })
   }
 
-  async function onbatch (batch) {
-    for (const { type, paths } of batch){
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
       const func = on[type] || fail
       await func(data, type)
     }
   }
 
-  function inject (data) {
-    style.textContent = data[0]
+  function inject(data) {
+    style.textContent =  data[0]
   }
 
   async function ondata(data) {
@@ -161,38 +56,32 @@ async function transaction_list (opts = {}) {
 
   async function renderValues(dataList) {
     const container = document.createElement('div')
+    
 
     if (!Array.isArray(dataList)) dataList = [dataList]
 
-    const grouped = {}
-    for (const item of dataList) {
-      const { date = "Unknown" } = item
-      if (!grouped[date]) grouped[date] = []
-      grouped[date].push(item)
+    const first4 = dataList.slice(0, 4)
+
+    for (const tx of first4) {
+      const { tid, ttime, tamount, avatar } = tx
+      const row = await createTransactionRow({ tid, ttime, tamount, avatar})
+      container.appendChild(row)
     }
 
-    for (const date in grouped) {
-      const dateEl = document.createElement('div')
-      dateEl.className = 'transaction-date'
-      dateEl.innerHTML = `<span>${date}</span>`
-      container.appendChild(dateEl)
-
-      for (const tx of grouped[date]) {
-        const { tid, ttime, tamount, avatar } = tx
-        const row = await createTransactionRow({ tid, ttime, tamount, avatar })
-        container.appendChild(row)
-      }
-    }
-
-    const containerEl = shadow.querySelector('.transaction-history-container')
-    containerEl.innerHTML = `<div class="transaction-history-header">Transaction history</div>`
+    const containerEl = shadow.querySelector('.transaction-list-container')
+    containerEl.innerHTML = `
+      <div class="transaction-list-header">
+        <div class="transaction-list-title">Transactions</div>
+        <div class="transaction-list-see-all">See all</div>
+      </div>
+    `
     containerEl.appendChild(container)
   }
 }
 
-function fallback_module () {
+function fallback_module() {
   return {
-    api (opts = {}) {
+    api(opts = {}) {
       return {
         drive: {
           'style/': {
@@ -212,7 +101,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":4}],4:[function(require,module,exports){
+},{"STATE":1,"transaction_row":3}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -221,23 +110,6 @@ const { sdb, get } = statedb(fallback_module)
 module.exports = transaction_row
 
 async function transaction_row (opts = {}, protocol) {
-  let id = ''
-  let sdb
-
-  try {
-    const result = await get(opts.sid)
-    id = result.id
-    sdb = result.sdb
-  } catch (err) {
-    console.warn('No valid sid in transaction_row. Using fallback.')
-    const fallback = fallback_module()
-    const { drive } = fallback.api().drive
-    sdb = {
-      watch: async () => {}, // dummy watch
-      drive
-    }
-  }
-  
   const {drive} = sdb
 
   const avatar = opts.avatar || ''
@@ -252,23 +124,23 @@ async function transaction_row (opts = {}, protocol) {
 
   
   const el = document.createElement('div')
-  el.classList.add('transaction-row')
   const shadow =  el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    
-    <div class="transaction-detail">
-      <div class="transaction-avatar">
-        <img src="${avatar}" alt="avatar" />
-      </div>
-      <div class="transaction-data">
-        <div class="transaction-id">${tid}</div>
-        <div class="transaction-time">${ttime}</div>
-      </div>
-    </div>  
-    <div class="transaction-amount">
-      <span>${tamount} ₿</span>
-    </div> 
+    <div class="transaction-row">
+      <div class="transaction-detail">
+        <div class="transaction-avatar">
+          <img src="${avatar}" alt="avatar" />
+        </div>
+        <div class="transaction-data">
+          <div class="transaction-id">${tid}</div>
+          <div class="transaction-time">${ttime}</div>
+        </div>
+      </div>  
+      <div class="transaction-amount">
+        <span>${tamount} ₿</span>
+      </div> 
+    </div>
     <style></style>
   `
 
@@ -315,7 +187,7 @@ async function transaction_row (opts = {}, protocol) {
     }
 
   `
-  await sdb.watch(onbatch)
+  //await sdb.watch(onbatch)
 
   return el
 
@@ -359,7 +231,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],5:[function(require,module,exports){
+},{"STATE":1}],4:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -371,13 +243,13 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":6}],6:[function(require,module,exports){
+},{"./page":5}],5:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-const transactionHistory = require('../src/node_modules/transaction_history')
+// const transactionHistory = require('../src/node_modules/transaction_history')
 const transactionList = require('../src/node_modules/transaction_list')
 
 const state = {}
@@ -387,25 +259,6 @@ function protocol (message, notify) {
   state[from] = { notify }
   return listen
 }
-
-function listen (message) {
-  console.log('Protocol message received:', message)
-}
-
-const on = {
-  style: injectStyle,
-  value: handleValue
-}
-
-function injectStyle (data) {
-  console.log('Injecting shared style (if needed)', data)
-}
-
-function handleValue (data) {
-  console.log(`"${data.id}" value:`, data.value)
-}
-
-
 
 function onbatch (batch) {
   console.log(' Watch triggered with batch:', batch)
@@ -424,19 +277,19 @@ async function main () {
   const subs = await sdb.watch(onbatch)
 
 
-  const tHistoryComponent = await transactionHistory(subs[0], protocol)
-  console.log('subss[1]',subs[1])
-  const tListComponent = await transactionList(subs[1], protocol)
+ // const tHistoryComponent = await transactionHistory(subs[0], protocol)
+  console.log('subss[1]',subs[2])
+ const tListComponent = await transactionList(subs[0], protocol)
  
   const page = document.createElement('div')
   page.innerHTML = `
-    <div style="display: flex; flex-direction: column; gap: 20px; padding: 20px;">
+    <div >
       <div id="history-container"></div>
       <div id="list-container"></div>
     </div>
   `
-  // Append the components to the page
-  page.querySelector('#history-container').appendChild(tHistoryComponent)
+ 
+  // page.querySelector('#history-container').appendChild(tHistoryComponent)
   page.querySelector('#list-container').appendChild(tListComponent)
   document.body.append(page)
   console.log("Page mounted")
@@ -449,122 +302,105 @@ function fallback_module () {
   return {
     drive: {},
     _: {
-      '../src/node_modules/transaction_history': {
-        $: '',
-        0: {
-    value: [
-            {
-              date: "Today",
-              tid: "Luis fedrick",
-              ttime: "11:30 AM",
-              tamount: "+ 0.02456",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-
-            },
-            {
-              date: "Today",
-              tid: "3TgmbHfn...455p",
-              ttime: "02:15 PM",
-              tamount: "+ 0.03271",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Today",
-              tid: "Mark Kevin",
-              ttime: "03:45 PM",
-              tamount: "- 0.00421",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-            },
-            {
-              date: "Today",
-              tid: "7RwmbHfn...455p",
-              ttime: "04:45 PM",
-              tamount: "- 0.03791",
-              avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Yesterday",
-              tid: "Luis fedrick",
-              ttime: "11:30 AM",
-              tamount: "+ 0.02456",
-              avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Yesterday",
-              tid: "3TgmbHfn...455p",
-              ttime: "02:15 PM",
-              tamount: "+ 0.03271",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-            },
-            {
-              date: "Yesterday",
-              tid: "Mark Kevin",
-              ttime: "03:45 PM",
-              tamount: "- 0.00421",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Yesterday",
-              tid: "7RwmbHfn...455p",
-              ttime: "04:45 PM",
-              tamount: "- 0.03791",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Dec 09",
-              tid: "Luis fedrick",
-              ttime: "11:30 AM",
-              tamount: "+ 0.02456",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Dec 09",
-              tid: "3TgmbHfn...455p",
-              ttime: "02:15 PM",
-              tamount: "+ 0.03271",
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Dec 09",
-              tid: "Mark Kevin",
-              ttime: "03:45 PM",
-              tamount: "- 0.00421",
-              avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-            {
-              date: "Dec 09",
-              tid: "7RwmbHfn...455p",
-              ttime: "04:45 PM",
-              tamount: "- 0.03791",
-              avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-            },
-          ]
-        },
-        mapping: {
-          style: 'style',
-          data: 'data'
-        }
-      },
       '../src/node_modules/transaction_list': {
         $: '',
         0: {
-          value: [
-            {
-              date: "Dec 09",
-              tid: "7RwmbHfn...455p",
-              ttime: "04:45 PM",
-              tamount: "- 0.03791",
-              avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+        value: [
+                {
+                  date: "Today",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+
+                },
+                {
+                  date: "Today",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Today",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+              ]
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
             }
-          ]
-        },
-        mapping: {
-          style: 'style',
-          data: 'data'
-        }
-     }
+          
+          }
+       }
     }
-  }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/transaction_history":2,"../src/node_modules/transaction_list":3}]},{},[5]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/transaction_list":2}]},{},[4]);
