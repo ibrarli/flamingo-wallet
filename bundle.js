@@ -6,11 +6,9 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-module.exports = transaction_list
+module.exports = contact_row
 
-const createTransactionRow = require('transaction_row')
-
-async function transaction_list(opts = {}) {
+async function contact_row (opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -23,20 +21,21 @@ async function transaction_list(opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="transaction-list-container"></div>
+    <div class="contact-list"></div>
     <style></style>
   `
 
+  const listContainer = shadow.querySelector('.contact-list')
   const style = shadow.querySelector('style')
-  await sdb.watch(onbatch)
 
+  const subs = await sdb.watch(onbatch)
   return el
 
   function fail(data, type) {
     throw new Error('invalid message', { cause: { data, type } })
   }
 
-  async function onbatch(batch) {
+  async function onbatch (batch) {
     for (const { type, paths } of batch) {
       const data = await Promise.all(
         paths.map(path => drive.get(path).then(file => file.raw))
@@ -46,47 +45,64 @@ async function transaction_list(opts = {}) {
     }
   }
 
-  function inject(data) {
-    style.textContent =  data[0]
+  function inject (data) {
+    style.textContent = data[0]
   }
 
-  async function ondata(data) {
-    await renderValues(data[0]?.value || {})
+  async function ondata (data) {
+    const contacts = data[0]?.value || []
+    renderContacts(contacts)
   }
 
-  async function renderValues(dataList) {
-    const container = document.createElement('div')
-    
+  function renderContacts (contacts = []) {
+    listContainer.innerHTML = '' // clear existing
 
-    if (!Array.isArray(dataList)) dataList = [dataList]
+    for (const contact of contacts) {
+      const {
+        avatar = '',
+        name = '',
+        message = '',
+        time = '',
+        unread = 0,
+        online = false,
+        lightining = false
+      } = contact
 
-    const first4 = dataList.slice(0, 4)
-
-    for (const tx of first4) {
-      const { tid, ttime, tamount, avatar } = tx
-      const row = await createTransactionRow({ tid, ttime, tamount, avatar})
-      container.appendChild(row)
+      const row = document.createElement('div')
+      row.className = 'contact-row'
+      row.innerHTML = `
+        <div class="contact-left">
+          <div class="contact-avatar">
+            <img src="${avatar}" alt="avatar" />
+            ${online ? '<div class="online-dot"></div>' : ''}
+          </div>
+          <div class="contact-info">
+            <div class="contact-name">${name}</div>
+            <div class="contact-message">${message}</div>
+          </div>
+        </div>
+        <div class="contact-right">
+          <div class="contact-time">${time}</div>
+          <div class="icon-wrapper  ${!lightining ? 'no-lightning' : ''}">
+            ${lightining ? `<svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" id="IconChangeColor"> <path fill-rule="evenodd" clip-rule="evenodd" d="M11.3006 1.04621C11.7169 1.17743 12 1.56348 12 1.99995V6.99995L16 6.99995C16.3729 6.99995 16.7148 7.20741 16.887 7.53814C17.0592 7.86887 17.0331 8.26794 16.8192 8.57341L9.81924 18.5734C9.56894 18.931 9.11564 19.0849 8.69936 18.9537C8.28309 18.8225 8 18.4364 8 18L8 13H4C3.62713 13 3.28522 12.7925 3.11302 12.4618C2.94083 12.131 2.96694 11.732 3.18077 11.4265L10.1808 1.42649C10.4311 1.06892 10.8844 0.914992 11.3006 1.04621Z" fill="orange" id="mainIconPathAttribute" stroke="#f7931a" stroke-width="0"></path> </svg>`: ' '}
+            ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
+          </div>
+        </div>
+      `
+      listContainer.appendChild(row)
     }
-
-    const containerEl = shadow.querySelector('.transaction-list-container')
-    containerEl.innerHTML = `
-      <div class="transaction-list-header">
-        <div class="transaction-list-title">Transactions</div>
-        <div class="transaction-list-see-all">See all</div>
-      </div>
-    `
-    containerEl.appendChild(container)
   }
 }
 
-function fallback_module() {
+
+function fallback_module () {
   return {
-    api(opts = {}) {
+    api (opts = {}) {
       return {
         drive: {
           'style/': {
-            'transaction_list.css': {
-              '$ref': 'transaction_list.css'
+            'contact_row.css': {
+              '$ref': 'contact_row.css'
             }
           },
           'data/': {
@@ -100,138 +116,8 @@ function fallback_module() {
   }
 }
 
-}).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":3}],3:[function(require,module,exports){
-(function (__filename){(function (){
-const STATE = require('STATE')
-const statedb = STATE(__filename)
-const { sdb, get } = statedb(fallback_module)
-
-module.exports = transaction_row
-
-async function transaction_row (opts = {}, protocol) {
-  const {drive} = sdb
-
-  const avatar = opts.avatar || ''
-  const tid = opts.tid || ''
-  const ttime = opts.ttime || ''
-  const tamount = opts.tamount || 0
-
-  const on = {
-    style: inject,
-    data: ondata
-  }
-
-  
-  const el = document.createElement('div')
-  const shadow =  el.attachShadow({ mode: 'closed' })
-
-  shadow.innerHTML = `
-    <div class="transaction-row">
-      <div class="transaction-detail">
-        <div class="transaction-avatar">
-          <img src="${avatar}" alt="avatar" />
-        </div>
-        <div class="transaction-data">
-          <div class="transaction-id">${tid}</div>
-          <div class="transaction-time">${ttime}</div>
-        </div>
-      </div>  
-      <div class="transaction-amount">
-        <span>${tamount} ₿</span>
-      </div> 
-    </div>
-    <style></style>
-  `
-
-  const style = shadow.querySelector('style')
-  style.textContent = `
-    .transaction-id {
-      font-size: 20px;
-      margin-top: 2px;
-    }
-    .transaction-row {
-      display: flex;
-      flex-direction: row;
-      align-items:start;
-      justify-content: space-between;
-      margin-top: 12px;
-      font-size: 14px;
-    }
-    .transaction-detail{
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 10px;
-    }
-    .transaction-avatar img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%; 
-      margin-right: 10px;
-    }
-    .transaction-data{
-      display: flex;
-      flex-direction: column;
-      text-align: start;
-      
-    }
-    .transaction-time {
-      display: flex;
-      flex-direction: column;
-      color: gray;
-      text-align: start;
-    }
-    .transaction-amount {
-      font-size: 20px;
-    }
-
-  `
-  //await sdb.watch(onbatch)
-
-  return el
-
-  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
-
-  async function onbatch (batch) {
-    for (const { type, paths } of batch){
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
-      const func = on[type] || fail
-      await func(data, type)
-    }
-  }
-
-  function inject (data) {
-     style.textContent = data[0]
-  }
-
-  async function ondata(data) {
-    await renderValues(data[0]?.value || {})
-  }
-
-}
-
-// ============ Fallback Setup for STATE ============
-
-function fallback_module () {
-  return {
-    api (opts = {}) {
-      return {
-        drive: {
-          'data/': {
-            'opts.json': {
-              raw: opts
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-
-}).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],4:[function(require,module,exports){
+}).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
+},{"STATE":1}],3:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -243,14 +129,16 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":5}],5:[function(require,module,exports){
+},{"./page":4}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 // const transactionHistory = require('../src/node_modules/transaction_history')
-const transactionList = require('../src/node_modules/transaction_list')
+// const transactionList = require('../src/node_modules/transaction_list')
+const contactRow = require('../src/node_modules/contact_row')
+
 
 const state = {}
 
@@ -278,19 +166,20 @@ async function main () {
 
 
  // const tHistoryComponent = await transactionHistory(subs[0], protocol)
-  console.log('subss[1]',subs[2])
- const tListComponent = await transactionList(subs[0], protocol)
- 
+//  const tListComponent = await transactionList(subs[0], protocol)
+  const contactRowComponent = await contactRow(subs[0], protocol)
   const page = document.createElement('div')
   page.innerHTML = `
     <div >
       <div id="history-container"></div>
       <div id="list-container"></div>
+      <div id="contact-row-container" style = "border: 1px solid #ccc; border-radius: 10px; padding: 5px; width: 400px; background: white; font-family: Arial, sans-serif;  color: black; " ></div>
     </div>
   `
  
   // page.querySelector('#history-container').appendChild(tHistoryComponent)
-  page.querySelector('#list-container').appendChild(tListComponent)
+  // page.querySelector('#list-container').appendChild(tListComponent)
+  page.querySelector('#contact-row-container').appendChild(contactRowComponent)
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -302,105 +191,77 @@ function fallback_module () {
   return {
     drive: {},
     _: {
-      '../src/node_modules/transaction_list': {
-        $: '',
-        0: {
-        value: [
-                {
-                  date: "Today",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+      // '../src/node_modules/transaction_list': {
+      //   $: '',
+      //   0: {
+      //   value: [
+      //           {
+      //             date: "Today",
+      //             tid: "Luis fedrick",
+      //             ttime: "11:30 AM",
+      //             tamount: "+ 0.02456",
+      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
 
-                },
-                {
-                  date: "Today",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Today",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-                },
-                {
-                  date: "Today",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Yesterday",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Yesterday",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-                },
-                {
-                  date: "Yesterday",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Yesterday",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Dec 09",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Dec 09",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Dec 09",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Dec 09",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-              ]
-            },
-            mapping: {
-              style: 'style',
-              data: 'data'
-            }
+      //           },
+      //           {
+      //             date: "Today",
+      //             tid: "3TgmbHfn...455p",
+      //             ttime: "02:15 PM",
+      //             tamount: "+ 0.03271",
+      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+      //           },
+      //           {
+      //             date: "Today",
+      //             tid: "Mark Kevin",
+      //             ttime: "03:45 PM",
+      //             tamount: "- 0.00421",
+      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+      //           },
+      //           {
+      //             date: "Today",
+      //             tid: "7RwmbHfn...455p",
+      //             ttime: "04:45 PM",
+      //             tamount: "- 0.03791",
+      //             avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+      //           },
+      //           {
+      //             date: "Yesterday",
+      //             tid: "Luis fedrick",
+      //             ttime: "11:30 AM",
+      //             tamount: "+ 0.02456",
+      //             avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+      //           }
+      //         ]
+      //       },
+      //       mapping: {
+      //         style: 'style',
+      //         data: 'data'
+      //       }
           
+      //     },
+      '../src/node_modules/contact_row': {
+      $: '',
+      0: {
+      value: [
+              {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'Mark kevin',
+                message: 'Payment Re...',
+                time: '3 hr',
+                unread: 5,
+                online: true,
+                lightining: true
+              }
+            ]
+          },
+          mapping: {
+            style: 'style',
+            data: 'data'
           }
+        
+        },
        }
     }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/transaction_list":2}]},{},[4]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/contact_row":2}]},{},[3]);
