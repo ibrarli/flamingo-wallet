@@ -3,6 +3,8 @@ const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const contacts_list = require('../src/node_modules/contacts_list')
+const transaction_history = require('../src/node_modules/transaction_history')
+const transaction_list = require('../src/node_modules/transaction_list')
 
 const state = {}
 
@@ -47,17 +49,21 @@ async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-
-  const contact_list = await contacts_list(subs[0], protocol)
+    const transaction_list_component = await transaction_list(subs[0], protocol)
+  const transaction_history_component = await transaction_history(subs[2], protocol)
+  const contacts_list_component = await contacts_list(subs[4], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
     <div >
-      <div id="contacts-list-container" ></div>   
+      <div id="transaction-list-container"></div> 
+      <div id="transaction-history-container"></div> 
+      <div id="contacts-list-container" ></div>  
     </div>
   `
-
-  page.querySelector('#contacts-list-container').appendChild(contact_list)
+  page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
+  page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
+  page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -70,6 +76,151 @@ function fallback_module () {
     drive: {},
  
     _: {
+              '../src/node_modules/transaction_list': {
+        $: '',
+        0: {
+        value: [
+                {
+                  date: "Today",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Today",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+              
+              ]
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
+            }
+          
+          },
+      '../src/node_modules/transaction_history': {
+        $: '',
+        0: {
+        value: [
+                {
+                  date: "Today",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Today",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+              ]
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
+            }
+          
+          },
+   
           '../src/node_modules/contacts_list': {
             $: '',
             0: {
@@ -116,7 +267,8 @@ function fallback_module () {
               style: 'style',
               data: 'data'
             }
-          }
+          },
+          
        }
     }
 }
