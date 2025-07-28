@@ -55,7 +55,7 @@ async function main () {
 
   const page = document.createElement('div')
   page.innerHTML = `
-    <div >
+    <div style="display:flex; flex-direction:row; gap: 20px;">
       <div id="transaction-list-container"></div> 
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>  
@@ -225,6 +225,7 @@ function fallback_module () {
             $: '',
             0: {
               value: [
+                
                 {
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
                   name: 'Mark Kevin',

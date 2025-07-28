@@ -8,175 +8,31 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = contact_row
 
-async function contact_row (opts = {}, protocol) {
-  // const { id, sdb } = await get(opts.sid)
+async function contact_row (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
-  const avatar = opts.avatar || ''
-  const name = opts.name || ''
-  const message = opts.message || ''
-  const time = opts.time || ''
-  const unread = opts.unread || 0
-  const online = opts.online || false
-  const lightining = opts.lightining || false
-
-
+  
   const on = {
     style: inject,
-    data: ondata
+    data: ondata,
+    icons: iconject,
+
   }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="contact-row">
-      <div class="contact-left">
-        <div class="contact-avatar">
-          <img src="${avatar}" alt="avatar" />
-          ${online ? '<div class="online-dot"></div>' : ''}
-        </div>
-        <div class="contact-info">
-          <div class="contact-name">${name}</div>
-          <div class="contact-message ${unread > 0 ? 'unread-message' : ''}">${message}</div>       
-      </div>
-      </div>
-      <div class="contact-right">
-        <div class="contact-time">${time}</div>
-        <div class="icon-wrapper  ${!lightining ? 'no-lightning' : ''}">
-          ${lightining ? `<svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" id="IconChangeColor"> <path fill-rule="evenodd" clip-rule="evenodd" d="M11.3006 1.04621C11.7169 1.17743 12 1.56348 12 1.99995V6.99995L16 6.99995C16.3729 6.99995 16.7148 7.20741 16.887 7.53814C17.0592 7.86887 17.0331 8.26794 16.8192 8.57341L9.81924 18.5734C9.56894 18.931 9.11564 19.0849 8.69936 18.9537C8.28309 18.8225 8 18.4364 8 18L8 13H4C3.62713 13 3.28522 12.7925 3.11302 12.4618C2.94083 12.131 2.96694 11.732 3.18077 11.4265L10.1808 1.42649C10.4311 1.06892 10.8844 0.914992 11.3006 1.04621Z" fill="orange" id="mainIconPathAttribute" stroke="#f7931a" stroke-width="0"></path> </svg>`: ' '}
-          ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
-        </div>
-      </div>
-    </div>
+    <div class="contact-row"></div>
     <style></style>
   `
   const style = shadow.querySelector('style')
-  style.textContent = `
-      .contact-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0px;
-        font-family: Arial, sans-serif;
-        color: black;
-        width: 100%;
-        box-sizing: border-box;
-        cursor: pointer;
-      }
+  const row = shadow.querySelector('.contact-row')
+  
+  
+  let dricons = []
+  await sdb.watch(onbatch)
 
-      .contact-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .contact-avatar {
-        position: relative;
-        width: 50px;
-        height: 50px;
-        flex-shrink: 0;
-      }
-
-      .contact-avatar img {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1px solid #ccc;
-
-      }
-
-      .online-dot {
-        position: absolute;
-        bottom: 2px;
-        right: 2px;
-        width: 12px;
-        height: 12px;
-        background-color: #00c853; /* green */
-        border: 2px solid white;
-        border-radius: 50%;
-      }
-
-      .contact-info {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-      }
-
-      .contact-name {
-        font-size: 20px;
-        color: #222;
-        line-height: 1.4;
-        
-      }
-
-      .contact-message {
-        font-size: 15px;
-        font-weight: normal; /* Default if no unread */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 180px;
-        display: inline-block;
-      }
-
-      .contact-message.unread-message {
-        font-weight: 550;
-      }
-
-      .contact-right {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 6px;
-      }
-
-      .contact-time {
-        font-size: 16px;
-        color: #888;
-      }
-
-      .icon-wrapper {
-        position: relative;
-        width: 20px;
-        height: 20px;
-        padding-right: 8px;
-
-      }
-
-   
-
-      .bolt-icon {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-
-      .unread-badge {
-        position: absolute;
-        top: -6px;
-        right: -10px;
-        width: 10px;
-        height: 10px;
-        background-color: #FF4343;
-        color: white;
-        font-size: 12px;
-        font-weight: bold;
-        border-radius: 50%;
-        padding: 5px 5px;
-        text-align: center;
-        line-height: 1;
-        border: 2px solid white;
-        border-radius: 50%;
-      }
-
-
-      .icon-wrapper.no-lightning .unread-badge {
-        position: static;
-      }
-
-  `
   return el
 
   function fail(data, type) {
@@ -198,28 +54,177 @@ async function contact_row (opts = {}, protocol) {
   }
 
   async function ondata (data) {
-    await renderValues(data[0]?.value || {})
+    const { avatar, name, message, time, unread, online, lightining } = data[0]
+    row.innerHTML = `
+    <div class="contact-left">
+        <div class="contact-avatar">
+          <img src="${avatar}" alt="avatar" />
+          ${online ? '<div class="online-dot"></div>' : ''}
+        </div>
+        <div class="contact-info">
+          <div class="contact-name">${name}</div>
+          <div class="contact-message ${unread > 0 ? 'unread-message' : ''}">${message}</div>       
+      </div>
+      </div>
+      <div class="contact-right">
+        <div class="contact-time">${time}</div>
+        <div class="icon-wrapper  ${!lightining ? 'no-lightning' : ''}">
+          ${lightining ? dricons[0]: ' '}
+          ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
+        </div>
+      </div>` 
+  }
+
+   function iconject (data) {
+    dricons = data
   }
 }
 
 
 function fallback_module () {
   return {
-    api (opts = {}) {
-      return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
         drive: {
+          'icons/': {
+            'lightning.svg': {
+              '$ref': 'lightning.svg'
+            },
+          },
+          'style/':{
+            'style.css':{
+              raw:  `
+                .contact-row {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 12px 0px;
+                  font-family: Arial, sans-serif;
+                  color: black;
+                  width: 100%;
+                  box-sizing: border-box;
+                  cursor: pointer;
+                }
+
+                .contact-left {
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                }
+
+                .contact-avatar {
+                  position: relative;
+                  width: 50px;
+                  height: 50px;
+                  flex-shrink: 0;
+                }
+
+                .contact-avatar img {
+                  width: 100%;
+                  height: 100%;
+                  border-radius: 50%;
+                  object-fit: cover;
+                  border: 1px solid #ccc;
+
+                }
+
+                .online-dot {
+                  position: absolute;
+                  bottom: 2px;
+                  right: 2px;
+                  width: 12px;
+                  height: 12px;
+                  background-color: #00c853; /* green */
+                  border: 2px solid white;
+                  border-radius: 50%;
+                }
+
+                .contact-info {
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: center;
+                }
+
+                .contact-name {
+                  font-size: 20px;
+                  color: #222;
+                  line-height: 1.4;
+                  
+                }
+
+                .contact-message {
+                  font-size: 15px;
+                  font-weight: normal; /* Default if no unread */
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  max-width: 180px;
+                  display: inline-block;
+                }
+
+                .contact-message.unread-message {
+                  font-weight: 550;
+                }
+
+                .contact-right {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-end;
+                  justify-content: center;
+                  gap: 6px;
+                }
+
+                .contact-time {
+                  font-size: 16px;
+                  color: #888;
+                }
+
+                .icon-wrapper {
+                  position: relative;
+                  width: 20px;
+                  height: 20px;
+                  padding-right: 8px;
+
+                }
+                  
+                .bolt-icon {
+                  width: 100%;
+                  height: 100%;
+                  display: block;
+                }
+
+                .unread-badge {
+                  position: absolute;
+                  top: -6px;
+                  right: -10px;
+                  width: 10px;
+                  height: 10px;
+                  background-color: #FF4343;
+                  color: white;
+                  font-size: 12px;
+                  font-weight: bold;
+                  border-radius: 50%;
+                  padding: 5px 5px;
+                  text-align: center;
+                  line-height: 1;
+                  border: 2px solid white;
+                  border-radius: 50%;
+                }
+
+                .icon-wrapper.no-lightning .unread-badge {
+                  position: static;
+                }
+            `
+            }
+          },
           'data/': {
             'opts.json': {
-              raw: {
-                avatar: 'https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain',
-                tid: 'Sample Transaction',
-                ttime: '12:00 PM',
-                tamount: '+ 0.02345'
-              }
+              raw: opts
             }
           }
         }
-      }
     }
   }
 }
@@ -231,11 +236,14 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const search_bar = require('search_bar') 
+const square_button = require('square_button') 
+const contact_row = require('contact_row')
+
+
 module.exports = contacts_list
 
-const createContactRow = require('contact_row')
-
-async function contacts_list (opts = {}) {
+async function contacts_list(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -248,14 +256,417 @@ async function contacts_list (opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="contact-list-container"></div>
+    <div class="component-label">Contacts List</div>
+    <div class="contact-list-container">
+      <div class="contact-list-header">Contacts</div>
+      <div class="top-bar"></div>
+    </div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const containerEl = shadow.querySelector('.contact-list-container')
+  const contact_list_container = shadow.querySelector('.contact-list-container')
+  const top_bar = shadow.querySelector('.top-bar')
 
   const subs = await sdb.watch(onbatch)
+  
+  if (subs.length > 0) {
+    const search = await search_bar(subs[0])
+    const button = await square_button(subs[1])
+    top_bar.append(search)
+    top_bar.append(button)  
+  }
+
+  for (let i = 2; i < subs.length; i++) {
+    const contact = await contact_row(subs[i]) 
+    contact_list_container.append(contact)
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'search_bar': { $: '' },
+      'contact_row': { $: '' },
+      'square_button': { $: '' }
+    }
+  }
+
+  function api(opts) {
+    const search_bar = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+      }
+    }
+
+    const square_button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      1: {
+      }
+    }
+
+    const contact_row = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+
+      }
+    }
+
+    opts.value.forEach((contact, index) => {
+      contact_row[index + 2] = contact
+    })
+
+    return {
+      drive: {
+        'style/': {
+          'contacts_list.css': {
+            '$ref': 'contacts_list.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        search_bar,
+        square_button,
+        contact_row
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
+},{"STATE":1,"contact_row":2,"search_bar":4,"square_button":5}],4:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = search_bar
+
+async function search_bar (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+  <div class="search-bar">
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Search"
+      style="border: none; outline: none; font-size: 14px; background: transparent; flex: 1;"
+    />
+    <div class="search-icon">
+      <div class="icon-slot"></div>
+    </div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.search-bar')
+
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+  }
+
+  function iconject (data) {
+    dricons = data
+    const icon_slot = shadow.querySelector('.icon-slot')
+    if (icon_slot && dricons[0]) {
+      icon_slot.innerHTML = dricons[0]
+    }
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+  function fallback_instance (opts) {
+    return {
+        drive: {
+          'icons/':{
+            'search.svg':{
+              '$ref': 'search.svg'
+            }
+          },
+          'style/':{
+            'style.css':{
+              raw: `
+              .search-bar {
+                display: flex;
+                align-items: center;  
+                justify-content: center; 
+                margin-top: 15px;
+                width: 330px;
+                border: 1px solid gray;
+                height: 50px;
+                border-radius: 12px;
+                margin-bottom: 16px;
+              }
+
+              .search-input {
+                flex: 1;
+                padding: 12px;
+                font-size: 16px;
+                color: #555;
+              }
+              .search-icon {
+                padding: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+              }
+              `
+            }
+          },
+          'data/': {
+            'opts.json': {
+              raw: opts
+            }
+          }
+        }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
+},{"STATE":1}],5:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = square_button
+
+async function square_button (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <button class="square-btn">
+      <div class="icon-slot"></div>
+    </button>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+
+  await sdb.watch(onbatch)
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject (data) {
+    dricons = data
+    const icon_slot = shadow.querySelector('.icon-slot')
+    if (icon_slot && dricons[0]) {
+      icon_slot.innerHTML = dricons[0]
+    }
+  }
+
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'plus.svg': {
+            '$ref': 'plus.svg'
+          },
+        },
+        'style/': {
+          'style.css': {
+            raw: `
+              .square-btn {
+                width: 50px;
+                height: 50px;
+                background-color: #000;
+                border: none;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+                margin: 0px;
+              }
+
+              .square-btn:hover {
+                background-color: #3f3f3fff;
+              }
+
+              .square-btn svg {
+                stroke: #fff;
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
+},{"STATE":1}],6:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const transaction_row = require('transaction_row')
+
+module.exports = transaction_history
+
+async function transaction_history (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+  console.log("sdb", sdb)
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="component-label">Transaction History</div>
+    <div class="transaction-history-container">
+      <div class="transaction-history-header"> Transactions History </div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const containerEl = shadow.querySelector('.transaction-history-container')
+
+  const subs = await sdb.watch(onbatch)
+  const grouped = {}
+  subs.forEach(sub => {
+    const date = (sub.date || 'Unknown').trim() // trim extra spaces
+    if (!grouped[date]) grouped[date] = []
+    grouped[date].push(sub)
+  })
+  
+  for (const date in grouped) {
+    const dateEl = document.createElement('div')
+    dateEl.className = 'transaction-date'
+    dateEl.innerHTML = `<span>${date}</span>`
+    containerEl.appendChild(dateEl)
+
+    for (const sub of grouped[date]) {
+      const row = await transaction_row(sub)
+      containerEl.appendChild(row)
+    }
+  }
+
 
   return el
 
@@ -276,28 +687,276 @@ async function contacts_list (opts = {}) {
   }
 
   async function ondata(data) {
-    const contacts = data[0]?.value || []
-    await renderContacts(contacts)
+  }
+}
+
+
+function fallback_module () {
+  return {
+    api,
+    _: {
+      'transaction_row':{
+        $: ''
+      }
+    } 
+  }
+  function api(opts){
+    const transaction_row = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      }
+    }
+    opts.value.forEach((transaction, index) => {
+      transaction_row[index] = transaction
+    })
+    return {
+      drive: {
+        'style/': {
+          'transaction_history.css':{
+            '$ref': 'transaction_history.css'
+          }
+        },
+        'data/': {
+          'opts.json':{
+            raw: opts
+          }
+        }
+      },
+      _:{
+        transaction_row
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
+},{"STATE":1,"transaction_row":8}],7:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const transaction_row = require('transaction_row')
+
+module.exports = transaction_list
+
+
+async function transaction_list(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
   }
 
-  async function renderContacts(contactList) {
-    containerEl.innerHTML = `<div class="contact-list-header">Contacts</div>`
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
 
-    for (const contact of contactList) {
-      const row = await createContactRow(contact)
-      containerEl.appendChild(row)
+  shadow.innerHTML = `
+    <div class="component-label">Transaction List</div>
+    <div class="transaction-list-container">
+      <div class="transaction-list-header">  
+        <div class="transaction-list-title"> Transactions </div>
+        <div class="transaction-list-see-all"> See all</div>
+      </div>
+    
+
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const containerEl = shadow.querySelector('.transaction-list-container')
+
+  const subs = await sdb.watch(onbatch)
+
+  subs.slice(0, 4).forEach(async sub => {
+      containerEl.append(await transaction_row(sub))
+  })
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
     }
+  }
+
+  function inject(data) {
+    style.textContent =  data[0]
+  }
+
+  async function ondata(data) {
   }
 }
 
 function fallback_module () {
   return {
-    api (opts = {}) {
-      return {
+    api,
+    _: {
+      'transaction_row':{
+        $: ''
+      }
+    } 
+  }
+  function api(opts){
+    const transaction_row = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      }
+    }
+    opts.value.forEach((transaction, index) => {
+      transaction_row[index] = transaction
+    })
+    return {
+      drive: {
+        'style/': {
+          'transaction_list.css':{
+            '$ref': 'transaction_list.css'
+          }
+        },
+        'data/': {
+          'opts.json':{
+            raw: opts
+          }
+        }
+      },
+      _:{
+        transaction_row
+      }
+    }
+  }
+}
+
+
+}).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
+},{"STATE":1,"transaction_row":8}],8:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = transaction_row
+
+async function transaction_row (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="transaction-row">
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.transaction-row')
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+    const { avatar, tid, ttime, tamount } = data[0] || {}
+    row.innerHTML = `
+    <div class="transaction-detail">
+        <div class="transaction-avatar">
+          <img src="${avatar}" alt="avatar" />
+        </div>
+        <div class="transaction-data">
+          <div class="transaction-id">${tid}</div>
+          <div class="transaction-time">${ttime}</div>
+        </div>
+      </div>  
+      <div class="transaction-amount">
+        <span>${tamount} ₿</span>
+      </div> 
+    `
+  }
+}
+
+function fallback_module () {
+  return {
+    api
+  }
+  function api (opts) {
+    return {
         drive: {
-          'style/': {
-            'contacts_list.css': {
-              '$ref': 'contacts_list.css'
+          'style/':{
+            'style.css':{
+              raw: `
+                .transaction-id {
+                  font-size: 20px;
+                  margin-top: 2px;
+                }
+                .transaction-row {
+                  display: flex;
+                  flex-direction: row;
+                  align-items:start;
+                  justify-content: space-between;
+                  margin-top: 12px;
+                  font-size: 14px;
+                }
+                .transaction-detail{
+                  display: flex;
+                  flex-direction: row;
+                  align-items: center;
+                  gap: 10px;
+                }
+                .transaction-avatar img {
+                  width: 40px;
+                  height: 40px;
+                  border-radius: 50%; 
+                  margin-right: 10px;
+                }
+                .transaction-data{
+                  display: flex;
+                  flex-direction: column;
+                  text-align: start;
+                }
+                .transaction-time {
+                  color: gray;
+                  text-align: start;
+                }
+                .transaction-amount {
+                  font-size: 20px;
+                }
+              `
             }
           },
           'data/': {
@@ -306,13 +965,13 @@ function fallback_module () {
             }
           }
         }
-      }
     }
   }
 }
 
-}).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":2}],4:[function(require,module,exports){
+
+}).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
+},{"STATE":1}],9:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -324,26 +983,43 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":5}],5:[function(require,module,exports){
+},{"./page":10}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-// const transactionHistory = require('../src/node_modules/transaction_history')
-// const transactionList = require('../src/node_modules/transaction_list')
-// const contactRow = require('../src/node_modules/contact_row')
-const contactsList = require('../src/node_modules/contacts_list')
-
-
+const contacts_list = require('../src/node_modules/contacts_list')
+const transaction_history = require('../src/node_modules/transaction_history')
+const transaction_list = require('../src/node_modules/transaction_list')
 
 const state = {}
 
-function protocol (message, notify) {
+function protocol(message, notify) {
   const { from } = message
   state[from] = { notify }
+
+  function listen(message) {
+    const { type, data } = message
+    if (on[type]) on[type](data)
+  }
+
   return listen
 }
+
+const on = {
+  style: injectStyle,
+  value: handleValue
+}
+
+function injectStyle (data) {
+  console.log('Injecting shared style (if needed)', data)
+}
+
+function handleValue (data) {
+  console.log(`"${data.id}" value:`, data.value)
+}
+
 
 function onbatch (batch) {
   console.log(' Watch triggered with batch:', batch)
@@ -360,26 +1036,21 @@ async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-
-
-//  const tHistoryComponent = await transactionHistory(subs[0], protocol)
-//  const tListComponent = await transactionList(subs[0], protocol)
-  // const contactRowComponent = await contactRow(subs[0], protocol)
-  const contactListComponent = await contactsList(subs[0], protocol)
+    const transaction_list_component = await transaction_list(subs[0], protocol)
+  const transaction_history_component = await transaction_history(subs[2], protocol)
+  const contacts_list_component = await contacts_list(subs[4], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
-    <div >
-      <div id="history-container"></div>
-      <div id="list-container"></div>
-      <div id="contacts-list-container" ></div>   
+    <div style="display:flex; flex-direction:row; gap: 20px;">
+      <div id="transaction-list-container"></div> 
+      <div id="transaction-history-container"></div> 
+      <div id="contacts-list-container" ></div>  
     </div>
   `
- 
-  // page.querySelector('#history-container').appendChild(tHistoryComponent)
-  // page.querySelector('#list-container').appendChild(tListComponent)
-  // page.querySelector('#contact-row-container').appendChild(contactRowComponent)
-  page.querySelector('#contacts-list-container').appendChild(contactListComponent)
+  page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
+  page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
+  page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -392,10 +1063,156 @@ function fallback_module () {
     drive: {},
  
     _: {
+              '../src/node_modules/transaction_list': {
+        $: '',
+        0: {
+        value: [
+                {
+                  date: "Today",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Today",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+              
+              ]
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
+            }
+          
+          },
+      '../src/node_modules/transaction_history': {
+        $: '',
+        0: {
+        value: [
+                {
+                  date: "Today",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Today",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Today",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                },
+                {
+                  date: "Yesterday",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Yesterday",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  date: "Dec 09",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+              ]
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
+            }
+          
+          },
+   
           '../src/node_modules/contacts_list': {
             $: '',
             0: {
               value: [
+                
                 {
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
                   name: 'Mark Kevin',
@@ -438,130 +1255,10 @@ function fallback_module () {
               style: 'style',
               data: 'data'
             }
-          }
-
-
-
-      // '../src/node_modules/transaction_history': {
-      //   $: '',
-      //   0: {
-      //   value: [
-      //           {
-      //             date: "Today",
-      //             tid: "Luis fedrick",
-      //             ttime: "11:30 AM",
-      //             tamount: "+ 0.02456",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-
-      //           },
-      //           {
-      //             date: "Today",
-      //             tid: "3TgmbHfn...455p",
-      //             ttime: "02:15 PM",
-      //             tamount: "+ 0.03271",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Today",
-      //             tid: "Mark Kevin",
-      //             ttime: "03:45 PM",
-      //             tamount: "- 0.00421",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-      //           },
-      //           {
-      //             date: "Today",
-      //             tid: "7RwmbHfn...455p",
-      //             ttime: "04:45 PM",
-      //             tamount: "- 0.03791",
-      //             avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Yesterday",
-      //             tid: "Luis fedrick",
-      //             ttime: "11:30 AM",
-      //             tamount: "+ 0.02456",
-      //             avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Yesterday",
-      //             tid: "3TgmbHfn...455p",
-      //             ttime: "02:15 PM",
-      //             tamount: "+ 0.03271",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-      //           },
-      //           {
-      //             date: "Yesterday",
-      //             tid: "Mark Kevin",
-      //             ttime: "03:45 PM",
-      //             tamount: "- 0.00421",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Yesterday",
-      //             tid: "7RwmbHfn...455p",
-      //             ttime: "04:45 PM",
-      //             tamount: "- 0.03791",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Dec 09",
-      //             tid: "Luis fedrick",
-      //             ttime: "11:30 AM",
-      //             tamount: "+ 0.02456",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Dec 09",
-      //             tid: "3TgmbHfn...455p",
-      //             ttime: "02:15 PM",
-      //             tamount: "+ 0.03271",
-      //             avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Dec 09",
-      //             tid: "Mark Kevin",
-      //             ttime: "03:45 PM",
-      //             tamount: "- 0.00421",
-      //             avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //           {
-      //             date: "Dec 09",
-      //             tid: "7RwmbHfn...455p",
-      //             ttime: "04:45 PM",
-      //             tamount: "- 0.03791",
-      //             avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-      //           },
-      //         ]
-      //       },
-      //       mapping: {
-      //         style: 'style',
-      //         data: 'data'
-      //       }
+          },
           
-      //     },
-          // '../src/node_modules/contact_row': {
-          // $: '',
-          // 0: {
-          // value: [
-          //         {
-          //           avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
-          //           name: 'Mark kevin',
-          //           message: 'Payment Re...',
-          //           time: '3 hr',
-          //           unread: 5,
-          //           online: false,
-          //           lightining: true
-          //         }
-          //       ]
-          //     },
-          //     mapping: {
-          //       style: 'style',
-          //       data: 'data'
-          //     }
-            
-          //   },
        }
     }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/contacts_list":3}]},{},[4]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/contacts_list":3,"../src/node_modules/transaction_history":6,"../src/node_modules/transaction_list":7}]},{},[9]);

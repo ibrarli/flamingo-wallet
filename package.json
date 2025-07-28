@@ -15,7 +15,8 @@
   "author": "Ibrar",
   "license": "MIT",
   "dependencies": {
-    "budo": "^11.8.4"
+    "budo": "^11.8.4",
+    "standardx": "^7.0.0"
   },
   "devDependencies": {
     "browserify": "^17.0.1"
