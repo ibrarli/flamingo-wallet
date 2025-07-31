@@ -74,151 +74,142 @@ main()
 function fallback_module () {
   return {
     drive: {},
- 
     _: {
-              '../src/node_modules/transaction_list': {
+      '../src/node_modules/transaction_list': {
         $: '',
         0: {
         value: [
                 {
-                  date: "Today",
                   tid: "Luis fedrick",
                   ttime: "11:30 AM",
                   tamount: "+ 0.02456",
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Today",
                   tid: "3TgmbHfn...455p",
                   ttime: "02:15 PM",
                   tamount: "+ 0.03271",
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Today",
                   tid: "Mark Kevin",
                   ttime: "03:45 PM",
                   tamount: "- 0.00421",
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
                 },
                 {
-                  date: "Today",
                   tid: "7RwmbHfn...455p",
                   ttime: "04:45 PM",
                   tamount: "- 0.03791",
                   avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Yesterday",
                   tid: "Luis fedrick",
                   ttime: "11:30 AM",
                   tamount: "+ 0.02456",
                   avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
-              
               ]
             },
             mapping: {
               style: 'style',
               data: 'data'
             }
-          
           },
       '../src/node_modules/transaction_history': {
         $: '',
         0: {
         value: [
                 {
-                  date: "Today",
+                  dateString: "2025-05-10",
                   tid: "Luis fedrick",
                   ttime: "11:30 AM",
                   tamount: "+ 0.02456",
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Today",
+                  dateString: "2025-05-16",
                   tid: "3TgmbHfn...455p",
                   ttime: "02:15 PM",
                   tamount: "+ 0.03271",
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Today",
+                  dateString: "2025-05-12",
                   tid: "Mark Kevin",
                   ttime: "03:45 PM",
                   tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Today",
+                  dateString: "2025-05-22",
                   tid: "7RwmbHfn...455p",
                   ttime: "04:45 PM",
                   tamount: "- 0.03791",
                   avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Yesterday",
+                  dateString: "2025-07-23",
                   tid: "Luis fedrick",
                   ttime: "11:30 AM",
                   tamount: "+ 0.02456",
                   avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Yesterday",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
-                },
-                {
-                  date: "Yesterday",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Yesterday",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Dec 09",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  date: "Dec 09",
+                  dateString: "2025-07-31",
                   tid: "3TgmbHfn...455p",
                   ttime: "02:15 PM",
                   tamount: "+ 0.03271",
                   avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Dec 09",
+                  dateString: "2025-07-28",
+                  tid: "Mark Kevin",
+                  ttime: "03:45 PM",
+                  tamount: "- 0.00421",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  dateString: "2025-08-01",
+                  tid: "7RwmbHfn...455p",
+                  ttime: "04:45 PM",
+                  tamount: "- 0.03791",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  dateString: "2025-07-28",
+                  tid: "Luis fedrick",
+                  ttime: "11:30 AM",
+                  tamount: "+ 0.02456",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  dateString: "2025-07-29",
+                  tid: "3TgmbHfn...455p",
+                  ttime: "02:15 PM",
+                  tamount: "+ 0.03271",
+                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                },
+                {
+                  dateString: "2025-07-30",
                   tid: "Mark Kevin",
                   ttime: "03:45 PM",
                   tamount: "- 0.00421",
                   avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
                 },
                 {
-                  date: "Dec 09",
+                  dateString: "2025-08-01",
                   tid: "7RwmbHfn...455p",
                   ttime: "04:45 PM",
                   tamount: "- 0.03791",
                   avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
+                }
               ]
             },
             mapping: {
               style: 'style',
               data: 'data'
             }
-          
           },
    
           '../src/node_modules/contacts_list': {
