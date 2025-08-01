@@ -5,6 +5,7 @@ const { sdb, get } = statedb(fallback_module)
 const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
 const transaction_list = require('../src/node_modules/transaction_list')
+const chat_view = require('../src/node_modules/chat_view')
 
 const state = {}
 
@@ -49,21 +50,25 @@ async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-    const transaction_list_component = await transaction_list(subs[0], protocol)
+  const transaction_list_component = await transaction_list(subs[0], protocol)
   const transaction_history_component = await transaction_history(subs[2], protocol)
   const contacts_list_component = await contacts_list(subs[4], protocol)
+  const chat_view_compoent = await chat_view(subs[6],protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
-    <div style="display:flex; flex-direction:row; gap: 20px;">
+    <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;"> 
       <div id="transaction-list-container"></div> 
       <div id="transaction-history-container"></div> 
-      <div id="contacts-list-container" ></div>  
+      <div id="contacts-list-container" ></div>   
+      <div id="chat-view-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
+  page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
+
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -254,6 +259,21 @@ function fallback_module () {
                   lightining: false
                 }
               ]
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
+            }
+          },
+
+          '../src/node_modules/chat_view': {
+            $: '',
+            0: {
+              value: {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: "David Clark",
+                code: "1FfmbHfn...455p"
+              }
             },
             mapping: {
               style: 'style',

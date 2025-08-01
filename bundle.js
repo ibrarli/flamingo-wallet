@@ -6,6 +6,406 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+module.exports = black_button
+
+async function black_button (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+
+
+  shadow.innerHTML = `
+    <button class="black-btn"></button>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const btn_text = shadow.querySelector('.black-btn')
+
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const {label} = data[0]
+    
+    btn_text.innerHTML = `
+      <div>${label}</div>
+    `
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+      
+        'style/': {
+          'style.css': {
+            raw: `
+              .black-btn {
+                width: 100%; /* Fill the container */
+                height: 50px;
+                background-color: #000;
+                color: #fff; /* Make text color white */
+                border: none;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: background 0.3s;
+                margin: 0px;
+              }
+
+              .black-btn:hover {
+                background-color: #3f3f3fff;
+              }
+
+           
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/black_button/black_button.js")
+},{"STATE":1}],3:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const chat_view_header = require('chat_view_header')
+const black_button = require('black_button') 
+
+module.exports = chat_view
+
+async function chat_view(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="component-label">Chat View</div>
+    <div class="chat-view-container">
+      <div class="chat-view-header"></div>
+      <div class="request-button"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+
+  const header_component = shadow.querySelector('.chat-view-header')
+  const request_button_component = shadow.querySelector('.request-button')
+
+  const subs = await sdb.watch(onbatch)
+
+  const header = await chat_view_header(subs[0])
+  const button = await black_button(subs[1])
+
+  request_button_component.replaceWith(button)  
+  header_component.append(header)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'chat_view_header': { $: '' },
+      'black_button': { $: '' },
+    }
+  }
+
+  function api(opts) {
+
+    const chat_view_header = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: opts.value
+    }
+
+    const black_button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      1: {
+        label: 'Request'
+      }
+    }
+
+    return {
+      drive: {
+        'style/': {
+          'chat_view.css': {
+            '$ref': 'chat_view.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        chat_view_header,
+        black_button,
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
+},{"STATE":1,"black_button":2,"chat_view_header":4}],4:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = chat_view_header
+
+async function chat_view_header (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+  
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="chat_view_header"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.chat_view_header')
+  
+  
+  let dricons = []
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+  const { avatar, name, code } = data[0]
+  row.innerHTML = `
+    <div class="container-view-header">
+      <div class="container-left">
+        <div class="left-icon">
+          ${dricons[0] || ''}
+        </div>
+
+        <div class="contact-heading">
+          <div class="contact-avatar">
+            <img src="${avatar}" alt="avatar" />
+          </div>
+          <div class="contact-info">
+            <div class="contact-name">${name}</div>
+            <div class="contact-code">${code}</div>
+          </div>
+        </div>
+      </div>
+      <div class="right-icon">
+        ${dricons[1] || ''}
+      </div>
+    </div>
+  `
+}
+
+   function iconject (data) {
+    dricons = data
+  }
+}
+
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+        drive: {
+          'icons/': {
+            'left-arrow.svg': {
+              '$ref': 'left-arrow.svg'
+            },
+            'three-dot.svg':{
+              '$ref': 'three-dot.svg'
+            }
+          },
+          'style/':{
+            'style.css':{
+              raw:  `
+              .container-view-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+              }
+
+              .container-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              }
+
+              .left-icon,
+              .right-icon {
+                cursor: pointer;
+              }
+
+              .contact-heading {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+              }
+
+              .contact-avatar {
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                overflow: hidden;
+                flex-shrink: 0;
+              }
+
+              .contact-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 50%;
+                border: 1px solid #ccc;
+              }
+
+              .contact-info {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+              }
+
+              .contact-name {
+                font-size: 18px;
+                color: #222;
+              }
+
+              .contact-code {
+                font-size: 14px;
+                color: #666;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 160px;
+              }
+              `
+            }
+          },
+          'data/': {
+            'opts.json': {
+              raw: opts
+            }
+          }
+        }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
+},{"STATE":1}],5:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 module.exports = contact_row
 
 async function contact_row (opts = {}) {
@@ -230,7 +630,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],3:[function(require,module,exports){
+},{"STATE":1}],6:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -371,7 +771,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":2,"search_bar":4,"square_button":5}],4:[function(require,module,exports){
+},{"STATE":1,"contact_row":5,"search_bar":7,"square_button":8}],7:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -498,7 +898,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],5:[function(require,module,exports){
+},{"STATE":1}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -614,7 +1014,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],6:[function(require,module,exports){
+},{"STATE":1}],9:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -730,7 +1130,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":8}],7:[function(require,module,exports){
+},{"STATE":1,"transaction_row":11}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -760,8 +1160,6 @@ async function transaction_list(opts = {}) {
         <div class="transaction-list-title"> Transactions </div>
         <div class="transaction-list-see-all"> See all</div>
       </div>
-    
-
     </div>
     <style></style>
   `
@@ -840,7 +1238,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":8}],8:[function(require,module,exports){
+},{"STATE":1,"transaction_row":11}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -989,7 +1387,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],9:[function(require,module,exports){
+},{"STATE":1}],12:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -1001,7 +1399,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":10}],10:[function(require,module,exports){
+},{"./page":13}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -1010,6 +1408,7 @@ const { sdb, get } = statedb(fallback_module)
 const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
 const transaction_list = require('../src/node_modules/transaction_list')
+const chat_view = require('../src/node_modules/chat_view')
 
 const state = {}
 
@@ -1054,21 +1453,25 @@ async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-    const transaction_list_component = await transaction_list(subs[0], protocol)
+  const transaction_list_component = await transaction_list(subs[0], protocol)
   const transaction_history_component = await transaction_history(subs[2], protocol)
   const contacts_list_component = await contacts_list(subs[4], protocol)
+  const chat_view_compoent = await chat_view(subs[6],protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
-    <div style="display:flex; flex-direction:row; gap: 20px;">
+    <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;"> 
       <div id="transaction-list-container"></div> 
       <div id="transaction-history-container"></div> 
-      <div id="contacts-list-container" ></div>  
+      <div id="contacts-list-container" ></div>   
+      <div id="chat-view-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
+  page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
+
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -1265,9 +1668,24 @@ function fallback_module () {
               data: 'data'
             }
           },
+
+          '../src/node_modules/chat_view': {
+            $: '',
+            0: {
+              value: {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: "David Clark",
+                code: "1FfmbHfn...455p"
+              }
+            },
+            mapping: {
+              style: 'style',
+              data: 'data'
+            }
+          },
           
        }
     }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/contacts_list":3,"../src/node_modules/transaction_history":6,"../src/node_modules/transaction_list":7}]},{},[9]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":3,"../src/node_modules/contacts_list":6,"../src/node_modules/transaction_history":9,"../src/node_modules/transaction_list":10}]},{},[12]);
