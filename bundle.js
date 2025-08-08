@@ -6,9 +6,9 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-module.exports = black_button
+module.exports = button
 
-async function black_button (opts = {}) {
+async function button (opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -105,7 +105,7 @@ function fallback_module () {
   }
 }
 
-}).call(this)}).call(this,"/src/node_modules/black_button/black_button.js")
+}).call(this)}).call(this,"/src/node_modules/button/button.js")
 },{"STATE":1}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
@@ -113,7 +113,7 @@ const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const chat_view_header = require('chat_view_header')
-const black_button = require('black_button') 
+const button = require('button') 
 
 module.exports = chat_view
 
@@ -146,9 +146,9 @@ async function chat_view(opts = {}) {
   const subs = await sdb.watch(onbatch)
 
   const header = await chat_view_header(subs[0])
-  const button = await black_button(subs[1])
+  const request_button = await button(subs[1])
 
-  request_button_component.replaceWith(button)  
+  request_button_component.replaceWith(request_button)  
   header_component.append(header)
 
   return el
@@ -178,7 +178,7 @@ function fallback_module() {
     api,
     _: {
       'chat_view_header': { $: '' },
-      'black_button': { $: '' },
+      'button': { $: '' },
     }
   }
 
@@ -193,7 +193,7 @@ function fallback_module() {
       0: opts.value
     }
 
-    const black_button = {
+    const button = {
       mapping: {
         style: 'style',
         data: 'data',
@@ -218,14 +218,14 @@ function fallback_module() {
       },
       _: {
         chat_view_header,
-        black_button,
+        button,
       }
     }
   }
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"black_button":2,"chat_view_header":4}],4:[function(require,module,exports){
+},{"STATE":1,"button":2,"chat_view_header":4}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -375,7 +375,7 @@ function fallback_module () {
 
               .contact-name {
                 font-size: 18px;
-                color: #222;
+                 color: #222;
               }
 
               .contact-code {
@@ -1020,6 +1020,195 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+module.exports = switch_account
+
+async function switch_account (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="component-label">Switch Account</div>  
+    <div class="switch-account-container"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.switch-account-container')
+
+  await sdb.watch(onbatch)
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const { btc, lightning  } = data[0]
+    row.innerHTML = `
+      <div class="container-title">
+        <div class="title">Switch Account</div>
+        <div class="close-icon">${dricons[0]}</div>   
+      </div>
+      <div class="account-container">
+        <div class="btc-icon">${dricons[1]}BTC</div>
+        <div class="btc-amount">${parseFloat(btc).toFixed(4)}</div>       
+      </div>
+      <div class="account-container">
+        <div class="lightning-icon">${dricons[2]}Lightning</div>
+        <div class="lightning-amount">${parseFloat(lightning).toFixed(4)}</div>       
+      </div>
+` 
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'x.svg':{
+            '$ref': 'x.svg'
+          },
+          'btc.svg': {
+            '$ref': 'btc.svg'
+          },
+          'lightning.svg': {
+            '$ref': 'lightning.svg'
+          },
+        },
+        'style/': {
+          'style.css': {
+            raw: `
+              .component-label{
+                font-size: 18px;
+                font-weight: bold;
+                font-family: Arial, sans-serif;
+                margin-block: 10px;
+              }
+
+              .switch-account-container {
+                border: 1px solid #ccc;
+                border-radius: 10px;
+                padding: 16px;
+                width: 250px;
+                background: white;
+                font-family: Arial, sans-serif;
+                color: black;
+                margin-right: 20px;
+              }
+
+              .container-title{
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 20px;
+              }
+
+              .container-title svg{
+                width: 25px;
+                height: 25px;
+              }
+
+              .title{
+                font-size: 24px;
+              }
+
+              .account-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 16px;
+                padding-inline: 10px;
+                gap: 8px;
+                padding-block: 20px;
+                border-radius: 8px; /* Optional: for smooth edges */
+                transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+              }
+
+              .account-container:hover {
+                background-color: #f0f0f0ff;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                transform: translateY(-2px);
+                cursor: pointer;
+              }
+
+              .btc-icon,
+              .lightning-icon {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                color: #2e2e2e;
+                font-size: 18px;
+                white-space: nowrap;
+              }
+
+              .account-container svg {
+                width: 25px;
+                height: 25px;
+                display: inline-block;
+                vertical-align: middle;
+              }
+
+              .btc-amount,
+              .lightning-amount {
+                color: #2e2e2e;
+                font-size: 18px;
+                margin-left: 8px;
+                white-space: nowrap;
+              }
+
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
+},{"STATE":1}],10:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 const transaction_row = require('transaction_row')
 
 module.exports = transaction_history
@@ -1130,7 +1319,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":11}],10:[function(require,module,exports){
+},{"STATE":1,"transaction_row":12}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1238,7 +1427,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":11}],11:[function(require,module,exports){
+},{"STATE":1,"transaction_row":12}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1387,7 +1576,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],12:[function(require,module,exports){
+},{"STATE":1}],13:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -1399,7 +1588,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":13}],13:[function(require,module,exports){
+},{"./page":14}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -1409,6 +1598,8 @@ const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
 const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
+const switch_account = require('../src/node_modules/switch_account')
+
 
 const state = {}
 
@@ -1457,6 +1648,7 @@ async function main () {
   const transaction_history_component = await transaction_history(subs[2], protocol)
   const contacts_list_component = await contacts_list(subs[4], protocol)
   const chat_view_compoent = await chat_view(subs[6],protocol)
+  const switch_account_component = await switch_account(subs[8], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -1465,12 +1657,14 @@ async function main () {
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
+      <div id="switch-account-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
+  page.querySelector('#switch-account-container').appendChild(switch_account_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -1684,8 +1878,21 @@ function fallback_module () {
             }
           },
           
+          '../src/node_modules/switch_account': {
+            $: '',
+            0: {
+                btc: 0.9862,
+                lightning: 0.9000
+            },
+            mapping: {
+              style: 'style',
+              data: 'data',
+              icons: 'icons'
+            }
+          },
+          
        }
     }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":3,"../src/node_modules/contacts_list":6,"../src/node_modules/transaction_history":9,"../src/node_modules/transaction_list":10}]},{},[12]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":3,"../src/node_modules/contacts_list":6,"../src/node_modules/switch_account":9,"../src/node_modules/transaction_history":10,"../src/node_modules/transaction_list":11}]},{},[13]);

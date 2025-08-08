@@ -6,6 +6,8 @@ const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
 const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
+const switch_account = require('../src/node_modules/switch_account')
+
 
 const state = {}
 
@@ -54,6 +56,7 @@ async function main () {
   const transaction_history_component = await transaction_history(subs[2], protocol)
   const contacts_list_component = await contacts_list(subs[4], protocol)
   const chat_view_compoent = await chat_view(subs[6],protocol)
+  const switch_account_component = await switch_account(subs[8], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -62,12 +65,14 @@ async function main () {
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
+      <div id="switch-account-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
+  page.querySelector('#switch-account-container').appendChild(switch_account_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -278,6 +283,19 @@ function fallback_module () {
             mapping: {
               style: 'style',
               data: 'data'
+            }
+          },
+          
+          '../src/node_modules/switch_account': {
+            $: '',
+            0: {
+                btc: 0.9862,
+                lightning: 0.9000
+            },
+            mapping: {
+              style: 'style',
+              data: 'data',
+              icons: 'icons'
             }
           },
           
