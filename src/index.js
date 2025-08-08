@@ -8,3 +8,6 @@ module.exports.square_button = require('square_button')
 module.exports.button = require('button/button')
 module.exports.chat_view_header = require('chat_view_header')
 module.exports.chat_view = require('chat_view')
+module.exports.switch_account = require('switch_account')
+module.exports.send_btc = require('send_btc')
+

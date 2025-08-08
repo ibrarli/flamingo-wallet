@@ -23,11 +23,11 @@ async function button (opts = {}) {
 
 
   shadow.innerHTML = `
-    <button class="black-btn"></button>
+    <button class="btn"></button>
     <style></style>
   `
   const style = shadow.querySelector('style')
-  const btn_text = shadow.querySelector('.black-btn')
+  const btn_text = shadow.querySelector('.btn')
 
   await sdb.watch(onbatch)
 
@@ -72,7 +72,7 @@ function fallback_module () {
         'style/': {
           'style.css': {
             raw: `
-              .black-btn {
+              .btn {
                 width: 100%; /* Fill the container */
                 height: 50px;
                 background-color: #000;
@@ -87,11 +87,9 @@ function fallback_module () {
                 margin: 0px;
               }
 
-              .black-btn:hover {
+              .btn:hover {
                 background-color: #3f3f3fff;
               }
-
-           
             `
           }
         },
@@ -771,7 +769,138 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":5,"search_bar":7,"square_button":8}],7:[function(require,module,exports){
+},{"STATE":1,"contact_row":5,"search_bar":8,"square_button":10}],7:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = input_field
+
+async function input_field (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+  
+  const on = {
+    style: inject,
+    data: ondata,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="input-field-container"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const container = shadow.querySelector('.input-field-container')
+  
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const { header, placeholder, address } = data[0]
+    container.innerHTML = `
+        <div class="contact-header">${header}</div>
+        <div class="input-field">
+          <input
+            type="text"
+            class="search-input"
+            placeholder="${placeholder}"
+          />
+        </div>
+      ` 
+      
+    const input = container.querySelector('.search-input')
+
+    input.addEventListener('focus', () => {
+      if (address) {
+        input.value = address
+      }
+    })
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'style/': {
+          'style.css': {
+            raw: `
+              .contact-header {
+                font-size: 16px;
+                color: #666;
+                margin-bottom: 8px;
+              }
+
+              .input-field {
+                width: 100%;
+                display: flex;
+              }
+
+              .search-input {
+                width: 100%;
+                padding: 15px 12px;
+                font-size: 18px;
+                border: 1px solid #ccc; 
+                border-radius: 6px; 
+                background-color: #f7f7f7ff; 
+                outline: none;
+                transition: all 0.3s ease;
+              }
+
+              .search-input::placeholder {
+                color: #555; 
+              }
+
+              .search-input:hover {
+                border-color: #999;
+                background-color: #eeeeee; 
+              }
+
+              .search-input:focus {
+                border-color: #666;
+                background-color: #ffffff; 
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          },
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
+},{"STATE":1}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -898,7 +1027,158 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],8:[function(require,module,exports){
+},{"STATE":1}],9:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const send_button = require('button')
+const address_input = require('input_field')
+
+module.exports = send_btc
+
+async function send_btc(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="component-label">Send BTC</div>
+    <div class="send-btc-container">
+      <div class="send-btc-header">  
+        <div class="title-container"> 
+          <div class="send-btc-header">Send BTC</div>
+          <div class="btc-icon"></div>
+        </div>  
+        <div class="x-icon"></div>
+      </div>
+      <div class="address-input"></div>
+      <div class="send_button"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const send_button_component = shadow.querySelector('.send_button')
+  const address_input_component = shadow.querySelector('.address-input')
+
+  const subs = await sdb.watch(onbatch)
+
+  const button_component = await send_button(subs[0])
+  const address_component = await address_input(subs[1])
+
+  send_button_component.append(button_component)
+  address_input_component.append(address_component)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject (data) {
+    dricons = data
+
+    const btc_icon = shadow.querySelector('.btc-icon')
+    const x_icon = shadow.querySelector('.x-icon')
+
+    btc_icon.innerHTML = dricons[0]
+    x_icon.innerHTML = dricons[1]
+  }
+
+  async function ondata(data) {
+    
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'button': { $: '' },
+      'input_field': { $: '' }
+    }
+  }
+
+  function api(opts) {
+    
+    const button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      0: {
+        label: 'Send'
+      }    
+    }
+    
+      
+    const input_field = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      1: {
+        header: 'Address',
+        placeholder: 'Tap to past your address',
+        address: 'oiyqwr02816r0175915ijr0912740921u409re2109ru20194',
+      }    
+    }
+
+    return {
+      drive: {
+        'icons/': {
+          'btc.svg': {
+            '$ref': 'btc.svg'
+          },
+          'x.svg': {
+            '$ref': 'x.svg'
+          },
+        },
+        'style/': {
+          'send_btc.css': {
+            '$ref': 'send_btc.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        button,
+        input_field
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
+},{"STATE":1,"button":2,"input_field":7}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1014,7 +1294,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],9:[function(require,module,exports){
+},{"STATE":1}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1127,7 +1407,6 @@ function fallback_module () {
                 background: white;
                 font-family: Arial, sans-serif;
                 color: black;
-                margin-right: 20px;
               }
 
               .container-title{
@@ -1203,7 +1482,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],10:[function(require,module,exports){
+},{"STATE":1}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1319,7 +1598,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":12}],11:[function(require,module,exports){
+},{"STATE":1,"transaction_row":14}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1427,7 +1706,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":12}],12:[function(require,module,exports){
+},{"STATE":1,"transaction_row":14}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1576,7 +1855,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],13:[function(require,module,exports){
+},{"STATE":1}],15:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -1588,7 +1867,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":14}],14:[function(require,module,exports){
+},{"./page":16}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -1599,7 +1878,7 @@ const transaction_history = require('../src/node_modules/transaction_history')
 const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
-
+const send_btc = require('../src/node_modules/send_btc')
 
 const state = {}
 
@@ -1649,6 +1928,8 @@ async function main () {
   const contacts_list_component = await contacts_list(subs[4], protocol)
   const chat_view_compoent = await chat_view(subs[6],protocol)
   const switch_account_component = await switch_account(subs[8], protocol)
+  const send_btc_component = await send_btc(subs[10], protocol)
+
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -1658,6 +1939,7 @@ async function main () {
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div id="switch-account-container"></div>
+      <div id="send-btc-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -1665,6 +1947,8 @@ async function main () {
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
+  page.querySelector('#send-btc-container').appendChild(send_btc_component)
+
 
   document.body.append(page)
   console.log("Page mounted")
@@ -1718,181 +2002,190 @@ function fallback_module () {
               data: 'data'
             }
           },
-      '../src/node_modules/transaction_history': {
+    '../src/node_modules/transaction_history': {
+      $: '',
+      0: {
+      value: [
+              {
+                dateString: "2025-08-01",
+                tid: "Luis fedrick",
+                ttime: "11:30 AM",
+                tamount: "+ 0.02456",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-08-01",
+                tid: "3TgmbHfn...455p",
+                ttime: "02:15 PM",
+                tamount: "+ 0.03271",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-08-01",
+                tid: "Mark Kevin",
+                ttime: "03:45 PM",
+                tamount: "- 0.00421",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-31",
+                tid: "7RwmbHfn...455p",
+                ttime: "04:45 PM",
+                tamount: "- 0.03791",
+                avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-31",
+                tid: "Luis fedrick",
+                ttime: "11:30 AM",
+                tamount: "+ 0.02456",
+                avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-31",
+                tid: "3TgmbHfn...455p",
+                ttime: "02:15 PM",
+                tamount: "+ 0.03271",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-28",
+                tid: "Mark Kevin",
+                ttime: "03:45 PM",
+                tamount: "- 0.00421",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-08-01",
+                tid: "7RwmbHfn...455p",
+                ttime: "04:45 PM",
+                tamount: "- 0.03791",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-28",
+                tid: "Luis fedrick",
+                ttime: "11:30 AM",
+                tamount: "+ 0.02456",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-29",
+                tid: "3TgmbHfn...455p",
+                ttime: "02:15 PM",
+                tamount: "+ 0.03271",
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-07-30",
+                tid: "Mark Kevin",
+                ttime: "03:45 PM",
+                tamount: "- 0.00421",
+                avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+              },
+              {
+                dateString: "2025-05-10",
+                tid: "7RwmbHfn...455p",
+                ttime: "04:45 PM",
+                tamount: "- 0.03791",
+                avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+              }
+            ]
+          },
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        },
+  
+        '../src/node_modules/contacts_list': {
+          $: '',
+          0: {
+            value: [
+              
+              {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'Mark Kevin',
+                message: 'Payment Received successfully',
+                time: '3 hr',
+                unread: 5,
+                online: true,
+                lightining: true
+              },
+              {
+                avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'David Clark',
+                message: 'You have a new message from Mark',
+                time: '1 hr',
+                unread: 5,
+                online: false,
+                lightining: false
+              },
+              {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'David Clark',
+                message: 'Received funds',
+                time: '1 hr',
+                unread: 0,
+                online: true,
+                lightining: true
+              },
+              {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'Sara Ahmed',
+                message: 'Invoice sent',
+                time: '2 hr',
+                unread: 0,
+                online: false,
+                lightining: false
+              }
+            ]
+          },
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        },
+
+        '../src/node_modules/chat_view': {
+          $: '',
+          0: {
+            value: {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: "David Clark",
+              code: "1FfmbHfn...455p"
+            }
+          },
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        },
+        
+        '../src/node_modules/switch_account': {
+          $: '',
+          0: {
+            btc: 0.9862,
+            lightning: 0.9000
+          },
+          mapping: {
+            style: 'style',
+            data: 'data',
+            icons: 'icons'
+          }
+        },
+        '../src/node_modules/send_btc': {
         $: '',
         0: {
-        value: [
-                {
-                  dateString: "2025-08-01",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-08-01",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-08-01",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-31",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-31",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-31",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-28",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-08-01",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-28",
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-29",
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-07-30",
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  dateString: "2025-05-10",
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                }
-              ]
-            },
-            mapping: {
-              style: 'style',
-              data: 'data'
-            }
-          },
-   
-          '../src/node_modules/contacts_list': {
-            $: '',
-            0: {
-              value: [
-                
-                {
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
-                  name: 'Mark Kevin',
-                  message: 'Payment Received successfully',
-                  time: '3 hr',
-                  unread: 5,
-                  online: true,
-                  lightining: true
-                },
-                {
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
-                  name: 'David Clark',
-                  message: 'You have a new message from Mark',
-                  time: '1 hr',
-                  unread: 5,
-                  online: false,
-                  lightining: false
-                },
-                {
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-                  name: 'David Clark',
-                  message: 'Received funds',
-                  time: '1 hr',
-                  unread: 0,
-                  online: true,
-                  lightining: true
-                },
-                {
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
-                  name: 'Sara Ahmed',
-                  message: 'Invoice sent',
-                  time: '2 hr',
-                  unread: 0,
-                  online: false,
-                  lightining: false
-                }
-              ]
-            },
-            mapping: {
-              style: 'style',
-              data: 'data'
-            }
-          },
-
-          '../src/node_modules/chat_view': {
-            $: '',
-            0: {
-              value: {
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: "David Clark",
-                code: "1FfmbHfn...455p"
-              }
-            },
-            mapping: {
-              style: 'style',
-              data: 'data'
-            }
-          },
-          
-          '../src/node_modules/switch_account': {
-            $: '',
-            0: {
-                btc: 0.9862,
-                lightning: 0.9000
-            },
-            mapping: {
-              style: 'style',
-              data: 'data',
-              icons: 'icons'
-            }
-          },
-          
-       }
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
     }
+  }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":3,"../src/node_modules/contacts_list":6,"../src/node_modules/switch_account":9,"../src/node_modules/transaction_history":10,"../src/node_modules/transaction_list":11}]},{},[13]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":3,"../src/node_modules/contacts_list":6,"../src/node_modules/send_btc":9,"../src/node_modules/switch_account":11,"../src/node_modules/transaction_history":12,"../src/node_modules/transaction_list":13}]},{},[15]);
