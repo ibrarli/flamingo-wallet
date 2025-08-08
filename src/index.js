@@ -10,4 +10,4 @@ module.exports.chat_view_header = require('chat_view_header')
 module.exports.chat_view = require('chat_view')
 module.exports.switch_account = require('switch_account')
 module.exports.send_btc = require('send_btc')
-
+module.exports.input_field = require('input_field')
