@@ -8,6 +8,7 @@ const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
+const btc_input_card = require('../src/node_modules/btc_input_card')
 
 const state = {}
 
@@ -58,7 +59,7 @@ async function main () {
   const chat_view_compoent = await chat_view(subs[6],protocol)
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
-
+  const btc_input_card_component = await btc_input_card(subs[12], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -68,7 +69,10 @@ async function main () {
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div id="switch-account-container"></div>
-      <div id="send-btc-container"></div>
+      <div style="display:flex; gap:20px; flex-direction:column;  font-family: Arial, sans-serif;"> 
+        <div id="send-btc-container"></div>
+        <div id="btc-input-container" style="width:400px;"></div>    
+      </div
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -77,7 +81,7 @@ async function main () {
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
-
+  page.querySelector('#btc-input-container').appendChild(btc_input_card_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -305,7 +309,23 @@ function fallback_module () {
         },
         '../src/node_modules/send_btc': {
         $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+       '../src/node_modules/btc_input_card': {
+        $: '',
         0: {
+          currency: "USD",
+          amount: "0.0789",
+          usdValue: "2000",
+          valid: false,
+          errorMessage: "Insufficient balance, please add funds to you’re account",
+          balance: "0.00179",
+          showBalance: true
         },
         mapping: {
           style: 'style',

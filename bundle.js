@@ -6,6 +6,215 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+module.exports = btc_input_card
+
+async function btc_input_card (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+  
+  const on = {
+    style: inject,
+    data: ondata,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="btc-card"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const container = shadow.querySelector('.btc-card')
+  
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const {
+      currency = "BTC",
+      amount = "0.0000",
+      usdValue = "0",
+      valid = true,
+      errorMessage = "",
+      balance = "",
+      showBalance = false
+    } = data[0]
+
+    container.innerHTML = `
+      <div class="header">
+        <span class="toggle ${currency === 'BTC' ? 'active' : ''}">BTC</span>
+        <span class="toggle ${currency === 'USD' ? 'active' : ''}">USD</span>
+      </div>
+
+      <div class="main-area"> 
+        <div class="amount-row">
+          <div class="amount">${amount}</div>
+          <div class="actions">
+            <button class="close-btn">✕</button>
+            <button class="btn">Half</button>
+            <button class="btn">All</button>
+          </div>
+        </div>
+        ${!valid ? `<div class="divider"></div><div class="error">${errorMessage}</div>` : ""}
+        ${showBalance ? `<div class="balance">Balance ${balance} BTC</div>` : ""}
+        <div class="usd-text">You are sending <strong>USD ${usdValue}$</strong></div>
+      </div>
+
+   
+    `
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'style/': {
+          'style.css': {
+            raw: `
+              .btc-card {
+                background: #f9f9f9;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 16px;
+                width: 100%;
+                box-sizing: border-box;
+                margin-top: 15px;
+                margin-bottom: 30px;
+              }
+
+              .header {
+                display: flex;
+                gap: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 10px;
+              }
+
+              .toggle {
+                cursor: pointer;
+                color: #888;
+                padding-bottom: 2px;
+              }
+
+              .toggle.active {
+                color: #000;
+                border-bottom: 2px solid #000;
+              }
+
+              .main-area{
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 110px;              
+              }
+              
+              .amount-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 6px;
+              }
+              .amount {
+                font-size: 30px;
+                font-weight: 500;
+              }
+              .actions {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+              }
+              .btn {
+                border: none;
+                background: #000;
+                color: #fff;
+                padding: 3px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                border-radius: 3px;
+              }
+
+              .close-btn {
+                background: #000;
+                border: none;
+                color: #fff;
+                font-size: 12px;
+                cursor: pointer;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+              }
+
+              .divider {
+                width: 100%;
+                height: 1px;
+                background-color: #000; 
+                margin: 2px 0; 
+              }
+
+              .error {
+                color: #666;
+                font-size: 13px;
+                padding-block:10px;
+              }
+
+              .balance {
+                font-size: 12px;
+                color: #666;
+                padding-bottom:10px;
+              }
+          
+              .usd-text {
+                font-size: 14px;
+                margin-top: auto;
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          },
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/btc_input_card/btc_input_card.js")
+},{"STATE":1}],3:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 module.exports = button
 
 async function button (opts = {}) {
@@ -104,7 +313,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/button/button.js")
-},{"STATE":1}],3:[function(require,module,exports){
+},{"STATE":1}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -223,7 +432,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"button":2,"chat_view_header":4}],4:[function(require,module,exports){
+},{"STATE":1,"button":3,"chat_view_header":5}],5:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -398,7 +607,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
-},{"STATE":1}],5:[function(require,module,exports){
+},{"STATE":1}],6:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -628,7 +837,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],6:[function(require,module,exports){
+},{"STATE":1}],7:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -769,7 +978,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":5,"search_bar":8,"square_button":10}],7:[function(require,module,exports){
+},{"STATE":1,"contact_row":6,"search_bar":9,"square_button":11}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -900,7 +1109,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],8:[function(require,module,exports){
+},{"STATE":1}],9:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1027,7 +1236,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],9:[function(require,module,exports){
+},{"STATE":1}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1035,6 +1244,7 @@ const { sdb, get } = statedb(fallback_module)
 
 const send_button = require('button')
 const address_input = require('input_field')
+const btc_input_card = require('btc_input_card')
 
 module.exports = send_btc
 
@@ -1064,6 +1274,7 @@ async function send_btc(opts = {}) {
         <div class="x-icon"></div>
       </div>
       <div class="address-input"></div>
+      <div class="btc-input-card"></div>
       <div class="send_button"></div>
     </div>
     <style></style>
@@ -1072,14 +1283,17 @@ async function send_btc(opts = {}) {
   const style = shadow.querySelector('style')
   const send_button_component = shadow.querySelector('.send_button')
   const address_input_component = shadow.querySelector('.address-input')
+  const btc_input_card_component = shadow.querySelector('.btc-input-card')
 
   const subs = await sdb.watch(onbatch)
 
   const button_component = await send_button(subs[0])
   const address_component = await address_input(subs[1])
+  const btc_component = await btc_input_card(subs[2])
 
   send_button_component.append(button_component)
   address_input_component.append(address_component)
+  btc_input_card_component.append(btc_component)
 
   return el
 
@@ -1119,7 +1333,8 @@ function fallback_module() {
     api,
     _: {
       'button': { $: '' },
-      'input_field': { $: '' }
+      'input_field': { $: '' },
+      'btc_input_card': { $: '' },
     }
   }
 
@@ -1148,6 +1363,22 @@ function fallback_module() {
       }    
     }
 
+    const btc_input_card = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      2: {
+        currency: "BTC",
+        amount: "0.0016",
+        usdValue: "200",
+        valid: true,
+        errorMessage: "",
+        balance: "",
+        showBalance: false
+      }    
+    }
+
     return {
       drive: {
         'icons/': {
@@ -1171,14 +1402,15 @@ function fallback_module() {
       },
       _: {
         button,
-        input_field
+        input_field,
+        btc_input_card
       }
     }
   }
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"button":2,"input_field":7}],10:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":2,"button":3,"input_field":8}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1294,7 +1526,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],11:[function(require,module,exports){
+},{"STATE":1}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1482,7 +1714,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],12:[function(require,module,exports){
+},{"STATE":1}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1598,7 +1830,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":14}],13:[function(require,module,exports){
+},{"STATE":1,"transaction_row":15}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1706,7 +1938,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":14}],14:[function(require,module,exports){
+},{"STATE":1,"transaction_row":15}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1855,7 +2087,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],15:[function(require,module,exports){
+},{"STATE":1}],16:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -1867,7 +2099,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":16}],16:[function(require,module,exports){
+},{"./page":17}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -1879,6 +2111,7 @@ const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
+const btc_input_card = require('../src/node_modules/btc_input_card')
 
 const state = {}
 
@@ -1929,7 +2162,7 @@ async function main () {
   const chat_view_compoent = await chat_view(subs[6],protocol)
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
-
+  const btc_input_card_component = await btc_input_card(subs[12], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -1939,7 +2172,10 @@ async function main () {
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div id="switch-account-container"></div>
-      <div id="send-btc-container"></div>
+      <div style="display:flex; gap:20px; flex-direction:column;  font-family: Arial, sans-serif;"> 
+        <div id="send-btc-container"></div>
+        <div id="btc-input-container" style="width:400px;"></div>    
+      </div
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -1948,7 +2184,7 @@ async function main () {
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
-
+  page.querySelector('#btc-input-container').appendChild(btc_input_card_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -2176,7 +2412,23 @@ function fallback_module () {
         },
         '../src/node_modules/send_btc': {
         $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+       '../src/node_modules/btc_input_card': {
+        $: '',
         0: {
+          currency: "USD",
+          amount: "0.0789",
+          usdValue: "2000",
+          valid: false,
+          errorMessage: "Insufficient balance, please add funds to you’re account",
+          balance: "0.00179",
+          showBalance: true
         },
         mapping: {
           style: 'style',
@@ -2188,4 +2440,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":3,"../src/node_modules/contacts_list":6,"../src/node_modules/send_btc":9,"../src/node_modules/switch_account":11,"../src/node_modules/transaction_history":12,"../src/node_modules/transaction_list":13}]},{},[15]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_input_card":2,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/send_btc":10,"../src/node_modules/switch_account":12,"../src/node_modules/transaction_history":13,"../src/node_modules/transaction_list":14}]},{},[16]);
