@@ -50,38 +50,137 @@ async function btc_input_card (opts = {}) {
   }
 
   async function ondata (data) {
-    const {
+    let {
       currency = "BTC",
-      amount = "0.0000",
-      usdValue = "0",
-      valid = true,
-      errorMessage = "",
-      balance = "",
-      showBalance = false
+      amount = 0,
+      usdValue: usd_value = 0,
+      balance = 0, 
+      showBalance = true
     } = data[0]
+
+    const EXCHANGE_RATE = 120000 
 
     container.innerHTML = `
       <div class="header">
-        <span class="toggle ${currency === 'BTC' ? 'active' : ''}">BTC</span>
-        <span class="toggle ${currency === 'USD' ? 'active' : ''}">USD</span>
+        <span class="toggle ${currency === 'BTC' ? 'active' : ''}" data-currency="BTC">BTC</span>
+        <span class="toggle ${currency === 'USD' ? 'active' : ''}" data-currency="USD">USD</span>
       </div>
 
       <div class="main-area"> 
         <div class="amount-row">
-          <div class="amount">${amount}</div>
+          <input type="number" min="0" step="0.0001" value="${currency === 'BTC' ? amount : usd_value}" class="amount-input" />
           <div class="actions">
             <button class="close-btn">✕</button>
-            <button class="btn">Half</button>
-            <button class="btn">All</button>
+            <button class="btn half-btn">Half</button>
+            <button class="btn all-btn">All</button>
           </div>
         </div>
-        ${!valid ? `<div class="divider"></div><div class="error">${errorMessage}</div>` : ""}
+        <div class="error"></div>
         ${showBalance ? `<div class="balance">Balance ${balance} BTC</div>` : ""}
-        <div class="usd-text">You are sending <strong>USD ${usdValue}$</strong></div>
+        <div class="usd-text">
+          You are sending 
+          <strong>
+            ${currency === 'BTC' ? `USD ${(amount * EXCHANGE_RATE).toFixed(2)}` : `${(usd_value / EXCHANGE_RATE).toFixed(4)} BTC`}
+          </strong>
+        </div>
       </div>
-
-   
     `
+
+    const amount_input = container.querySelector('.amount-input')
+    const half_btn = container.querySelector('.half-btn')
+    const all_btn = container.querySelector('.all-btn')
+    const btc_toggle = container.querySelector('[data-currency="BTC"]')
+    const usd_toggle = container.querySelector('[data-currency="USD"]')
+    const usd_text = container.querySelector('.usd-text strong')
+    const close_btn = container.querySelector('.close-btn')
+    const error_div = container.querySelector('.error')
+
+    function showError(msg) {
+      if (msg) {
+        error_div.innerHTML = `<div class="divider"></div>${msg}`
+      } else {
+        error_div.innerHTML = ""
+      }
+    }
+
+    function updateValues(newAmountBTC) {
+      amount = parseFloat(newAmountBTC) || 0
+      usd_value = (amount * EXCHANGE_RATE).toFixed(2)
+      if (amount > balance) {
+        showError("Insufficient balance, please add funds to your account")
+      } else {
+        showError("")
+      }
+    }
+
+    function updateDisplay(value, curr) {
+      amount_input.value = value
+      usd_text.textContent = curr === 'BTC'
+        ? `USD ${usd_value}`
+        : `${amount} BTC`
+      container.querySelectorAll('.toggle').forEach(t => t.classList.remove('active'))
+      container.querySelector(`[data-currency="${curr}"]`).classList.add('active')
+    }
+
+    btc_toggle.addEventListener('click', () => {
+      currency = 'BTC'
+      updateDisplay(amount, currency)
+    })
+
+    usd_toggle.addEventListener('click', () => {
+      currency = 'USD'
+      updateDisplay(usd_value, currency)
+    })
+
+    half_btn.addEventListener('click', () => {
+      amount = balance / 2
+      usd_value = (amount * EXCHANGE_RATE).toFixed(2)
+      updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
+      showError("")
+    })
+
+    all_btn.addEventListener('click', () => {
+      amount = balance
+      usd_value = (amount * EXCHANGE_RATE).toFixed(2)
+      updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
+      showError("")
+    })
+
+    close_btn.addEventListener('click', () => {
+      amount = 0
+      usd_value = 0
+      updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
+      showError("")
+    })
+
+   amount_input.addEventListener('input', () => {
+      let val = amount_input.value
+
+      if (val < 0) val = ''
+
+      if (val.includes('.')) {
+        const [int_part, dec_part] = val.split('.')
+        val = int_part + '.' + dec_part.slice(0, 4)
+      }
+
+      amount_input.value = val
+
+      if (currency === 'BTC') {
+        updateValues(val)
+      } else {
+        usd_value = parseFloat(val) || 0
+        amount = usd_value / EXCHANGE_RATE
+        
+        if (amount > balance) {
+          showError("Insufficient balance, please add funds to your account")
+        } else {
+          showError("")
+        }
+      }
+      usd_text.textContent = currency === 'BTC'
+        ? `USD ${usd_value}`
+        : `${amount.toFixed(4)} BTC`
+    })
   }
 }
 
@@ -138,9 +237,16 @@ function fallback_module () {
                 justify-content: space-between;
                 margin-bottom: 6px;
               }
-              .amount {
+              .amount-input {
                 font-size: 30px;
                 font-weight: 500;
+                width: 120px;
+                text-align: right;
+                border: none;
+                outline: none;
+                background: transparent;
+                text-align: right;
+           
               }
               .actions {
                 display: flex;
@@ -180,9 +286,9 @@ function fallback_module () {
               }
 
               .error {
-                color: #666;
+                color: #666; /* same as balance text */
                 font-size: 13px;
-                padding-block:10px;
+                padding-block: 6px;
               }
 
               .balance {
@@ -1370,13 +1476,11 @@ function fallback_module() {
       },
       2: {
         currency: "BTC",
-        amount: "0.0016",
-        usdValue: "200",
-        valid: true,
-        errorMessage: "",
-        balance: "",
-        showBalance: false
-      }    
+        amount: 0.0002,
+        usdValue: "",
+        balance: 0.0024, 
+        showBalance: true
+      }  
     }
 
     return {
@@ -2111,7 +2215,6 @@ const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
-const btc_input_card = require('../src/node_modules/btc_input_card')
 
 const state = {}
 
@@ -2162,7 +2265,6 @@ async function main () {
   const chat_view_compoent = await chat_view(subs[6],protocol)
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
-  const btc_input_card_component = await btc_input_card(subs[12], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -2172,10 +2274,7 @@ async function main () {
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div id="switch-account-container"></div>
-      <div style="display:flex; gap:20px; flex-direction:column;  font-family: Arial, sans-serif;"> 
-        <div id="send-btc-container"></div>
-        <div id="btc-input-container" style="width:400px;"></div>    
-      </div
+      <div id="send-btc-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -2184,7 +2283,6 @@ async function main () {
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
-  page.querySelector('#btc-input-container').appendChild(btc_input_card_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -2419,25 +2517,8 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-       '../src/node_modules/btc_input_card': {
-        $: '',
-        0: {
-          currency: "USD",
-          amount: "0.0789",
-          usdValue: "2000",
-          valid: false,
-          errorMessage: "Insufficient balance, please add funds to you’re account",
-          balance: "0.00179",
-          showBalance: true
-        },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_input_card":2,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/send_btc":10,"../src/node_modules/switch_account":12,"../src/node_modules/transaction_history":13,"../src/node_modules/transaction_list":14}]},{},[16]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/send_btc":10,"../src/node_modules/switch_account":12,"../src/node_modules/transaction_history":13,"../src/node_modules/transaction_list":14}]},{},[16]);
