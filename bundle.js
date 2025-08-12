@@ -166,7 +166,7 @@ async function btc_input_card (opts = {}) {
 
       if (val.includes('.')) {
         const [int_part, dec_part] = val.split('.')
-        val = int_part + '.' + dec_part.slice(0, 4)
+        val = int_part + '.' + dec_part.slice(0, 8)
       }
 
       amount_input.value = val
