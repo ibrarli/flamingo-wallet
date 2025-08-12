@@ -94,7 +94,8 @@ async function btc_input_card (opts = {}) {
     const usd_text = container.querySelector('.usd-text strong')
     const close_btn = container.querySelector('.close-btn')
     const error_div = container.querySelector('.error')
-
+    const toggles = container.querySelectorAll('.toggle')
+    
     function showError(msg) {
       if (msg) {
         error_div.innerHTML = `<div class="divider"></div>${msg}`
@@ -118,42 +119,47 @@ async function btc_input_card (opts = {}) {
       usd_text.textContent = curr === 'BTC'
         ? `USD ${usd_value}`
         : `${amount} BTC`
-      container.querySelectorAll('.toggle').forEach(t => t.classList.remove('active'))
-      container.querySelector(`[data-currency="${curr}"]`).classList.add('active')
+
+      toggles.forEach(t => t.classList.remove('active'))
+      if (curr === 'BTC') {
+        btc_toggle.classList.add('active')
+      } else {
+        usd_toggle.classList.add('active')
+      }
     }
 
-    btc_toggle.addEventListener('click', () => {
+    function onToggleBTC() {
       currency = 'BTC'
       updateDisplay(amount, currency)
-    })
+    }
 
-    usd_toggle.addEventListener('click', () => {
+    function onToggleUSD() {
       currency = 'USD'
       updateDisplay(usd_value, currency)
-    })
+    }
 
-    half_btn.addEventListener('click', () => {
+    function onHalfClick() {
       amount = balance / 2
       usd_value = (amount * EXCHANGE_RATE).toFixed(2)
       updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
       showError("")
-    })
+    }
 
-    all_btn.addEventListener('click', () => {
+    function onAllClick() {
       amount = balance
       usd_value = (amount * EXCHANGE_RATE).toFixed(2)
       updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
       showError("")
-    })
+    }
 
-    close_btn.addEventListener('click', () => {
+    function onCloseClick() {
       amount = 0
       usd_value = 0
       updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
       showError("")
-    })
+    }
 
-   amount_input.addEventListener('input', () => {
+    function onAmountInput() {
       let val = amount_input.value
 
       if (val < 0) val = ''
@@ -180,7 +186,14 @@ async function btc_input_card (opts = {}) {
       usd_text.textContent = currency === 'BTC'
         ? `USD ${usd_value}`
         : `${amount.toFixed(4)} BTC`
-    })
+    }
+    
+    btc_toggle.onclick = onToggleBTC
+    usd_toggle.onclick = onToggleUSD
+    half_btn.onclick = onHalfClick
+    all_btn.onclick = onAllClick
+    close_btn.onclick = onCloseClick
+    amount_input.oninput = onAmountInput 
   }
 }
 
