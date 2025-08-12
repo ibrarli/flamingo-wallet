@@ -163,10 +163,12 @@ async function btc_input_card (opts = {}) {
       let val = amount_input.value
 
       if (val < 0) val = ''
+      
+      if (val > 100000) val = '99999'
 
       if (val.includes('.')) {
-        const [int_part, dec_part] = val.split('.')
-        val = int_part + '.' + dec_part.slice(0, 8)
+        let [int_part, dec_part] = val.split('.')
+        val = int_part.slice(0,1) + '.' + dec_part.slice(0, 8)
       }
 
       amount_input.value = val
