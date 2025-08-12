@@ -6,6 +6,22 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+
+async function get_rate(from = 'btc', to = 'usd') {
+  let cachedRate = null
+  if (cachedRate) return cachedRate
+  
+  const rate = Number(await (await fetch(`https://api.price2sheet.com/raw/${from}/${to}`)).text())
+
+  if (!isNaN(rate) && rate > 0) {
+    cachedRate = rate
+  } else {
+    cachedRate = 0 
+  }
+
+  return cachedRate
+}
+
 module.exports = btc_input_card
 
 async function btc_input_card (opts = {}) {
@@ -58,7 +74,7 @@ async function btc_input_card (opts = {}) {
       showBalance = true
     } = data[0]
 
-    const EXCHANGE_RATE = 120000 
+    const EXCHANGE_RATE = await get_rate('btc', 'usd')
 
     container.innerHTML = `
       <div class="header">
