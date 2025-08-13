@@ -8,6 +8,7 @@ const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
+const receive_btc = require('../src/node_modules/receive_btc')
 
 const state = {}
 
@@ -58,6 +59,7 @@ async function main () {
   const chat_view_compoent = await chat_view(subs[6],protocol)
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
+  const receive_btc_component = await receive_btc(subs[12], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -68,6 +70,7 @@ async function main () {
       <div id="chat-view-container"></div>
       <div id="switch-account-container"></div>
       <div id="send-btc-container"></div>
+      <div id="receive-btc-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -76,6 +79,7 @@ async function main () {
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
+  page.querySelector('#receive-btc-container').appendChild(receive_btc_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -301,6 +305,7 @@ function fallback_module () {
             icons: 'icons'
           }
         },
+
         '../src/node_modules/send_btc': {
         $: '',
         0: '',
@@ -310,6 +315,16 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+      
+        '../src/node_modules/receive_btc': {
+        $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      }
     }
   }
 }
