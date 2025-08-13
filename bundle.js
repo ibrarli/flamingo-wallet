@@ -14,9 +14,10 @@ async function get_rate(from = 'btc', to = 'usd') {
   const rate = Number(await (await fetch(`https://api.price2sheet.com/raw/${from}/${to}`)).text())
 
   if (!isNaN(rate) && rate > 0) {
-    cachedRate = rate
+    cached_rate = rate
+    console.log("api is working")
   } else {
-    cachedRate = 0 
+    console.log("api is returning null value")
   }
 
   return cached_rate
@@ -291,7 +292,7 @@ function fallback_module () {
                 font-size: 30px;
                 font-weight: 500;
                 flex: 1;
-                text-align: right;
+                text-align: left;
                 border: none;
                 outline: none;
                 background: transparent;
@@ -1136,7 +1137,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":6,"search_bar":9,"square_button":11}],8:[function(require,module,exports){
+},{"STATE":1,"contact_row":6,"search_bar":11,"square_button":13}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1273,6 +1274,228 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+module.exports = qr_code
+
+async function qr_code(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="qr-container"></div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const qrContainer = shadow.querySelector('.qr-container')
+
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+    const {address} = data[0]
+    console.log('QR-Code address:', address)
+    await render_qr_code(address)
+  }
+
+  async function render_qr_code(address) {
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(address)}`
+    qrContainer.innerHTML = `<img src="${qrApiUrl}" alt="QR Code" width="200" height="200">`
+  }
+}
+
+function fallback_module() {
+  return {
+    api
+  }
+
+  function api(opts) {
+    return {
+      drive: {
+        'style/': {
+          'qr_code.css': {
+            raw: ``
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
+},{"STATE":1}],10:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const address_input = require('input_field')
+const qr_code = require('qr_code') 
+
+module.exports = receive_btc
+
+async function receive_btc(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="component-label">Receive BTC</div>
+    <div class="receive-btc-container">
+      <div class="btc-icon"></div> 
+      <div class="qr-code"></div> 
+      <div class="address-input"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const address_input_component = shadow.querySelector('.address-input')
+  const qr_code_component = shadow.querySelector('.qr-code')
+
+  const subs = await sdb.watch(onbatch)
+  
+  const qr_component = await qr_code(subs[0])
+  const address_component = await address_input(subs[1])
+
+  address_input_component.append(address_component)
+  qr_code_component.append(qr_component)
+
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+    const btc_icon = shadow.querySelector('.btc-icon')
+    btc_icon.innerHTML = dricons[0]
+  }
+
+  async function ondata(data) {
+
+  }
+}
+
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'input_field': { $: '' },
+      'qr_code': { $: '' },
+    }
+  }
+
+  function api(opts) {
+    const qr_code = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      0: {
+        address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT', 
+      }    
+    }
+
+    const input_field = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      1: {
+        header: 'Your bitcoin address',
+        placeholder: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+        address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+      }    
+    }
+
+    return {
+      drive: {
+        'icons/': {
+          'btc.svg': {
+            '$ref': 'btc.svg'
+          },
+        },
+        'style/': {
+          'receive_btc.css': {
+            '$ref': 'receive_btc.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        qr_code,
+        input_field
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
+},{"STATE":1,"input_field":8,"qr_code":9}],11:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 module.exports = search_bar
 
 async function search_bar (opts = {}) {
@@ -1394,7 +1617,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],10:[function(require,module,exports){
+},{"STATE":1}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1562,7 +1785,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":2,"button":3,"input_field":8}],11:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":2,"button":3,"input_field":8}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1678,7 +1901,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],12:[function(require,module,exports){
+},{"STATE":1}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1866,7 +2089,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],13:[function(require,module,exports){
+},{"STATE":1}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1982,7 +2205,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":15}],14:[function(require,module,exports){
+},{"STATE":1,"transaction_row":17}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2090,7 +2313,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":15}],15:[function(require,module,exports){
+},{"STATE":1,"transaction_row":17}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2239,7 +2462,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],16:[function(require,module,exports){
+},{"STATE":1}],18:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -2251,7 +2474,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":17}],17:[function(require,module,exports){
+},{"./page":19}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -2263,6 +2486,7 @@ const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
+const receive_btc = require('../src/node_modules/receive_btc')
 
 const state = {}
 
@@ -2313,6 +2537,7 @@ async function main () {
   const chat_view_compoent = await chat_view(subs[6],protocol)
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
+  const receive_btc_component = await receive_btc(subs[12], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -2323,6 +2548,7 @@ async function main () {
       <div id="chat-view-container"></div>
       <div id="switch-account-container"></div>
       <div id="send-btc-container"></div>
+      <div id="receive-btc-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -2331,6 +2557,7 @@ async function main () {
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
+  page.querySelector('#receive-btc-container').appendChild(receive_btc_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -2556,6 +2783,7 @@ function fallback_module () {
             icons: 'icons'
           }
         },
+
         '../src/node_modules/send_btc': {
         $: '',
         0: '',
@@ -2565,8 +2793,18 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+      
+        '../src/node_modules/receive_btc': {
+        $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      }
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/send_btc":10,"../src/node_modules/switch_account":12,"../src/node_modules/transaction_history":13,"../src/node_modules/transaction_list":14}]},{},[16]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/receive_btc":10,"../src/node_modules/send_btc":12,"../src/node_modules/switch_account":14,"../src/node_modules/transaction_history":15,"../src/node_modules/transaction_list":16}]},{},[18]);
