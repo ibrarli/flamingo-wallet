@@ -8,18 +8,18 @@ const { sdb, get } = statedb(fallback_module)
 
 
 async function get_rate(from = 'btc', to = 'usd') {
-  let cachedRate = null
-  if (cachedRate) return cachedRate
+  let cached_rate = null
+  if (cached_rate) return cached_rate
   
   const rate = Number(await (await fetch(`https://api.price2sheet.com/raw/${from}/${to}`)).text())
 
   if (!isNaN(rate) && rate > 0) {
-    cachedRate = rate
+    cached_rate = rate
   } else {
-    cachedRate = 0 
+    cached_rate = 0 
   }
 
-  return cachedRate
+  return cached_rate
 }
 
 module.exports = btc_input_card
@@ -68,7 +68,7 @@ async function btc_input_card (opts = {}) {
   async function ondata (data) {
     let {
       currency = "BTC",
-      amount = 0,
+      amount = 0.0000,
       usdValue: usd_value = 0,
       balance = 0, 
       showBalance = true
@@ -176,36 +176,53 @@ async function btc_input_card (opts = {}) {
     }
 
     function onAmountInput() {
-      let val = amount_input.value
+      let val = amount_input.value;
 
-      if (val < 0) val = ''
-      
-      if (val > 100000) val = '99999'
+      if (val < 0) val = '';
+
+      if (val === "" || isNaN(val)) {
+        val = "0";
+      }
 
       if (val.includes('.')) {
-        let [int_part, dec_part] = val.split('.')
-        val = int_part.slice(0,1) + '.' + dec_part.slice(0, 8)
-      }
-
-      amount_input.value = val
-
-      if (currency === 'BTC') {
-        updateValues(val)
-      } else {
-        usd_value = parseFloat(val) || 0
-        amount = usd_value / EXCHANGE_RATE
-        
-        if (amount > balance) {
-          showError("Insufficient balance, please add funds to your account")
+        let [int_part, dec_part] = val.split('.');
+        if (currency === 'BTC') {
+          int_part = int_part.slice(0, 5); // Limited to 99,999 BTC
+          dec_part = dec_part.slice(0, 8);  // Lowest denomination is 0.00000001 BTC
         } else {
-          showError("")
+          int_part = int_part.slice(0, 10); // Limited to 1 billion USD
+          dec_part = dec_part.slice(0, 1); // Lowest denomination is 0.1 USD
+        }
+        val = int_part + (dec_part ? '.' + dec_part : '');
+      }else {
+        if (currency === 'BTC') {
+          val = val.slice(0, 5);
+        } else {
+          val = val.slice(0, 10);
         }
       }
+
+      amount_input.value = val;
+
+      if (currency === 'BTC') {
+        amount = parseFloat(val) || 0;
+        usd_value = (amount * EXCHANGE_RATE).toFixed(2);
+      } else {
+        usd_value = parseFloat(val) || 0;
+        amount = +(usd_value / EXCHANGE_RATE).toFixed(8); 
+      }
+
+      if (amount > balance) {
+        showError("Insufficient balance, please add funds to your account");
+      } else {
+        showError("");
+      }
+
       usd_text.textContent = currency === 'BTC'
         ? `USD ${usd_value}`
-        : `${amount.toFixed(4)} BTC`
+        : `${amount.toFixed(8)} BTC`;
     }
-    
+
     btc_toggle.onclick = onToggleBTC
     usd_toggle.onclick = onToggleUSD
     half_btn.onclick = onHalfClick
@@ -267,23 +284,27 @@ function fallback_module () {
                 align-items: center;
                 justify-content: space-between;
                 margin-bottom: 6px;
+                gap: 6px;
               }
+
               .amount-input {
                 font-size: 30px;
                 font-weight: 500;
-                width: 120px;
+                flex: 1;
                 text-align: right;
                 border: none;
                 outline: none;
                 background: transparent;
-                text-align: right;
-           
+                min-width: 0; 
               }
+
               .actions {
                 display: flex;
                 gap: 6px;
                 align-items: center;
+                flex-shrink: 0;
               }
+
               .btn {
                 border: none;
                 background: #000;
@@ -1506,11 +1527,7 @@ function fallback_module() {
         data: 'data',
       },
       2: {
-        currency: "BTC",
-        amount: 0.0002,
-        usdValue: "",
         balance: 0.0024, 
-        showBalance: true
       }  
     }
 
