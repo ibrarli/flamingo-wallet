@@ -8,18 +8,19 @@ const { sdb, get } = statedb(fallback_module)
 
 
 async function get_rate(from = 'btc', to = 'usd') {
-  let cachedRate = null
-  if (cachedRate) return cachedRate
+  let cached_rate = null
+  if (cached_rate) return cached_rate
   
   const rate = Number(await (await fetch(`https://api.price2sheet.com/raw/${from}/${to}`)).text())
 
   if (!isNaN(rate) && rate > 0) {
-    cachedRate = rate
+    cached_rate = rate
+    console.log("api is working")
   } else {
-    cachedRate = 0 
+    console.log("api is returning null value")
   }
 
-  return cachedRate
+  return cached_rate
 }
 
 module.exports = btc_input_card
