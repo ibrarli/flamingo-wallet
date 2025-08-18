@@ -72,7 +72,7 @@ async function btc_input_card (opts = {}) {
       amount = 0.0000,
       usdValue: usd_value = 0,
       balance = 0, 
-      showBalance = true
+      show_balance = true
     } = data[0]
 
     const EXCHANGE_RATE = await get_rate('btc', 'usd')
@@ -93,7 +93,7 @@ async function btc_input_card (opts = {}) {
           </div>
         </div>
         <div class="error"></div>
-        ${showBalance ? `<div class="balance">Balance ${balance} BTC</div>` : ""}
+        ${show_balance ? `<div class="balance">Balance ${balance} BTC</div>` : ""}
         <div class="usd-text">
           You are sending 
           <strong>
@@ -121,7 +121,7 @@ async function btc_input_card (opts = {}) {
       }
     }
 
-    function updateValues(newAmountBTC) {
+    function update_values(newAmountBTC) {
       amount = parseFloat(newAmountBTC) || 0
       usd_value = (amount * EXCHANGE_RATE).toFixed(2)
       if (amount > balance) {
@@ -131,7 +131,7 @@ async function btc_input_card (opts = {}) {
       }
     }
 
-    function updateDisplay(value, curr) {
+    function update_display(value, curr) {
       amount_input.value = value
       usd_text.textContent = curr === 'BTC'
         ? `USD ${usd_value}`
@@ -145,38 +145,38 @@ async function btc_input_card (opts = {}) {
       }
     }
 
-    function onToggleBTC() {
+    function on_toggle_btc() {
       currency = 'BTC'
-      updateDisplay(amount, currency)
+      update_display(amount, currency)
     }
 
-    function onToggleUSD() {
+    function on_toggle_usd() {
       currency = 'USD'
-      updateDisplay(usd_value, currency)
+      update_display(usd_value, currency)
     }
 
-    function onHalfClick() {
+    function on_half_click() {
       amount = balance / 2
       usd_value = (amount * EXCHANGE_RATE).toFixed(2)
-      updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
+      update_display(currency === 'BTC' ? amount : usd_value, currency)
       showError("")
     }
 
-    function onAllClick() {
+    function on_all_click() {
       amount = balance
       usd_value = (amount * EXCHANGE_RATE).toFixed(2)
-      updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
+      update_display(currency === 'BTC' ? amount : usd_value, currency)
       showError("")
     }
 
-    function onCloseClick() {
+    function on_close_click() {
       amount = 0
       usd_value = 0
-      updateDisplay(currency === 'BTC' ? amount : usd_value, currency)
+      update_display(currency === 'BTC' ? amount : usd_value, currency)
       showError("")
     }
 
-    function onAmountInput() {
+    function on_amount_input() {
       let val = amount_input.value;
 
       if (val < 0) val = '';
@@ -203,7 +203,6 @@ async function btc_input_card (opts = {}) {
         }
       }
 
-      amount_input.value = val;
 
       if (currency === 'BTC') {
         amount = parseFloat(val) || 0;
@@ -224,12 +223,12 @@ async function btc_input_card (opts = {}) {
         : `${amount.toFixed(8)} BTC`;
     }
 
-    btc_toggle.onclick = onToggleBTC
-    usd_toggle.onclick = onToggleUSD
-    half_btn.onclick = onHalfClick
-    all_btn.onclick = onAllClick
-    close_btn.onclick = onCloseClick
-    amount_input.oninput = onAmountInput 
+    btc_toggle.onclick = on_toggle_btc
+    usd_toggle.onclick = on_toggle_usd
+    half_btn.onclick = on_half_click
+    all_btn.onclick = on_all_click
+    close_btn.onclick = on_close_click
+    amount_input.oninput = on_amount_input 
   }
 }
 
@@ -1044,6 +1043,7 @@ async function contacts_list(opts = {}) {
   }
 
   for (let i = 2; i < subs.length; i++) {
+    console.log('contact row subs', subs[i])
     const contact = await contact_row(subs[i]) 
     contact_list_container.append(contact)
   }
@@ -1137,7 +1137,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":6,"search_bar":11,"square_button":13}],8:[function(require,module,exports){
+},{"STATE":1,"contact_row":6,"search_bar":12,"square_button":14}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1149,9 +1149,12 @@ async function input_field (opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
   
+  let dricons = [] // store icons globally for component
+
   const on = {
     style: inject,
     data: ondata,
+    icons: iconject,
   }
 
   const el = document.createElement('div')
@@ -1186,8 +1189,13 @@ async function input_field (opts = {}) {
     style.textContent = data[0]
   }
 
+  function iconject(data) {
+    dricons = data 
+  }
+
   async function ondata (data) {
-    const { header, placeholder, address } = data[0]
+    const { header, placeholder, address, icon } = data[0]
+
     container.innerHTML = `
         <div class="contact-header">${header}</div>
         <div class="input-field">
@@ -1196,6 +1204,9 @@ async function input_field (opts = {}) {
             class="search-input"
             placeholder="${placeholder}"
           />
+           ${icon 
+            ? `<span class="icon">${dricons[0] || ""}</span>` 
+            : ''}
         </div>
       ` 
       
@@ -1216,6 +1227,9 @@ function fallback_module () {
   function fallback_instance (opts) {
     return {
       drive: {
+        'icons/': {
+          'copy.svg': { '$ref': 'copy.svg' },
+        },
         'style/': {
           'style.css': {
             raw: `
@@ -1228,16 +1242,27 @@ function fallback_module () {
               .input-field {
                 width: 100%;
                 display: flex;
-              }
-
-              .search-input {
-                width: 100%;
-                padding: 15px 12px;
-                font-size: 18px;
+                align-items: center;
+                gap: 8px;
                 border: 1px solid #ccc; 
                 border-radius: 6px; 
                 background-color: #f7f7f7ff; 
+              }
+
+              .input-icon {
+                width: 20px;
+                height: 20px;
+                cursor: pointer;
+              }
+
+              .search-input {
+                flex: 1;
+                padding: 15px 12px;
+                font-size: 18px;
                 outline: none;
+                border: 0;
+                background-color: #f7f7f7ff; 
+                border-radius: 6px; 
                 transition: all 0.3s ease;
               }
 
@@ -1246,13 +1271,17 @@ function fallback_module () {
               }
 
               .search-input:hover {
-                border-color: #999;
                 background-color: #eeeeee; 
               }
 
               .search-input:focus {
                 border-color: #666;
                 background-color: #ffffff; 
+              }
+              
+              .icon{
+                padding: 5px;
+                cursor: pointer;
               }
             `
           }
@@ -1280,6 +1309,10 @@ async function qr_code(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
+  const { default: VanillaQR } = await import(
+    '/node_modules/vanillaqr/VanillaQR.module.js'
+  )
+
   const on = {
     style: inject,
     data: ondata
@@ -1294,7 +1327,7 @@ async function qr_code(opts = {}) {
   `
 
   const style = shadow.querySelector('style')
-  const qrContainer = shadow.querySelector('.qr-container')
+  const qr_container = shadow.querySelector('.qr-container')
 
   await sdb.watch(onbatch)
 
@@ -1323,8 +1356,16 @@ async function qr_code(opts = {}) {
   }
 
   async function render_qr_code(address) {
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(address)}`
-    qrContainer.innerHTML = `<img src="${qrApiUrl}" alt="QR Code" width="200" height="200">`
+
+    const qr = new VanillaQR({
+      url: address,
+      size: 280,
+      colorLight: '#ffffffff',
+      ecclevel: 4,
+      noBorder: true,
+    })
+    
+    qr_container.appendChild(qr.toImage('png')) 
   }
 }
 
@@ -1353,6 +1394,153 @@ function fallback_module() {
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
 },{"STATE":1}],10:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = receipt_row
+
+async function receipt_row(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  let dricons = []
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="receipt-row"></div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.receipt-row')
+
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data 
+  }
+
+  async function ondata(data) {
+    let { label, value, is_link, is_total } = data[0] || {}
+
+    let valueHtml = value || ""
+
+    if (is_link) {
+      valueHtml = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
+    }
+
+    if (is_total && value) {
+      valueHtml = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
+    }
+    
+    row.className = `receipt-row ${is_total ? "total" : ""}`
+
+    row.innerHTML = `
+      <div class="receipt-label">${label}</div>
+      <div class="receipt-value">${valueHtml}</div>
+      ${is_total ? "" : `<div class="divider"></div>`}
+    `
+    
+  }
+
+}
+
+function fallback_module() {
+  return {
+    api: fallback_instance
+  }
+  function fallback_instance(opts) {
+    return {
+      drive: {
+        'icons/': {
+          'btc.svg': { '$ref': 'btc.svg' },
+        },
+        'style/': {
+         'style.css': {
+            raw: `
+              .receipt-row {
+                padding: 8px 0;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+              }
+
+              .receipt-label {
+                color: #6D6E6F;
+                font-size: 14px;
+                margin-bottom: 4px;
+              }
+
+              .receipt-value {
+                color: #000000;
+                font-size: 18px;
+              }
+
+              .receipt-row.total .receipt-value {
+                font-size: 28px;
+                font-weight: 600;
+                color: #000000;
+              }
+
+              .receipt-link {
+                color: #4479FF;
+                text-decoration: none;
+                cursor: pointer;
+              }
+
+              .btc-icon {
+          
+                display: inline-block;
+                vertical-align: middle;
+                margin-right: 6px;
+              }
+
+              .divider {
+                height: 1px;
+                background: #ddd;
+                margin-top: 6px;
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
+},{"STATE":1}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1455,11 +1643,13 @@ function fallback_module() {
       mapping: {
         style: 'style',
         data: 'data',
+        icons: 'icons'
       },
       1: {
         header: 'Your bitcoin address',
         placeholder: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
         address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+        icon: 'apple'
       }    
     }
 
@@ -1490,7 +1680,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":8,"qr_code":9}],11:[function(require,module,exports){
+},{"STATE":1,"input_field":8,"qr_code":9}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1617,7 +1807,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],12:[function(require,module,exports){
+},{"STATE":1}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1736,6 +1926,7 @@ function fallback_module() {
       mapping: {
         style: 'style',
         data: 'data',
+        icons: 'icons'
       },
       1: {
         header: 'Address',
@@ -1785,7 +1976,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":2,"button":3,"input_field":8}],13:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":2,"button":3,"input_field":8}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1901,7 +2092,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],14:[function(require,module,exports){
+},{"STATE":1}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2089,7 +2280,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],15:[function(require,module,exports){
+},{"STATE":1}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2205,7 +2396,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":17}],16:[function(require,module,exports){
+},{"STATE":1,"transaction_row":19}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2240,12 +2431,12 @@ async function transaction_list(opts = {}) {
   `
 
   const style = shadow.querySelector('style')
-  const containerEl = shadow.querySelector('.transaction-list-container')
+  const container_el = shadow.querySelector('.transaction-list-container')
 
   const subs = await sdb.watch(onbatch)
 
   subs.slice(0, 4).forEach(async sub => {
-      containerEl.append(await transaction_row(sub))
+      container_el.append(await transaction_row(sub))
   })
 
   return el
@@ -2313,7 +2504,132 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":17}],17:[function(require,module,exports){
+},{"STATE":1,"transaction_row":19}],18:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const receipt_row = require('receipt_row')
+
+module.exports = transaction_receipt
+
+async function transaction_receipt(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  let dricons = []
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="component-label">Transaction Receipt</div>
+    <div class="receipt-card">
+      <div class="receipt-header">
+        <div class="title-container">
+          <div class="receipt-title">Bitcoin Transaction</div>
+          <div class="btc-icon-small"></div>
+        </div>
+        <div class="close-icon"></div>
+      </div>
+      <div class="receipt-rows"></div>
+      <style></style>
+    </div>
+  `
+
+  const style = shadow.querySelector('style')
+  const rows_el = shadow.querySelector('.receipt-rows')
+
+  const subs = await sdb.watch(onbatch)
+
+  for (let i = 0; i < subs.length; i++) {
+    const row = await receipt_row(subs[i]) 
+    rows_el.append(row)
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+    const btcIcons = shadow.querySelectorAll('.btc-icon-small')
+    const closeIcon = shadow.querySelector('.close-icon')
+
+    btcIcons.forEach(el => el.innerHTML = dricons[0])
+    closeIcon.innerHTML = dricons[1]                  
+  }
+
+  async function ondata(data) {
+    
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'receipt_row': { 
+        $: '' 
+      }
+    }
+  }
+
+  function api(opts) {
+    
+    const receipt_row = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      }
+    }
+    opts.value.forEach((row, index) => {
+      receipt_row[index] = row
+    })
+
+    return {
+      drive: {
+        'icons/': {
+          'btc.svg': { '$ref': 'btc.svg' },
+          'x.svg': { '$ref': 'x.svg' }
+        },
+        'style/': {
+          'transaction_receipt.css': { '$ref': 'transaction_receipt.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+      _: { receipt_row }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
+},{"STATE":1,"receipt_row":10}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2462,7 +2778,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],18:[function(require,module,exports){
+},{"STATE":1}],20:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -2474,7 +2790,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":19}],19:[function(require,module,exports){
+},{"./page":21}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -2487,6 +2803,7 @@ const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
 const receive_btc = require('../src/node_modules/receive_btc')
+const transaction_receipt = require('../src/node_modules/transaction_receipt')
 
 const state = {}
 
@@ -2538,6 +2855,7 @@ async function main () {
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
   const receive_btc_component = await receive_btc(subs[12], protocol)
+  const transaction_receipt_component = await transaction_receipt(subs[14], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -2549,6 +2867,7 @@ async function main () {
       <div id="switch-account-container"></div>
       <div id="send-btc-container"></div>
       <div id="receive-btc-container"></div>
+      <div id="transaction-receipt-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -2558,6 +2877,7 @@ async function main () {
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
   page.querySelector('#receive-btc-container').appendChild(receive_btc_component)
+  page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -2590,7 +2910,7 @@ function fallback_module () {
                   tid: "Mark Kevin",
                   ttime: "03:45 PM",
                   tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                  avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
                 },
                 {
                   tid: "7RwmbHfn...455p",
@@ -2634,7 +2954,7 @@ function fallback_module () {
                 tid: "Mark Kevin",
                 ttime: "03:45 PM",
                 tamount: "- 0.00421",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-31",
@@ -2655,7 +2975,7 @@ function fallback_module () {
                 tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-28",
@@ -2683,7 +3003,7 @@ function fallback_module () {
                 tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-30",
@@ -2802,9 +3122,28 @@ function fallback_module () {
           data: 'data',
           icons: 'icons'
         }
+      },
+      '../src/node_modules/transaction_receipt': {
+        $: '',
+        0: {
+        value: [
+              { label: "Sent By", value: "Cypher" },
+              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
+              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+              { label: "Transaction Fees", value: "BTC 0.0001" },
+              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here", is_link: true },
+              { label: "Total Amount", value: "BTC 0.0020", is_total: true }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
       }
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/receive_btc":10,"../src/node_modules/send_btc":12,"../src/node_modules/switch_account":14,"../src/node_modules/transaction_history":15,"../src/node_modules/transaction_list":16}]},{},[18]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/receive_btc":11,"../src/node_modules/send_btc":13,"../src/node_modules/switch_account":15,"../src/node_modules/transaction_history":16,"../src/node_modules/transaction_list":17,"../src/node_modules/transaction_receipt":18}]},{},[20]);

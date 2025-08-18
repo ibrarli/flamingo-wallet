@@ -116,7 +116,7 @@ function fallback_module () {
                   tid: "Mark Kevin",
                   ttime: "03:45 PM",
                   tamount: "- 0.00421",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"     
+                  avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
                 },
                 {
                   tid: "7RwmbHfn...455p",
@@ -160,7 +160,7 @@ function fallback_module () {
                 tid: "Mark Kevin",
                 ttime: "03:45 PM",
                 tamount: "- 0.00421",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-31",
@@ -181,7 +181,7 @@ function fallback_module () {
                 tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-28",
@@ -209,7 +209,7 @@ function fallback_module () {
                 tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.x-5S96eQh14_yvkqjsIOfwHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-30",
