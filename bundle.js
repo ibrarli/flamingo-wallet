@@ -203,7 +203,6 @@ async function btc_input_card (opts = {}) {
         }
       }
 
-
       if (currency === 'BTC') {
         amount = parseFloat(val) || 0;
         usd_value = (amount * EXCHANGE_RATE).toFixed(2);
@@ -1309,9 +1308,6 @@ async function qr_code(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const { default: VanillaQR } = await import(
-    '/node_modules/vanillaqr/VanillaQR.module.js'
-  )
 
   const on = {
     style: inject,
@@ -1356,6 +1352,8 @@ async function qr_code(opts = {}) {
   }
 
   async function render_qr_code(address) {
+    
+    const { default: VanillaQR } = await import('/node_modules/vanillaqr/VanillaQR.module.js')
 
     const qr = new VanillaQR({
       url: address,
