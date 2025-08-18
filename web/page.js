@@ -9,6 +9,7 @@ const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
 const receive_btc = require('../src/node_modules/receive_btc')
+const transaction_receipt = require('../src/node_modules/transaction_receipt')
 
 const state = {}
 
@@ -60,6 +61,7 @@ async function main () {
   const switch_account_component = await switch_account(subs[8], protocol)
   const send_btc_component = await send_btc(subs[10], protocol)
   const receive_btc_component = await receive_btc(subs[12], protocol)
+  const transaction_receipt_component = await transaction_receipt(subs[14], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -71,6 +73,7 @@ async function main () {
       <div id="switch-account-container"></div>
       <div id="send-btc-container"></div>
       <div id="receive-btc-container"></div>
+      <div id="transaction-receipt-container"></div>
     </div>
   `
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
@@ -80,6 +83,7 @@ async function main () {
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
   page.querySelector('#receive-btc-container').appendChild(receive_btc_component)
+  page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -319,6 +323,25 @@ function fallback_module () {
         '../src/node_modules/receive_btc': {
         $: '',
         0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/transaction_receipt': {
+        $: '',
+        0: {
+        value: [
+              { label: "Sent By", value: "Cypher" },
+              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
+              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+              { label: "Transaction Fees", value: "BTC 0.0001" },
+              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here", is_link: true },
+              { label: "Total Amount", value: "BTC 0.0020", is_total: true }
+            ]
+          },
         mapping: {
           style: 'style',
           data: 'data',
