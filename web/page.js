@@ -4,12 +4,13 @@ const { sdb, get } = statedb(fallback_module)
 
 const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
-const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
 const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
+const home_page = require('../src/node_modules/home_page')
+
 
 const state = {}
 
@@ -54,7 +55,9 @@ async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-  const transaction_list_component = await transaction_list(subs[0], protocol)
+  console.log("Subscriptions received:", subs)
+
+  const home_page_component = await home_page(subs[0], protocol)
   const transaction_history_component = await transaction_history(subs[2], protocol)
   const contacts_list_component = await contacts_list(subs[4], protocol)
   const chat_view_compoent = await chat_view(subs[6],protocol)
@@ -65,7 +68,8 @@ async function main () {
 
   const page = document.createElement('div')
   page.innerHTML = `
-    <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;"> 
+    <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
+      <div id="home-page-container"></div> 
       <div id="transaction-list-container"></div> 
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
@@ -76,8 +80,8 @@ async function main () {
       <div id="transaction-receipt-container"></div>
     </div>
   `
+  page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
-  page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
@@ -96,47 +100,14 @@ function fallback_module () {
   return {
     drive: {},
     _: {
-      '../src/node_modules/transaction_list': {
+      '../src/node_modules/home_page': {
         $: '',
-        0: {
-        value: [
-                {
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
-                },
-                {
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-              ]
-            },
-            mapping: {
-              style: 'style',
-              data: 'data'
-            }
-          },
+        0: '',
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        },
     '../src/node_modules/transaction_history': {
       $: '',
       0: {
@@ -347,7 +318,8 @@ function fallback_module () {
           data: 'data',
           icons: 'icons'
         }
-      }
+      },
+      
     }
   }
 }

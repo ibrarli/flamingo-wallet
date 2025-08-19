@@ -6,6 +6,191 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const general_button = require('general_button')
+
+module.exports = action_buttons
+
+async function action_buttons (opts = {}, protocol) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const _ = {
+    up: null,
+    send_general: null,
+    receive_general: null,
+    wallet_general: null
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="action-buttons-container">
+        <div class="wallet-buttons">
+            <div id="wallet-button-container"></div>
+        </div>
+        <div class="send-receive-buttons">
+            <div id="send-button-container"></div> 
+            <div id="receive-button-container"></div> 
+        </div>
+    </div>
+    <style></style>
+    `
+
+
+  const style = shadow.querySelector('style')
+
+  const subs = await sdb.watch(onbatch)
+
+  if (protocol) {
+    protocol({ from: 'action_buttons', notify: on_message })
+  }
+
+  const sendButton = await general_button(subs[0], button_protocol('send_general'))
+  const receiveButton = await general_button(subs[1], button_protocol('receive_general'))
+  const walletButton = await general_button(subs[2], button_protocol('wallet_general'))
+
+  shadow.querySelector('#send-button-container').replaceWith(sendButton)
+  shadow.querySelector('#receive-button-container').replaceWith(receiveButton)
+  shadow.querySelector('#wallet-button-container').replaceWith(walletButton)
+
+  _.send_general?.({
+    type: 'button_name',
+    data: {
+      name: 'Send',
+      action: 'send_message'
+    }
+  })
+
+  _.receive_general?.({
+    type: 'button_name',
+    data: {
+      name: 'Receive',
+      action: 'receive_message'
+    }
+  })
+
+  _.wallet_general?.({
+    type: 'button_name',
+    data: {
+      name: 'Wallet',
+      action: 'wallet_action'
+    }
+  })
+
+  const action = {
+    send_message,
+    receive_message,
+    wallet_action
+  }
+
+  return el
+
+  // ------------------------- Helpers -------------------------
+
+  function fail (data, type) {
+    throw new Error('Invalid message type', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const handler = on[type] || fail
+      handler(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const buttonData = data[0]?.value || {}
+    // handle incoming button data here 
+  }
+
+  function button_protocol (key) {
+    return send => {
+      _[key] = send
+      return on
+    }
+  }
+
+  function on_message (message) {
+    const { type, data } = message
+    ;(action[type] || fail)(data, type)
+  }
+
+
+
+  function send_message (data, type) {
+    console.log('Send button clicked - handling send action')
+    // send logic
+  }
+
+  function receive_message (data, type) {
+    console.log('Receive button clicked - handling receive action')
+    // receive logic 
+  }
+
+  function wallet_action (data, type) {
+    console.log('Wallet button clicked - handling wallet action')
+    //wallet logic 
+  }
+}
+
+// ============ Fallback Setup for STATE ============
+
+function fallback_module () {
+  return {
+    _: {
+      'general_button': {
+        $: ''
+      }
+    },
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts = {}) {
+    return {
+      _: {
+        'general_button': {
+          0: '',
+          1: '',
+          2: '',
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        }
+      },
+      drive: {
+        'style/': {
+          'action_buttons.css': {
+            '$ref': 'action_buttons.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
+},{"STATE":1,"general_button":10}],3:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 
 async function get_rate(from = 'btc', to = 'usd') {
   let cached_rate = null
@@ -366,7 +551,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/btc_input_card/btc_input_card.js")
-},{"STATE":1}],3:[function(require,module,exports){
+},{"STATE":1}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -470,7 +655,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/button/button.js")
-},{"STATE":1}],4:[function(require,module,exports){
+},{"STATE":1}],5:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -589,7 +774,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"button":3,"chat_view_header":5}],5:[function(require,module,exports){
+},{"STATE":1,"button":4,"chat_view_header":6}],6:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -764,7 +949,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
-},{"STATE":1}],6:[function(require,module,exports){
+},{"STATE":1}],7:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -994,7 +1179,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],7:[function(require,module,exports){
+},{"STATE":1}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1136,7 +1321,679 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":6,"search_bar":12,"square_button":14}],8:[function(require,module,exports){
+},{"STATE":1,"contact_row":7,"search_bar":17,"square_button":19}],9:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = footer
+
+async function footer (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="footer-container"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const footer = shadow.querySelector('.footer-container')
+
+  await sdb.watch(onbatch)
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+
+    footer.innerHTML = `
+      <div class="tab-container">
+        <div class="icon">${dricons[0]}</div>   
+        <div class="label">Home</div>
+      </div>
+      <div class="tab-container">
+        <div class="icon">${dricons[1]}</div>   
+        <div class="label">Contacts</div>
+      </div>
+      <div class="tab-container">
+        <div class="icon">${dricons[2]}</div>   
+        <div class="label">Details</div>
+      </div>
+      <div class="tab-container">
+        <div class="icon">${dricons[3]}</div>   
+        <div class="label">More</div>
+      </div>
+` 
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'home.svg':{
+            '$ref': 'home.svg'
+          },
+          'contacts.svg': {
+            '$ref': 'contacts.svg'
+          },
+          'details.svg': {
+            '$ref': 'details.svg'
+          },
+          'more.svg': {
+            '$ref': 'more.svg'
+          },
+        },
+        'style/': {
+          'style.css': {
+            raw: `
+                .footer-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #fff;
+                    border: 1px solid #ccc;
+                    border-radius: 12px;
+                    padding: 10px;
+                    width: 100%;
+                    margin: 0 auto;
+                    font-family: Arial, sans-serif;
+                    box-sizing: border-box; 
+                }
+
+                .tab-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    cursor: pointer;
+                    flex: 1;
+                }
+
+                .tab-container .icon {
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+
+                .tab-container .label {
+                    font-size: 12px;
+                }
+
+                /* Active (Home) */
+                .tab-container:first-child .icon,
+                .tab-container:first-child .label {
+                    color: #000;
+                    fill: #000; /* in case icons are SVG */
+                    font-weight: 600;
+                }
+
+                /* Inactive (others) */
+                .tab-container:not(:first-child) .icon,
+                .tab-container:not(:first-child) .label {
+                    color: #888;
+                    fill: #888;
+                }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/footer/footer.js")
+},{"STATE":1}],10:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const switch_account = require('switch_account')  // ✅ require here
+
+module.exports = general_button
+
+async function general_button (opts = {}, protocol) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="general-button-container">
+      <button class="general-button" type="button">
+        <span class="button-text">Button</span>
+      </button>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const button = shadow.querySelector('.general-button')
+
+  let send_action = null
+  if (protocol) {
+    send_action = protocol(msg => on_message(msg))
+  }
+
+  // Set up click handler
+  button.addEventListener('click', handle_click)
+
+  await sdb.watch(onbatch)
+
+  return el
+
+  // ------------------------- Helpers -------------------------
+
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  function ondata(data) {
+    const buttonData = data[0]?.value || {}
+    const { name, action } = buttonData
+    console.log(`name "${name}"`)
+    update_button(buttonData)
+  }
+
+  function on_message({ type, data }) {
+    if (type === 'button_name') {
+      console.log(`Button "${data.name}", action "${data.action}"`)
+      update_button({
+        name: data.name,
+        action: data.action
+      })
+    }
+  }
+
+  function update_button({ name = 'Button', disabled = false, action = null }) {
+    const buttonTextEl = shadow.querySelector('.button-text')
+
+    if (buttonTextEl) {
+      buttonTextEl.textContent = name
+    }
+
+    if (button) {
+      button.disabled = disabled
+      button._action = action // Store action for use when clicked
+    }
+  }
+
+  async function handle_click(event) {
+    event.preventDefault()
+
+    if (button._action === 'wallet_action') {
+      console.log('Wallet button clicked - opening switch_account')
+
+      const subs = await sdb.watch(onbatch)
+
+      // ✅ load switch_account UI (with fallback support)
+      const switchEl = await switch_account(subs[0])
+
+      const container = document.createElement('div')
+      container.className = 'switch-account-container'
+      container.appendChild(switchEl)
+      shadow.appendChild(container)
+      return
+    }
+
+    if (send_action && button._action) {
+      send_action({
+        type: button._action,
+        data: {
+          text: shadow.querySelector('.button-text').textContent
+        }
+      })
+    }
+  }
+}
+
+// ============ Fallback Setup for STATE ============
+
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'switch_account': { $: '' },
+    }
+  }
+
+  function api(opts) {
+
+    const switch_account = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0:{
+        value: {
+          btc: 0.9862,
+          lightning: 0.9000
+        },
+      },
+    }
+
+    return {
+      drive: {
+        'style/': {
+          'general_button.css': {
+            '$ref': 'general_button.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        switch_account
+   
+      }
+    }
+  }
+}
+
+
+}).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
+},{"STATE":1,"switch_account":20}],11:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const transaction_list = require('transaction_list')
+const total_wealth = require('total_wealth')
+const action_buttons = require('action_buttons')
+const footer = require('footer')
+const home_page_header = require('home_page_header')
+
+module.exports = transaction_history
+
+async function transaction_history (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="component-label">Home Page</div>
+    <div class="home-page-container"></div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+
+  const container = shadow.querySelector('.home-page-container')
+
+  const subs = await sdb.watch(onbatch)
+  
+  const transaction_list_component = await transaction_list(subs[0])
+  const total_wealth_component = await total_wealth(subs[1])
+  const action_buttons_component = await action_buttons(subs[2])
+  const footer_component = await footer(subs[3])
+  const home_page_header_component = await home_page_header(subs[4])
+
+  container.appendChild(home_page_header_component)
+  container.appendChild(action_buttons_component)
+  container.appendChild(transaction_list_component)
+  container.appendChild(total_wealth_component)
+  container.appendChild(footer_component)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch){
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+  }
+}
+
+
+function fallback_module () {
+  return {
+    api,
+    _: {
+      'transaction_list':{ $: '' },
+      'total_wealth':{ $: '' },
+      'action_buttons':{ $: '' },
+      'footer':{ $: '' },
+      'home_page_header':{ $: '' }
+    } 
+  }
+  function api(opts){
+
+    const transaction_list = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      0: {
+        value: [
+          {
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            tid: "3TgmbHfn...455p",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
+          },
+          {
+            tid: "7RwmbHfn...455p",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+        ]
+      }
+    }
+    
+    const total_wealth = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+        value: {
+          total: 0.9862,
+          usd: 1000,
+          lightning: 0.02456,
+          bitcoin: 0.96164
+        }
+      }
+    }
+
+    const action_buttons = {
+      mapping: { 
+        style: 'style',
+        data: 'data'
+      },
+      0: {
+        buttons: [
+          { label: 'Send', action: 'send' },
+          { label: 'Receive', action: 'receive' },
+          { label: 'Wallet', action: 'wallet' }
+        ]
+      }
+    }
+   
+    const footer = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: ""
+    }
+
+    const home_page_header = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+        amount: "0.9616"
+      } 
+    }
+
+    return {
+      drive: {
+        'style/': {
+          'home_page.css':{
+            '$ref': 'home_page.css'
+          }
+        },
+        'data/': {
+          'opts.json':{
+            raw: opts
+          }
+        }
+      },
+      _:{
+        transaction_list,
+        total_wealth,
+        action_buttons,
+        footer,
+        home_page_header
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
+},{"STATE":1,"action_buttons":2,"footer":9,"home_page_header":12,"total_wealth":21,"transaction_list":23}],12:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = home_page_header
+
+async function home_page_header (opts = {}) {
+    const { id, sdb } = await get(opts.sid)
+    const { drive } = sdb
+
+    const on = {
+        style: inject,
+        data: ondata,
+        icons: iconject,
+    }
+
+    const el = document.createElement('div')
+    const shadow = el.attachShadow({ mode: 'closed' })
+
+    let dricons = []
+
+    shadow.innerHTML = `
+        <div class="header-container">
+        <div class="heading">Bitcoin Wallet</div>
+        <div class="wallet-row">
+        </div>
+        </div>
+        <style></style>
+    `
+
+    const style = shadow.querySelector('style')
+    const wallet_row = shadow.querySelector('.wallet-row')
+
+    await sdb.watch(onbatch)
+    return el
+
+    async function onbatch (batch) {
+        for (const { type, paths } of batch) {
+        const data = await Promise.all(
+            paths.map(path => drive.get(path).then(file => file.raw))
+        )
+        const func = on[type] || fail
+        await func(data, type)
+        }
+    }
+
+    function inject (data) {
+        style.textContent = data[0]
+    }
+
+    async function ondata (data) {
+        const { amount } = data[0]
+        wallet_row.innerHTML = `
+            <div class="icon-slot">${dricons[0]}</div>
+            <div class="wallet-amount">${amount > 0 ? amount : "0.00"}</div>
+        `
+    }
+
+
+    function fail (data, type) {
+        throw new Error('invalid message', { cause: { data, type } })
+    }
+
+    function iconject (data) {
+        dricons = data
+    } 
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'btc.svg': {
+            '$ref': 'btc.svg'
+          },
+        },
+        'style/': {
+          'style.css': {
+            raw: `
+              .header-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+              }
+
+              .heading {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                text-align: center;
+              }
+
+              .wallet-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                justify-content: center;
+              }
+
+              .icon-slot svg {
+                width: 32px;
+                height: 32px;
+              }
+
+              .wallet-amount {
+                font-size: 28px;
+                font-weight: bold;
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
+},{"STATE":1}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1296,11 +2153,12 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],9:[function(require,module,exports){
+},{"STATE":1}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
+
 
 module.exports = qr_code
 
@@ -1353,9 +2211,9 @@ async function qr_code(opts = {}) {
 
   async function render_qr_code(address) {
     
-    const { default: VanillaQR } = await import('/node_modules/vanillaqr/VanillaQR.module.js')
+    const { default: vanillaqr } = await import('/node_modules/vanillaqr/VanillaQR.module.js')
 
-    const qr = new VanillaQR({
+    const qr = new vanillaqr({
       url: address,
       size: 280,
       colorLight: '#ffffffff',
@@ -1391,7 +2249,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1}],10:[function(require,module,exports){
+},{"STATE":1}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1538,7 +2396,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1}],11:[function(require,module,exports){
+},{"STATE":1}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1678,7 +2536,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":8,"qr_code":9}],12:[function(require,module,exports){
+},{"STATE":1,"input_field":13,"qr_code":14}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1805,7 +2663,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],13:[function(require,module,exports){
+},{"STATE":1}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1974,7 +2832,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":2,"button":3,"input_field":8}],14:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":4,"input_field":13}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2090,7 +2948,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],15:[function(require,module,exports){
+},{"STATE":1}],20:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2140,6 +2998,7 @@ async function switch_account (opts = {}) {
 
   async function ondata (data) {
     const { btc, lightning  } = data[0]
+    console.log(btc, lightning, "Chitori bacha")
     row.innerHTML = `
       <div class="container-title">
         <div class="title">Switch Account</div>
@@ -2278,7 +3137,127 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],16:[function(require,module,exports){
+},{"STATE":1}],21:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = total_wealth
+
+async function total_wealth (opts = {}, protocol) {
+  const { id, sdb } = await get(opts.sid)
+  
+  const {drive} = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+  
+  const el = document.createElement('div')
+  const shadow =  el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="total-wealth-container">
+      <div class="total-wealth-header">Total wealth</div>
+      <div class="total-wealth-value">
+        <span>₿ 0.0000</span>
+        <div class="total-wealth-usd">= $0</div>
+      </div>
+      <div class="wallet-row">
+        <div class="lightning-icon"></div>
+        Lightning Wallet <span>0.0000</span>
+      </div>
+      <div class="wallet-row">
+        <div class="btc-icon"></div>
+        Bitcoin Wallet <span>0.0000</span>
+      </div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch){
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.replaceChildren((() => {
+      return document.createElement('style').textContent = data[0]
+    })())
+  }
+
+  function ondata(data) {
+    renderValues(data[0]?.value || {})
+  }
+  
+
+  function renderValues({ total = 0, usd = 1000, lightning = 0, bitcoin = 0 }) {
+    shadow.querySelector('.total-wealth-value span').textContent = `₿ ${total.toFixed(4)}`
+    shadow.querySelector('.total-wealth-usd').textContent = `= $${usd.toLocaleString()}`
+    shadow.querySelectorAll('.wallet-row')[0].querySelector('span').textContent = lightning.toFixed(4)
+    shadow.querySelectorAll('.wallet-row')[1].querySelector('span').textContent = bitcoin.toFixed(4)
+    
+    if (dricons.length) {
+      shadow.querySelector('.btc-icon').innerHTML = dricons[0]  // btc.svg
+      shadow.querySelector('.lightning-icon').innerHTML = dricons[1] // lightning.svg
+    }
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+}
+
+// ============ Fallback Setup for STATE ============
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts = {}) {
+    return {
+      drive: {
+        'icons/':{
+          'btc.svg':{
+            '$ref': 'btc.svg'
+          },
+          'lightning.svg':{
+            '$ref': 'lightning.svg'
+          }
+        },
+        'style/': {
+          'total_wealth.css': {
+           '$ref':'total_wealth.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
+},{"STATE":1}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2394,7 +3373,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":19}],17:[function(require,module,exports){
+},{"STATE":1,"transaction_row":25}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2418,7 +3397,7 @@ async function transaction_list(opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="component-label">Transaction List</div>
+    <!-- <div class="component-label">Transaction List</div> -->
     <div class="transaction-list-container">
       <div class="transaction-list-header">  
         <div class="transaction-list-title"> Transactions </div>
@@ -2479,6 +3458,7 @@ function fallback_module () {
     }
     opts.value.forEach((transaction, index) => {
       transaction_row[index] = transaction
+      console.log("Transaction Row:", transaction)
     })
     return {
       drive: {
@@ -2502,7 +3482,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":19}],18:[function(require,module,exports){
+},{"STATE":1,"transaction_row":25}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2627,7 +3607,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":10}],19:[function(require,module,exports){
+},{"STATE":1,"receipt_row":15}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2776,7 +3756,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],20:[function(require,module,exports){
+},{"STATE":1}],26:[function(require,module,exports){
 const prefix = 'https://raw.githubusercontent.com/alyhxn/playproject/main/'
 const init_url = prefix + 'src/node_modules/init.js'
 
@@ -2788,7 +3768,7 @@ fetch(init_url, { cache: 'no-store' }).then(res => res.text()).then(async source
   await init(arguments, prefix)
   require('./page') // or whatever is otherwise the main entry of our project
 })
-},{"./page":21}],21:[function(require,module,exports){
+},{"./page":27}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -2796,12 +3776,13 @@ const { sdb, get } = statedb(fallback_module)
 
 const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
-const transaction_list = require('../src/node_modules/transaction_list')
 const chat_view = require('../src/node_modules/chat_view')
 const switch_account = require('../src/node_modules/switch_account')
 const send_btc = require('../src/node_modules/send_btc')
 const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
+const home_page = require('../src/node_modules/home_page')
+
 
 const state = {}
 
@@ -2846,7 +3827,9 @@ async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-  const transaction_list_component = await transaction_list(subs[0], protocol)
+  console.log("Subscriptions received:", subs)
+
+  const home_page_component = await home_page(subs[0], protocol)
   const transaction_history_component = await transaction_history(subs[2], protocol)
   const contacts_list_component = await contacts_list(subs[4], protocol)
   const chat_view_compoent = await chat_view(subs[6],protocol)
@@ -2857,7 +3840,8 @@ async function main () {
 
   const page = document.createElement('div')
   page.innerHTML = `
-    <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;"> 
+    <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
+      <div id="home-page-container"></div> 
       <div id="transaction-list-container"></div> 
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
@@ -2868,8 +3852,8 @@ async function main () {
       <div id="transaction-receipt-container"></div>
     </div>
   `
+  page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
-  page.querySelector('#transaction-list-container').appendChild(transaction_list_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
   page.querySelector('#switch-account-container').appendChild(switch_account_component)
@@ -2888,47 +3872,14 @@ function fallback_module () {
   return {
     drive: {},
     _: {
-      '../src/node_modules/transaction_list': {
+      '../src/node_modules/home_page': {
         $: '',
-        0: {
-        value: [
-                {
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  tid: "3TgmbHfn...455p",
-                  ttime: "02:15 PM",
-                  tamount: "+ 0.03271",
-                  avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  tid: "Mark Kevin",
-                  ttime: "03:45 PM",
-                  tamount: "- 0.00421",
-                  avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
-                },
-                {
-                  tid: "7RwmbHfn...455p",
-                  ttime: "04:45 PM",
-                  tamount: "- 0.03791",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-                {
-                  tid: "Luis fedrick",
-                  ttime: "11:30 AM",
-                  tamount: "+ 0.02456",
-                  avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-                },
-              ]
-            },
-            mapping: {
-              style: 'style',
-              data: 'data'
-            }
-          },
+        0: '',
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        },
     '../src/node_modules/transaction_history': {
       $: '',
       0: {
@@ -3139,9 +4090,10 @@ function fallback_module () {
           data: 'data',
           icons: 'icons'
         }
-      }
+      },
+      
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":4,"../src/node_modules/contacts_list":7,"../src/node_modules/receive_btc":11,"../src/node_modules/send_btc":13,"../src/node_modules/switch_account":15,"../src/node_modules/transaction_history":16,"../src/node_modules/transaction_list":17,"../src/node_modules/transaction_receipt":18}]},{},[20]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":5,"../src/node_modules/contacts_list":8,"../src/node_modules/home_page":11,"../src/node_modules/receive_btc":16,"../src/node_modules/send_btc":18,"../src/node_modules/switch_account":20,"../src/node_modules/transaction_history":22,"../src/node_modules/transaction_receipt":24}]},{},[26]);
