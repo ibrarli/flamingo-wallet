@@ -2206,22 +2206,22 @@ async function qr_code(opts = {}) {
   async function ondata(data) {
     const {address} = data[0]
     console.log('QR-Code address:', address)
-    await render_qr_code(address)
+    // await render_qr_code(address)
   }
 
   async function render_qr_code(address) {
     
-    const { default: vanillaqr } = await import('/node_modules/vanillaqr/VanillaQR.module.js')
+    // const { default: vanillaqr } = await import('/node_modules/vanillaqr/VanillaQR.module.js')
 
-    const qr = new vanillaqr({
-      url: address,
-      size: 280,
-      colorLight: '#ffffffff',
-      ecclevel: 4,
-      noBorder: true,
-    })
+    // const qr = new vanillaqr({
+    //   url: address,
+    //   size: 280,
+    //   colorLight: '#ffffffff',
+    //   ecclevel: 4,
+    //   noBorder: true,
+    // })
     
-    qr_container.appendChild(qr.toImage('png')) 
+    // qr_container.appendChild(qr.toImage('png')) 
   }
 }
 
