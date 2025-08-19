@@ -2998,7 +2998,7 @@ async function switch_account (opts = {}) {
 
   async function ondata (data) {
     const { btc, lightning  } = data[0]
-    console.log(btc, lightning, "Chitori bacha")
+
     row.innerHTML = `
       <div class="container-title">
         <div class="title">Switch Account</div>
