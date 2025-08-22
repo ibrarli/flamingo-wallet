@@ -7,6 +7,7 @@ const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const general_button = require('general_button')
+const switch_account = require('switch_account')
 
 module.exports = action_buttons
 
@@ -20,7 +21,6 @@ async function action_buttons (opts = {}, protocol) {
   }
 
   const _ = {
-    up: null,
     send_general: null,
     receive_general: null,
     wallet_general: null
@@ -31,8 +31,8 @@ async function action_buttons (opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="action-buttons-container">
-        <div class="wallet-buttons">
-            <div id="wallet-button-container"></div>
+        <div class="wallet-buttons wallet-button-container" id="wallet-button-container">
+            <div class="dropdown-container hidden"></div> <!-- ✅ dropdown kept inside -->
         </div>
         <div class="send-receive-buttons">
             <div id="send-button-container"></div> 
@@ -40,10 +40,11 @@ async function action_buttons (opts = {}, protocol) {
         </div>
     </div>
     <style></style>
-    `
-
+  `
 
   const style = shadow.querySelector('style')
+  const wallet_container = shadow.querySelector('#wallet-button-container')
+  const dropdown = wallet_container.querySelector('.dropdown-container')
 
   const subs = await sdb.watch(onbatch)
 
@@ -51,36 +52,57 @@ async function action_buttons (opts = {}, protocol) {
     protocol({ from: 'action_buttons', notify: on_message })
   }
 
+  // Create buttons
   const sendButton = await general_button(subs[0], button_protocol('send_general'))
   const receiveButton = await general_button(subs[1], button_protocol('receive_general'))
-  const walletButton = await general_button(subs[2], button_protocol('wallet_general'))
+  const wallet_btn = await general_button(subs[2], button_protocol('wallet_general'))
 
   shadow.querySelector('#send-button-container').replaceWith(sendButton)
   shadow.querySelector('#receive-button-container').replaceWith(receiveButton)
-  shadow.querySelector('#wallet-button-container').replaceWith(walletButton)
 
+  // ✅ Insert wallet button inside container, before dropdown
+  wallet_container.insertBefore(wallet_btn, dropdown)
+
+  // Ensure wallet button has action set right away
+  wallet_btn._action = 'wallet_action'
+
+  // Click handler for wallet
+  let switchEl = null
+
+  wallet_btn.onclick = async () => {
+    if (wallet_btn._action !== 'wallet_action') return
+
+    if (!dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden')
+      return
+    }
+
+    if (!switchEl) {
+      switchEl = await switch_account(subs[3], {
+        onClose: () => {
+          dropdown.classList.add('hidden')
+        }
+      })
+      dropdown.appendChild(switchEl)
+    }
+
+    dropdown.classList.remove('hidden')
+  }
+
+  // Send initial config messages
   _.send_general?.({
     type: 'button_name',
-    data: {
-      name: 'Send',
-      action: 'send_message'
-    }
+    data: { name: 'Send', action: 'send_message' }
   })
 
   _.receive_general?.({
     type: 'button_name',
-    data: {
-      name: 'Receive',
-      action: 'receive_message'
-    }
+    data: { name: 'Receive', action: 'receive_message' }
   })
 
   _.wallet_general?.({
     type: 'button_name',
-    data: {
-      name: 'Wallet',
-      action: 'wallet_action'
-    }
+    data: { name: 'Wallet', action: 'wallet_action' }
   })
 
   const action = {
@@ -99,7 +121,9 @@ async function action_buttons (opts = {}, protocol) {
 
   async function onbatch (batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
       const handler = on[type] || fail
       handler(data, type)
     }
@@ -111,13 +135,13 @@ async function action_buttons (opts = {}, protocol) {
 
   async function ondata (data) {
     const buttonData = data[0]?.value || {}
-    // handle incoming button data here 
+    // you could update buttons dynamically here if needed
   }
 
   function button_protocol (key) {
     return send => {
       _[key] = send
-      return on
+      return send // return send function instead of handler object
     }
   }
 
@@ -126,49 +150,54 @@ async function action_buttons (opts = {}, protocol) {
     ;(action[type] || fail)(data, type)
   }
 
-
-
+  // Action handlers
   function send_message (data, type) {
     console.log('Send button clicked - handling send action')
-    // send logic
   }
 
   function receive_message (data, type) {
     console.log('Receive button clicked - handling receive action')
-    // receive logic 
   }
 
   function wallet_action (data, type) {
     console.log('Wallet button clicked - handling wallet action')
-    //wallet logic 
   }
 }
 
 // ============ Fallback Setup for STATE ============
-
 function fallback_module () {
   return {
+    api,
     _: {
-      'general_button': {
-        $: ''
-      }
-    },
-    api: fallback_instance
+      'general_button': { $: '' },
+      'switch_account': { $: '' }
+    }
   }
 
-  function fallback_instance (opts = {}) {
-    return {
-      _: {
-        'general_button': {
-          0: '',
-          1: '',
-          2: '',
-          mapping: {
-            style: 'style',
-            data: 'data'
-          }
-        }
+  function api (opts = {}) {
+    const general_button = {
+      mapping: {
+        style: 'style',
+        data: 'data'
       },
+      0: {}, // send button
+      1: {}, // receive button
+      2: {}  // wallet button
+    }
+
+    const switch_account = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      3: {
+        btc: 0.789,
+        lightning: 0.9000
+      } 
+    }
+
+    return {
       drive: {
         'style/': {
           'action_buttons.css': {
@@ -180,12 +209,17 @@ function fallback_module () {
             raw: opts
           }
         }
+      },
+      _: {
+        general_button,
+        switch_account
       }
     }
   }
 }
+
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":10}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":10,"switch_account":20}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1494,13 +1528,12 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-const switch_account = require('switch_account')  // ✅ require here
-
 module.exports = general_button
 
 async function general_button (opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
-  const { drive } = sdb
+
+  const {drive} = sdb
 
   const on = {
     style: inject,
@@ -1508,7 +1541,7 @@ async function general_button (opts = {}, protocol) {
   }
 
   const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
+  const shadow =  el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
     <div class="general-button-container">
@@ -1523,23 +1556,21 @@ async function general_button (opts = {}, protocol) {
   const button = shadow.querySelector('.general-button')
 
   let send_action = null
-  if (protocol) {
-    send_action = protocol(msg => on_message(msg))
+  if(protocol){
+   send_action = protocol(msg=>on_message(msg))
   }
 
   // Set up click handler
-  button.addEventListener('click', handle_click)
+  button.addEventListener('click', handleClick)
 
   await sdb.watch(onbatch)
 
   return el
 
-  // ------------------------- Helpers -------------------------
-
   function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
 
   async function onbatch (batch) {
-    for (const { type, paths } of batch) {
+    for (const { type, paths } of batch){
       const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
       const func = on[type] || fail
       func(data, type)
@@ -1547,58 +1578,49 @@ async function general_button (opts = {}, protocol) {
   }
 
   function inject (data) {
-    style.textContent = data[0]
+    style.replaceChildren((() => {
+      return document.createElement('style').textContent = data[0]
+    })())
   }
 
   function ondata(data) {
     const buttonData = data[0]?.value || {}
     const { name, action } = buttonData
     console.log(`name "${name}"`)
-    update_button(buttonData)
+    updateButton(buttonData)
   }
 
-  function on_message({ type, data }) {
+  function on_message({type, data}) {
     if (type === 'button_name') {
       console.log(`Button "${data.name}", action "${data.action}"`)
-      update_button({
+      
+      updateButton({
         name: data.name,
         action: data.action
       })
     }
   }
 
-  function update_button({ name = 'Button', disabled = false, action = null }) {
-    const buttonTextEl = shadow.querySelector('.button-text')
 
-    if (buttonTextEl) {
-      buttonTextEl.textContent = name
-    }
-
-    if (button) {
-      button.disabled = disabled
-      button._action = action // Store action for use when clicked
-    }
+  function updateButton({ name = 'Button', disabled = false, action = null }) {
+  const buttonTextEl = shadow.querySelector('.button-text')
+  
+  
+  if (buttonTextEl) {
+    buttonTextEl.textContent = name
   }
 
-  async function handle_click(event) {
+  if (button) {
+    button.disabled = disabled
+    button._action = action // Store action for use when clicked
+  }
+}
+
+
+  function handleClick(event) {
     event.preventDefault()
 
-    if (button._action === 'wallet_action') {
-      console.log('Wallet button clicked - opening switch_account')
-
-      const subs = await sdb.watch(onbatch)
-
-      // ✅ load switch_account UI (with fallback support)
-      const switchEl = await switch_account(subs[0])
-
-      const container = document.createElement('div')
-      container.className = 'switch-account-container'
-      container.appendChild(switchEl)
-      shadow.appendChild(container)
-      return
-    }
-
-    if (send_action && button._action) {
+    if(send_action && button._action){
       send_action({
         type: button._action,
         data: {
@@ -1611,36 +1633,17 @@ async function general_button (opts = {}, protocol) {
 
 // ============ Fallback Setup for STATE ============
 
-
-function fallback_module() {
+function fallback_module () {
   return {
-    api,
-    _: {
-      'switch_account': { $: '' },
-    }
+    api: fallback_instance
   }
 
-  function api(opts) {
-
-    const switch_account = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0:{
-        value: {
-          btc: 0.9862,
-          lightning: 0.9000
-        },
-      },
-    }
-
+  function fallback_instance (opts = {}) {
     return {
       drive: {
         'style/': {
           'general_button.css': {
-            '$ref': 'general_button.css'
+           '$ref':'general_button.css'
           }
         },
         'data/': {
@@ -1648,18 +1651,12 @@ function fallback_module() {
             raw: opts
           }
         }
-      },
-      _: {
-        switch_account
-   
       }
     }
   }
 }
-
-
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1,"switch_account":20}],11:[function(require,module,exports){
+},{"STATE":1}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2972,7 +2969,6 @@ async function switch_account (opts = {}) {
   let dricons = []
 
   shadow.innerHTML = `
-    <div class="component-label">Switch Account</div>  
     <div class="switch-account-container"></div>
     <style></style>
   `
@@ -2997,7 +2993,7 @@ async function switch_account (opts = {}) {
   }
 
   async function ondata (data) {
-    const { btc, lightning  } = data[0]
+    const { btc, lightning } = data[0]
 
     row.innerHTML = `
       <div class="container-title">
@@ -3012,8 +3008,20 @@ async function switch_account (opts = {}) {
         <div class="lightning-icon">${dricons[2]}Lightning</div>
         <div class="lightning-amount">${parseFloat(lightning).toFixed(4)}</div>       
       </div>
-` 
+    ` 
+
+    const closeBtn = row.querySelector('.close-icon')
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) {
+          dropdown.classList.add('hidden')   
+          dropdown.innerHTML = ''            
+        }
+      }
+    }
   }
+
 
   function fail (data, type) {
     throw new Error('invalid message', { cause: { data, type } })
@@ -3047,13 +3055,6 @@ function fallback_module () {
         'style/': {
           'style.css': {
             raw: `
-              .component-label{
-                font-size: 18px;
-                font-weight: bold;
-                font-family: Arial, sans-serif;
-                margin-block: 10px;
-              }
-
               .switch-account-container {
                 border: 1px solid #ccc;
                 border-radius: 10px;
@@ -3129,7 +3130,7 @@ function fallback_module () {
         'data/': {
           'opts.json': {
             raw: opts
-          }
+          },
         }
       }
     }
@@ -4889,7 +4890,10 @@ async function main () {
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
-      <div id="switch-account-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Switch Account</div>  
+        <div id="switch-account-container"></div>
+      </div>
       <div id="send-btc-container"></div>
       <div id="receive-btc-container"></div>
       <div id="transaction-receipt-container"></div>

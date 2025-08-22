@@ -74,7 +74,10 @@ async function main () {
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
-      <div id="switch-account-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Switch Account</div>  
+        <div id="switch-account-container"></div>
+      </div>
       <div id="send-btc-container"></div>
       <div id="receive-btc-container"></div>
       <div id="transaction-receipt-container"></div>
