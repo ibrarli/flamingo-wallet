@@ -2069,35 +2069,28 @@ async function ondata (data) {
   if (copy_icon) {
     copy_icon.onclick = async () => {
       try {
-        // Fill input with address if empty
-        if (!input.value && address) {
-          input.value = address
-        }
+        if (!input.value && address) input.value = address;
 
-        console.log("Input value before copy:", input.value) // log input
+        const textToCopy = input.value;
+        if (!textToCopy) return;
 
-        const textToCopy = input.value
-        if (!textToCopy) return
-
-        // Use textarea trick to force copy
-        const textarea = document.createElement("textarea")
-        textarea.value = textToCopy
-        document.body.appendChild(textarea)
-        textarea.select()
-        const success = document.execCommand("copy")
-        document.body.removeChild(textarea)
-
-        console.log("Copied to clipboard via execCommand:", success, textToCopy)
-
-        // Also try navigator.clipboard if available
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(textToCopy)
-          console.log("Copied to clipboard via navigator.clipboard:", textToCopy)
+          await navigator.clipboard.writeText(textToCopy);
+          console.log("Copied via navigator.clipboard:", textToCopy);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = textToCopy;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+          console.log("Copied via execCommand fallback:", textToCopy);
         }
+
       } catch (err) {
-        console.error("Failed to copy:", err)
+        console.error("Failed to copy:", err);
       }
-    }
+    };
   }
 }
 
