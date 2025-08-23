@@ -2327,27 +2327,29 @@ async function receipt_row(opts = {}) {
   }
 
   async function ondata(data) {
-    let { label, value, is_link, is_total } = data[0] || {}
+    let { label, value, class_name } = data[0] || {}
 
     let valueHtml = value || ""
 
-    if (is_link) {
+    // if the row has "link" style
+    if (class_name?.includes("link")) {
       valueHtml = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
     }
 
-    if (is_total && value) {
+    // if the row has "total" style, prepend btc icon
+    if (class_name?.includes("total") && value) {
       valueHtml = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
     }
-    
-    row.className = `receipt-row ${is_total ? "total" : ""}`
+
+    row.className = `receipt-row ${class_name || ""}`
 
     row.innerHTML = `
       <div class="receipt-label">${label}</div>
       <div class="receipt-value">${valueHtml}</div>
-      ${is_total ? "" : `<div class="divider"></div>`}
+      ${class_name?.includes("total") ? "" : `<div class="divider"></div>`}
     `
-    
   }
+
 
 }
 
@@ -2378,27 +2380,19 @@ function fallback_module() {
               }
 
               .receipt-value {
-                color: #000000;
+                color: #000;
                 font-size: 18px;
               }
 
               .receipt-row.total .receipt-value {
                 font-size: 28px;
                 font-weight: 600;
-                color: #000000;
               }
 
-              .receipt-link {
+              .receipt-row.link .receipt-value {
                 color: #4479FF;
                 text-decoration: none;
                 cursor: pointer;
-              }
-
-              .btc-icon {
-          
-                display: inline-block;
-                vertical-align: middle;
-                margin-right: 6px;
               }
 
               .divider {
@@ -2406,9 +2400,10 @@ function fallback_module() {
                 background: #ddd;
                 margin-top: 6px;
               }
+
             `
           }
-        },
+        },  
         'data/': {
           'opts.json': { raw: opts }
         }
@@ -5153,8 +5148,8 @@ function fallback_module () {
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
               { label: "Transaction Fees", value: "BTC 0.0001" },
               { label: "Recipient Receives", value: "BTC 0.0019" },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here", is_link: true },
-              { label: "Total Amount", value: "BTC 0.0020", is_total: true }
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  class_name: "link" },
+              { label: "Total Amount", value: "BTC 0.0020",  class_name: "total" }
             ]
           },
         mapping: {
