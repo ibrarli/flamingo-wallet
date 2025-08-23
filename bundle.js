@@ -2174,7 +2174,7 @@ function fallback_module () {
   }
 }
 
-}).call(this)}).call(this,"/src/node_modules/menu/footer.js")
+}).call(this)}).call(this,"/src/node_modules/menu/menu.js")
 },{"STATE":1}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
