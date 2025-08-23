@@ -2094,7 +2094,6 @@ async function ondata (data) {
           await navigator.clipboard.writeText(textToCopy)
           console.log("Copied to clipboard via navigator.clipboard:", textToCopy)
         }
-
       } catch (err) {
         console.error("Failed to copy:", err)
       }
