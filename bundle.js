@@ -2329,23 +2329,23 @@ async function receipt_row(opts = {}) {
   async function ondata(data) {
     let { label, value, class_name } = data[0] || {}
 
-    let valueHtml = value || ""
+    let value_html = value || ""
 
     // if the row has "link" style
     if (class_name?.includes("link")) {
-      valueHtml = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
+      value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
     }
 
     // if the row has "total" style, prepend btc icon
     if (class_name?.includes("total") && value) {
-      valueHtml = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
+      value_html = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
     }
 
     row.className = `receipt-row ${class_name || ""}`
 
     row.innerHTML = `
       <div class="receipt-label">${label}</div>
-      <div class="receipt-value">${valueHtml}</div>
+      <div class="receipt-value">${value_html}</div>
       ${class_name?.includes("total") ? "" : `<div class="divider"></div>`}
     `
   }
