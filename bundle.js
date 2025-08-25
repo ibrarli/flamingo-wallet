@@ -2331,7 +2331,6 @@ async function receipt_row(opts = {}) {
 
     let value_html = value || ""
 
-    // if the row has "link" style
     if (link) {
       value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
       row.className = `receipt-row link`
@@ -3307,12 +3306,28 @@ async function transaction_history (opts = {}) {
   const style = shadow.querySelector('style')
   const containerEl = shadow.querySelector('.transaction-history-container')
 
+  
   const subs = await sdb.watch(onbatch)
+  
 
   const grouped = {}
+  console.log("test",sdb)
 
+  // for (const sub of subs) {
+
+  //   const opts_file = await sdb.get(sub.sid)
+  //   console.log("opts_file",opts_file)
+
+  //   const tx = opts_file.raw || {}
+
+  //   const date = (tx.date || sub.date || 'Unknown').trim() 
+
+  //   if (!grouped[date]) grouped[date] = []
+  //   grouped[date].push({tx, sub_drive})
+  // }
+  
   subs.forEach(sub => {
-    const date = (sub.date || 'Unknown').trim() // trim extra spaces
+    const date = (sub.date || 'Unknown').trim() 
     if (!grouped[date]) grouped[date] = []
     grouped[date].push(sub)
   })
