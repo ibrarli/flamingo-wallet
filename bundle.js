@@ -8,6 +8,8 @@ const { sdb, get } = statedb(fallback_module)
 
 const general_button = require('general_button')
 const switch_account = require('switch_account')
+const send_btc = require('send_btc')      
+const receive_btc = require('receive_btc') 
 
 module.exports = action_buttons
 
@@ -32,11 +34,15 @@ async function action_buttons (opts = {}, protocol) {
   shadow.innerHTML = `
     <div class="action-buttons-container">
         <div class="wallet-buttons wallet-button-container" id="wallet-button-container">
-            <div class="dropdown-container hidden"></div> <!-- ✅ dropdown kept inside -->
+            <div class="dropdown-container hidden"></div>
         </div>
         <div class="send-receive-buttons">
-            <div id="send-button-container"></div> 
-            <div id="receive-button-container"></div> 
+            <div id="send-button-container">
+              <div class="send-dropdown hidden"></div>
+            </div> 
+            <div id="receive-button-container">
+              <div class="receive-dropdown hidden"></div>
+            </div> 
         </div>
     </div>
     <style></style>
@@ -44,7 +50,11 @@ async function action_buttons (opts = {}, protocol) {
 
   const style = shadow.querySelector('style')
   const wallet_container = shadow.querySelector('#wallet-button-container')
-  const dropdown = wallet_container.querySelector('.dropdown-container')
+
+  // Dropdown elements
+  const wallet_dropdown = wallet_container.querySelector('.dropdown-container')
+  const send_dropdown = shadow.querySelector('.send-dropdown')
+  const receive_dropdown = shadow.querySelector('.receive-dropdown')
 
   const subs = await sdb.watch(onbatch)
 
@@ -53,43 +63,130 @@ async function action_buttons (opts = {}, protocol) {
   }
 
   // Create buttons
-  const sendButton = await general_button(subs[0], button_protocol('send_general'))
-  const receiveButton = await general_button(subs[1], button_protocol('receive_general'))
-  const wallet_btn = await general_button(subs[2], button_protocol('wallet_general'))
+  const send_button = await general_button(subs[0], button_protocol('send_general'))
+  const receive_button = await general_button(subs[1], button_protocol('receive_general'))
+  const wallet_button = await general_button(subs[2], button_protocol('wallet_general'))
 
-  shadow.querySelector('#send-button-container').replaceWith(sendButton)
-  shadow.querySelector('#receive-button-container').replaceWith(receiveButton)
+  // Insert buttons
+  shadow.querySelector('#send-button-container').prepend(send_button)
+  shadow.querySelector('#receive-button-container').prepend(receive_button)
+  wallet_container.insertBefore(wallet_button, wallet_dropdown)
 
-  // ✅ Insert wallet button inside container, before dropdown
-  wallet_container.insertBefore(wallet_btn, dropdown)
+  // Set default actions
+  send_button._action = 'send_message'
+  receive_button._action = 'receive_message'
+  wallet_button._action = 'wallet_action'
 
-  // Ensure wallet button has action set right away
-  wallet_btn._action = 'wallet_action'
+  // Dropdown states
+  let send_el = null
+  let receive_el = null
+  let switch_el = null
 
-  // Click handler for wallet
-  let switchEl = null
+  // -------------------- Helpers --------------------
 
-  wallet_btn.onclick = async () => {
-    if (wallet_btn._action !== 'wallet_action') return
+  function close_all_dropdowns(except) {
+    if (except !== 'send') send_dropdown.classList.add('hidden')
+    if (except !== 'receive') receive_dropdown.classList.add('hidden')
+    if (except !== 'wallet') wallet_dropdown.classList.add('hidden')
+  }
 
-    if (!dropdown.classList.contains('hidden')) {
-      dropdown.classList.add('hidden')
+  function handle_outside_click(event) {
+    const target = event.target
+    console.log("Clicked element:", target)
+
+    const clicked_inside_dropdown =
+      send_dropdown.contains(target) ||
+      receive_dropdown.contains(target) ||
+      wallet_dropdown.contains(target)
+
+    const clicked_button =
+      send_button.contains(target) ||
+      receive_button.contains(target) ||
+      wallet_button.contains(target)
+
+    console.log("Inside dropdown?", clicked_inside_dropdown)
+    console.log("On button?", clicked_button)
+
+    if (!clicked_inside_dropdown && !clicked_button) {
+      console.log("Closing all dropdowns")
+      close_all_dropdowns(null)
+    } else {
+      console.log("Keeping dropdown open")
+    }
+  }
+
+  shadow.addEventListener('click', handle_outside_click)
+
+  // -------------------- Dropdown Toggles --------------------
+
+  // Send button
+  send_button.onclick = async (event) => {
+    event.stopPropagation()
+    if (send_button._action !== 'send_message') return
+
+    if (!send_dropdown.classList.contains('hidden')) {
+      send_dropdown.classList.add('hidden')
       return
     }
 
-    if (!switchEl) {
-      switchEl = await switch_account(subs[3], {
-        onClose: () => {
-          dropdown.classList.add('hidden')
-        }
+    close_all_dropdowns('send')
+
+    if (!send_el) {
+      send_el = await send_btc(subs[4], {
+        onClose: () => send_dropdown.classList.add('hidden')
       })
-      dropdown.appendChild(switchEl)
+      send_dropdown.appendChild(send_el)
     }
 
-    dropdown.classList.remove('hidden')
+    send_dropdown.classList.remove('hidden')
   }
 
-  // Send initial config messages
+  // Receive button
+  receive_button.onclick = async (event) => {
+    event.stopPropagation()
+    if (receive_button._action !== 'receive_message') return
+
+    if (!receive_dropdown.classList.contains('hidden')) {
+      receive_dropdown.classList.add('hidden')
+      return
+    }
+
+    close_all_dropdowns('receive')
+
+    if (!receive_el) {
+      receive_el = await receive_btc(subs[5], {
+        onClose: () => receive_dropdown.classList.add('hidden')
+      })
+      receive_dropdown.appendChild(receive_el)
+    }
+
+    receive_dropdown.classList.remove('hidden')
+  }
+
+  // Wallet button
+  wallet_button.onclick = async (event) => {
+    event.stopPropagation()
+    if (wallet_button._action !== 'wallet_action') return
+
+    if (!wallet_dropdown.classList.contains('hidden')) {
+      wallet_dropdown.classList.add('hidden')
+      return
+    }
+
+    close_all_dropdowns('wallet')
+
+    if (!switch_el) {
+      switch_el = await switch_account(subs[3], {
+        onClose: () => wallet_dropdown.classList.add('hidden')
+      })
+      wallet_dropdown.appendChild(switch_el)
+    }
+
+    wallet_dropdown.classList.remove('hidden')
+  }
+
+  // -------------------- Initial Config --------------------
+
   _.send_general?.({
     type: 'button_name',
     data: { name: 'Send', action: 'send_message' }
@@ -135,13 +232,12 @@ async function action_buttons (opts = {}, protocol) {
 
   async function ondata (data) {
     const buttonData = data[0]?.value || {}
-    // you could update buttons dynamically here if needed
   }
 
   function button_protocol (key) {
     return send => {
       _[key] = send
-      return send // return send function instead of handler object
+      return send
     }
   }
 
@@ -170,7 +266,9 @@ function fallback_module () {
     api,
     _: {
       'general_button': { $: '' },
-      'switch_account': { $: '' }
+      'switch_account': { $: '' },
+      'send_btc': { $: '' },
+      'receive_btc': { $: '' }
     }
   }
 
@@ -197,29 +295,40 @@ function fallback_module () {
       } 
     }
 
+    const send_btc = {
+      mapping: { 
+        style: 'style', 
+        data: 'data', 
+        icons: 'icons' 
+      },
+      4: ''
+    }
+
+    const receive_btc = {
+      mapping: { 
+        style: 'style', 
+        data: 'data', 
+        icons: 'icons' 
+      },
+      5: ''
+    }
+
     return {
       drive: {
         'style/': {
-          'action_buttons.css': {
-            '$ref': 'action_buttons.css'
-          }
+          'action_buttons.css': { '$ref': 'action_buttons.css' }
         },
         'data/': {
-          'opts.json': {
-            raw: opts
-          }
+          'opts.json': { raw: opts }
         }
       },
-      _: {
-        general_button,
-        switch_account
-      }
+      _: { general_button, switch_account, send_btc, receive_btc }
     }
   }
 }
 
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":9,"switch_account":20}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":9,"receive_btc":16,"send_btc":18,"switch_account":20}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1501,9 +1610,9 @@ const action_buttons = require('action_buttons')
 const menu = require('menu')
 const home_page_header = require('home_page_header')
 
-module.exports = transaction_history
+module.exports = home_page
 
-async function transaction_history (opts = {}) {
+async function home_page (opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -2436,7 +2545,6 @@ async function receive_btc(opts = {}) {
   let dricons = []
 
   shadow.innerHTML = `
-    <div class="component-label">Receive BTC</div>
     <div class="receive-btc-container">
       <div class="btc-icon"></div> 
       <div class="qr-code"></div> 
@@ -2704,7 +2812,6 @@ async function send_btc(opts = {}) {
   let dricons = []
 
   shadow.innerHTML = `
-    <div class="component-label">Send BTC</div>
     <div class="send-btc-container">
       <div class="send-btc-header">  
         <div class="title-container"> 
@@ -3026,16 +3133,16 @@ async function switch_account (opts = {}) {
       </div>
     ` 
 
-    const closeBtn = row.querySelector('.close-icon')
-    if (closeBtn) {
-      closeBtn.onclick = () => {
-        const dropdown = el.parentNode
-        if (dropdown) {
-          dropdown.classList.add('hidden')   
-          dropdown.innerHTML = ''            
-        }
-      }
-    }
+    // const closeBtn = row.querySelector('.close-icon')
+    // if (closeBtn) {
+    //   closeBtn.onclick = () => {
+    //     const dropdown = el.parentNode
+    //     if (dropdown) {
+    //       dropdown.classList.add('hidden')   
+    //       dropdown.innerHTML = ''            
+    //     }
+    //   }
+    // }
   }
 
 
@@ -3079,6 +3186,7 @@ function fallback_module () {
                 background: white;
                 font-family: Arial, sans-serif;
                 color: black;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.20);
               }
 
               .container-title{
@@ -3162,9 +3270,24 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = total_wealth
 
+async function get_rate(from = 'btc', to = 'usd') {
+  let cached_rate = null
+  if (cached_rate) return cached_rate
+  
+  const rate = Number(await (await fetch(`https://api.price2sheet.com/raw/${from}/${to}`)).text())
+
+  if (!isNaN(rate) && rate > 0) {
+    cached_rate = rate
+    console.log("api is working")
+  } else {
+    console.log("api is returning null value")
+  }
+
+  return cached_rate
+}
+
 async function total_wealth (opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
-  
   const {drive} = sdb
 
   const on = {
@@ -3214,9 +3337,8 @@ async function total_wealth (opts = {}, protocol) {
   }
 
   function inject (data) {
-    style.replaceChildren((() => {
-      return document.createElement('style').textContent = data[0]
-    })())
+    style.textContent = data[0]
+
   }
 
   function ondata(data) {
@@ -3224,9 +3346,12 @@ async function total_wealth (opts = {}, protocol) {
   }
   
 
-  function renderValues({ total = 0, usd = 1000, lightning = 0, bitcoin = 0 }) {
+  async function renderValues({ total = 0, lightning = 0, bitcoin = 0 }) {
+    const rate = await get_rate('btc', 'usd')
+    const usd = rate * total
+
     shadow.querySelector('.total-wealth-value span').textContent = `₿ ${total.toFixed(4)}`
-    shadow.querySelector('.total-wealth-usd').textContent = `= $${usd.toLocaleString()}`
+    shadow.querySelector('.total-wealth-usd').textContent = `= $${usd.toLocaleString(undefined, {maximumFractionDigits: 2})}`
     shadow.querySelectorAll('.wallet-row')[0].querySelector('span').textContent = lightning.toFixed(4)
     shadow.querySelectorAll('.wallet-row')[1].querySelector('span').textContent = bitcoin.toFixed(4)
     
@@ -3296,7 +3421,6 @@ async function transaction_history (opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="component-label">Transaction History</div>
     <div class="transaction-history-container">
       <div class="transaction-history-header"> Transactions History </div>
     </div>
@@ -3415,6 +3539,7 @@ const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const transaction_row = require('transaction_row')
+const transaction_history = require('transaction_history') 
 
 module.exports = transaction_list
 
@@ -3444,11 +3569,18 @@ async function transaction_list(opts = {}) {
 
   const style = shadow.querySelector('style')
   const container_el = shadow.querySelector('.transaction-list-container')
+  const see_all_btn = shadow.querySelector('.transaction-list-see-all')
 
   const subs = await sdb.watch(onbatch)
 
-  subs.slice(0, 4).forEach(async sub => {
+  subs.slice(1, 5).forEach(async sub => {
       container_el.append(await transaction_row(sub))
+  })
+
+  see_all_btn.addEventListener('click', async () => {
+    const history_component = await transaction_history(subs[0])
+    shadow.innerHTML = ''
+    shadow.appendChild(history_component)
   })
 
   return el
@@ -3479,12 +3611,107 @@ function fallback_module () {
   return {
     api,
     _: {
-      'transaction_row':{
-        $: ''
-      }
+      'transaction_history':{ $: ''},
+      'transaction_row':{ $: '' },
     } 
   }
   function api(opts){
+    const transaction_history = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      },
+      0: {
+        value:[
+          {
+            dateString: "2025-08-01",
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-08-01",
+            tid: "3TgmbHfn...455p",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-08-01",
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
+          },
+          {
+            dateString: "2025-07-31",
+            tid: "7RwmbHfn...455p",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-07-31",
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-07-31",
+            tid: "3TgmbHfn...455p",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
+          },
+          {
+            dateString: "2025-07-28",
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-08-01",
+            tid: "7RwmbHfn...455p",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-07-28",
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-07-29",
+            tid: "3TgmbHfn...455p",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
+          },
+          {
+            dateString: "2025-07-30",
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-05-10",
+            tid: "7RwmbHfn...455p",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          }
+        ]
+      }
+    }
+
+
     const transaction_row = {
       mapping: {
         style: 'style',
@@ -3509,6 +3736,7 @@ function fallback_module () {
         }
       },
       _:{
+        transaction_history,
         transaction_row
       }
     }
@@ -3517,7 +3745,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_row":25}],24:[function(require,module,exports){
+},{"STATE":1,"transaction_history":22,"transaction_row":25}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4920,16 +5148,24 @@ async function main () {
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
       <div id="home-page-container"></div> 
-      <div id="transaction-list-container"></div> 
-      <div id="transaction-history-container"></div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Transaction History</div>  
+        <div style="width: 400px; font-weight: 500px;"id="transaction-history-container"></div> 
+      </div>
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label">Switch Account</div>  
         <div id="switch-account-container"></div>
       </div>
-      <div id="send-btc-container"></div>
-      <div id="receive-btc-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Send btc</div>  
+        <div id="send-btc-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Receive btc</div>  
+        <div id="receive-btc-container"></div>
+      </div>
       <div id="transaction-receipt-container"></div>
     </div>
   `
