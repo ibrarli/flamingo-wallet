@@ -2327,30 +2327,27 @@ async function receipt_row(opts = {}) {
   }
 
   async function ondata(data) {
-    let { label, value, class_name } = data[0] || {}
+    let { label, value, link, icon } = data[0] || {}
 
     let value_html = value || ""
 
     // if the row has "link" style
-    if (class_name?.includes("link")) {
+    if (link) {
       value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
+      row.className = `receipt-row link`
     }
 
-    // if the row has "total" style, prepend btc icon
-    if (class_name?.includes("total") && value) {
-      value_html = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
+    if (icon == "btc.svg" && value) {
+      value_html = `<span class="receipt-icon">${dricons[0]}</span> ${value}`
+      row.className = `receipt-row total`
     }
-
-    row.className = `receipt-row ${class_name || ""}`
 
     row.innerHTML = `
       <div class="receipt-label">${label}</div>
       <div class="receipt-value">${value_html}</div>
-      ${class_name?.includes("total") ? "" : `<div class="divider"></div>`}
+      ${icon ? "" : `<div class="divider"></div>`}
     `
   }
-
-
 }
 
 function fallback_module() {
@@ -3311,7 +3308,9 @@ async function transaction_history (opts = {}) {
   const containerEl = shadow.querySelector('.transaction-history-container')
 
   const subs = await sdb.watch(onbatch)
+
   const grouped = {}
+
   subs.forEach(sub => {
     const date = (sub.date || 'Unknown').trim() // trim extra spaces
     if (!grouped[date]) grouped[date] = []
@@ -5148,8 +5147,8 @@ function fallback_module () {
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
               { label: "Transaction Fees", value: "BTC 0.0001" },
               { label: "Recipient Receives", value: "BTC 0.0019" },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  class_name: "link" },
-              { label: "Total Amount", value: "BTC 0.0020",  class_name: "total" }
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
+              { label: "Total Amount", value: "BTC 0.0020",  icon: "btc.svg" }
             ]
           },
         mapping: {
