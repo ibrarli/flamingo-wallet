@@ -7,6 +7,7 @@ const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const general_button = require('general_button')
+const switch_account = require('switch_account')
 
 module.exports = action_buttons
 
@@ -20,7 +21,6 @@ async function action_buttons (opts = {}, protocol) {
   }
 
   const _ = {
-    up: null,
     send_general: null,
     receive_general: null,
     wallet_general: null
@@ -31,8 +31,8 @@ async function action_buttons (opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="action-buttons-container">
-        <div class="wallet-buttons">
-            <div id="wallet-button-container"></div>
+        <div class="wallet-buttons wallet-button-container" id="wallet-button-container">
+            <div class="dropdown-container hidden"></div> <!-- ✅ dropdown kept inside -->
         </div>
         <div class="send-receive-buttons">
             <div id="send-button-container"></div> 
@@ -40,10 +40,11 @@ async function action_buttons (opts = {}, protocol) {
         </div>
     </div>
     <style></style>
-    `
-
+  `
 
   const style = shadow.querySelector('style')
+  const wallet_container = shadow.querySelector('#wallet-button-container')
+  const dropdown = wallet_container.querySelector('.dropdown-container')
 
   const subs = await sdb.watch(onbatch)
 
@@ -51,36 +52,57 @@ async function action_buttons (opts = {}, protocol) {
     protocol({ from: 'action_buttons', notify: on_message })
   }
 
+  // Create buttons
   const sendButton = await general_button(subs[0], button_protocol('send_general'))
   const receiveButton = await general_button(subs[1], button_protocol('receive_general'))
-  const walletButton = await general_button(subs[2], button_protocol('wallet_general'))
+  const wallet_btn = await general_button(subs[2], button_protocol('wallet_general'))
 
   shadow.querySelector('#send-button-container').replaceWith(sendButton)
   shadow.querySelector('#receive-button-container').replaceWith(receiveButton)
-  shadow.querySelector('#wallet-button-container').replaceWith(walletButton)
 
+  // ✅ Insert wallet button inside container, before dropdown
+  wallet_container.insertBefore(wallet_btn, dropdown)
+
+  // Ensure wallet button has action set right away
+  wallet_btn._action = 'wallet_action'
+
+  // Click handler for wallet
+  let switchEl = null
+
+  wallet_btn.onclick = async () => {
+    if (wallet_btn._action !== 'wallet_action') return
+
+    if (!dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden')
+      return
+    }
+
+    if (!switchEl) {
+      switchEl = await switch_account(subs[3], {
+        onClose: () => {
+          dropdown.classList.add('hidden')
+        }
+      })
+      dropdown.appendChild(switchEl)
+    }
+
+    dropdown.classList.remove('hidden')
+  }
+
+  // Send initial config messages
   _.send_general?.({
     type: 'button_name',
-    data: {
-      name: 'Send',
-      action: 'send_message'
-    }
+    data: { name: 'Send', action: 'send_message' }
   })
 
   _.receive_general?.({
     type: 'button_name',
-    data: {
-      name: 'Receive',
-      action: 'receive_message'
-    }
+    data: { name: 'Receive', action: 'receive_message' }
   })
 
   _.wallet_general?.({
     type: 'button_name',
-    data: {
-      name: 'Wallet',
-      action: 'wallet_action'
-    }
+    data: { name: 'Wallet', action: 'wallet_action' }
   })
 
   const action = {
@@ -99,7 +121,9 @@ async function action_buttons (opts = {}, protocol) {
 
   async function onbatch (batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
       const handler = on[type] || fail
       handler(data, type)
     }
@@ -111,13 +135,13 @@ async function action_buttons (opts = {}, protocol) {
 
   async function ondata (data) {
     const buttonData = data[0]?.value || {}
-    // handle incoming button data here 
+    // you could update buttons dynamically here if needed
   }
 
   function button_protocol (key) {
     return send => {
       _[key] = send
-      return on
+      return send // return send function instead of handler object
     }
   }
 
@@ -126,49 +150,54 @@ async function action_buttons (opts = {}, protocol) {
     ;(action[type] || fail)(data, type)
   }
 
-
-
+  // Action handlers
   function send_message (data, type) {
     console.log('Send button clicked - handling send action')
-    // send logic
   }
 
   function receive_message (data, type) {
     console.log('Receive button clicked - handling receive action')
-    // receive logic 
   }
 
   function wallet_action (data, type) {
     console.log('Wallet button clicked - handling wallet action')
-    //wallet logic 
   }
 }
 
 // ============ Fallback Setup for STATE ============
-
 function fallback_module () {
   return {
+    api,
     _: {
-      'general_button': {
-        $: ''
-      }
-    },
-    api: fallback_instance
+      'general_button': { $: '' },
+      'switch_account': { $: '' }
+    }
   }
 
-  function fallback_instance (opts = {}) {
-    return {
-      _: {
-        'general_button': {
-          0: '',
-          1: '',
-          2: '',
-          mapping: {
-            style: 'style',
-            data: 'data'
-          }
-        }
+  function api (opts = {}) {
+    const general_button = {
+      mapping: {
+        style: 'style',
+        data: 'data'
       },
+      0: {}, // send button
+      1: {}, // receive button
+      2: {}  // wallet button
+    }
+
+    const switch_account = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      3: {
+        btc: 0.789,
+        lightning: 0.9000
+      } 
+    }
+
+    return {
       drive: {
         'style/': {
           'action_buttons.css': {
@@ -180,12 +209,17 @@ function fallback_module () {
             raw: opts
           }
         }
+      },
+      _: {
+        general_button,
+        switch_account
       }
     }
   }
 }
+
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":10}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":9,"switch_account":20}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1327,180 +1361,12 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-module.exports = footer
-
-async function footer (opts = {}) {
-  const { id, sdb } = await get(opts.sid)
-  const { drive } = sdb
-
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
-  }
-
-  const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
-
-  let dricons = []
-
-  shadow.innerHTML = `
-    <div class="footer-container"></div>
-    <style></style>
-  `
-  const style = shadow.querySelector('style')
-  const footer = shadow.querySelector('.footer-container')
-
-  await sdb.watch(onbatch)
-  return el
-
-  async function onbatch (batch) {
-    for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
-      const func = on[type] || fail
-      await func(data, type)
-    }
-  }
-
-  function inject (data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata (data) {
-
-    footer.innerHTML = `
-      <div class="tab-container">
-        <div class="icon">${dricons[0]}</div>   
-        <div class="label">Home</div>
-      </div>
-      <div class="tab-container">
-        <div class="icon">${dricons[1]}</div>   
-        <div class="label">Contacts</div>
-      </div>
-      <div class="tab-container">
-        <div class="icon">${dricons[2]}</div>   
-        <div class="label">Details</div>
-      </div>
-      <div class="tab-container">
-        <div class="icon">${dricons[3]}</div>   
-        <div class="label">More</div>
-      </div>
-` 
-  }
-
-  function fail (data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  function iconject (data) {
-    dricons = data
-  }
-
-}
-
-function fallback_module () {
-  return {
-    api: fallback_instance
-  }
-
-  function fallback_instance (opts) {
-    return {
-      drive: {
-        'icons/': {
-          'home.svg':{
-            '$ref': 'home.svg'
-          },
-          'contacts.svg': {
-            '$ref': 'contacts.svg'
-          },
-          'details.svg': {
-            '$ref': 'details.svg'
-          },
-          'more.svg': {
-            '$ref': 'more.svg'
-          },
-        },
-        'style/': {
-          'style.css': {
-            raw: `
-                .footer-container {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    background: #fff;
-                    border: 1px solid #ccc;
-                    border-radius: 12px;
-                    padding: 10px;
-                    width: 100%;
-                    margin: 0 auto;
-                    font-family: Arial, sans-serif;
-                    box-sizing: border-box; 
-                }
-
-                .tab-container {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 4px;
-                    cursor: pointer;
-                    flex: 1;
-                }
-
-                .tab-container .icon {
-                    width: 24px;
-                    height: 24px;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-
-                .tab-container .label {
-                    font-size: 12px;
-                }
-
-                /* Active (Home) */
-                .tab-container:first-child .icon,
-                .tab-container:first-child .label {
-                    color: #000;
-                    fill: #000; /* in case icons are SVG */
-                    font-weight: 600;
-                }
-
-                /* Inactive (others) */
-                .tab-container:not(:first-child) .icon,
-                .tab-container:not(:first-child) .label {
-                    color: #888;
-                    fill: #888;
-                }
-            `
-          }
-        },
-        'data/': {
-          'opts.json': {
-            raw: opts
-          }
-        }
-      }
-    }
-  }
-}
-
-}).call(this)}).call(this,"/src/node_modules/footer/footer.js")
-},{"STATE":1}],10:[function(require,module,exports){
-(function (__filename){(function (){
-const STATE = require('STATE')
-const statedb = STATE(__filename)
-const { sdb, get } = statedb(fallback_module)
-
-const switch_account = require('switch_account')  // ✅ require here
-
 module.exports = general_button
 
 async function general_button (opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
-  const { drive } = sdb
+
+  const {drive} = sdb
 
   const on = {
     style: inject,
@@ -1508,7 +1374,7 @@ async function general_button (opts = {}, protocol) {
   }
 
   const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
+  const shadow =  el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
     <div class="general-button-container">
@@ -1523,23 +1389,21 @@ async function general_button (opts = {}, protocol) {
   const button = shadow.querySelector('.general-button')
 
   let send_action = null
-  if (protocol) {
-    send_action = protocol(msg => on_message(msg))
+  if(protocol){
+   send_action = protocol(msg=>on_message(msg))
   }
 
   // Set up click handler
-  button.addEventListener('click', handle_click)
+  button.addEventListener('click', handleClick)
 
   await sdb.watch(onbatch)
 
   return el
 
-  // ------------------------- Helpers -------------------------
-
   function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
 
   async function onbatch (batch) {
-    for (const { type, paths } of batch) {
+    for (const { type, paths } of batch){
       const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
       const func = on[type] || fail
       func(data, type)
@@ -1547,58 +1411,49 @@ async function general_button (opts = {}, protocol) {
   }
 
   function inject (data) {
-    style.textContent = data[0]
+    style.replaceChildren((() => {
+      return document.createElement('style').textContent = data[0]
+    })())
   }
 
   function ondata(data) {
     const buttonData = data[0]?.value || {}
     const { name, action } = buttonData
     console.log(`name "${name}"`)
-    update_button(buttonData)
+    updateButton(buttonData)
   }
 
-  function on_message({ type, data }) {
+  function on_message({type, data}) {
     if (type === 'button_name') {
       console.log(`Button "${data.name}", action "${data.action}"`)
-      update_button({
+      
+      updateButton({
         name: data.name,
         action: data.action
       })
     }
   }
 
-  function update_button({ name = 'Button', disabled = false, action = null }) {
-    const buttonTextEl = shadow.querySelector('.button-text')
 
-    if (buttonTextEl) {
-      buttonTextEl.textContent = name
-    }
-
-    if (button) {
-      button.disabled = disabled
-      button._action = action // Store action for use when clicked
-    }
+  function updateButton({ name = 'Button', disabled = false, action = null }) {
+  const buttonTextEl = shadow.querySelector('.button-text')
+  
+  
+  if (buttonTextEl) {
+    buttonTextEl.textContent = name
   }
 
-  async function handle_click(event) {
+  if (button) {
+    button.disabled = disabled
+    button._action = action // Store action for use when clicked
+  }
+}
+
+
+  function handleClick(event) {
     event.preventDefault()
 
-    if (button._action === 'wallet_action') {
-      console.log('Wallet button clicked - opening switch_account')
-
-      const subs = await sdb.watch(onbatch)
-
-      // ✅ load switch_account UI (with fallback support)
-      const switchEl = await switch_account(subs[0])
-
-      const container = document.createElement('div')
-      container.className = 'switch-account-container'
-      container.appendChild(switchEl)
-      shadow.appendChild(container)
-      return
-    }
-
-    if (send_action && button._action) {
+    if(send_action && button._action){
       send_action({
         type: button._action,
         data: {
@@ -1611,36 +1466,17 @@ async function general_button (opts = {}, protocol) {
 
 // ============ Fallback Setup for STATE ============
 
-
-function fallback_module() {
+function fallback_module () {
   return {
-    api,
-    _: {
-      'switch_account': { $: '' },
-    }
+    api: fallback_instance
   }
 
-  function api(opts) {
-
-    const switch_account = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0:{
-        value: {
-          btc: 0.9862,
-          lightning: 0.9000
-        },
-      },
-    }
-
+  function fallback_instance (opts = {}) {
     return {
       drive: {
         'style/': {
           'general_button.css': {
-            '$ref': 'general_button.css'
+           '$ref':'general_button.css'
           }
         },
         'data/': {
@@ -1648,18 +1484,12 @@ function fallback_module() {
             raw: opts
           }
         }
-      },
-      _: {
-        switch_account
-   
       }
     }
   }
 }
-
-
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1,"switch_account":20}],11:[function(require,module,exports){
+},{"STATE":1}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1668,7 +1498,7 @@ const { sdb, get } = statedb(fallback_module)
 const transaction_list = require('transaction_list')
 const total_wealth = require('total_wealth')
 const action_buttons = require('action_buttons')
-const footer = require('footer')
+const menu = require('menu')
 const home_page_header = require('home_page_header')
 
 module.exports = transaction_history
@@ -1700,7 +1530,7 @@ async function transaction_history (opts = {}) {
   const transaction_list_component = await transaction_list(subs[0])
   const total_wealth_component = await total_wealth(subs[1])
   const action_buttons_component = await action_buttons(subs[2])
-  const footer_component = await footer(subs[3])
+  const footer_component = await menu(subs[3])
   const home_page_header_component = await home_page_header(subs[4])
 
   container.appendChild(home_page_header_component)
@@ -1739,7 +1569,7 @@ function fallback_module () {
       'transaction_list':{ $: '' },
       'total_wealth':{ $: '' },
       'action_buttons':{ $: '' },
-      'footer':{ $: '' },
+      'menu':{ $: '' },
       'home_page_header':{ $: '' }
     } 
   }
@@ -1816,7 +1646,7 @@ function fallback_module () {
       }
     }
    
-    const footer = {
+    const menu = {
       mapping: {
         style: 'style',
         data: 'data',
@@ -1853,7 +1683,7 @@ function fallback_module () {
         transaction_list,
         total_wealth,
         action_buttons,
-        footer,
+        menu,
         home_page_header
       }
     }
@@ -1861,7 +1691,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"action_buttons":2,"footer":9,"home_page_header":12,"total_wealth":21,"transaction_list":23}],12:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":11,"menu":13,"total_wealth":21,"transaction_list":23}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1993,7 +1823,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],13:[function(require,module,exports){
+},{"STATE":1}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2049,31 +1879,56 @@ async function input_field (opts = {}) {
     dricons = data 
   }
 
-  async function ondata (data) {
-    const { header, placeholder, address, icon } = data[0]
+async function ondata (data) {
+  const { header, placeholder, address, icon } = data[0]
 
-    container.innerHTML = `
-        <div class="contact-header">${header}</div>
-        <div class="input-field">
-          <input
-            type="text"
-            class="search-input"
-            placeholder="${placeholder}"
-          />
-           ${icon 
-            ? `<span class="icon">${dricons[0] || ""}</span>` 
-            : ''}
-        </div>
-      ` 
-      
-    const input = container.querySelector('.search-input')
+  container.innerHTML = `
+      <div class="contact-header">${header}</div>
+      <div class="input-field">
+        <input
+          type="text"
+          class="search-input"
+          placeholder="${placeholder}"
+        />
+         ${icon 
+          ? `<span class="icon">${dricons[0] || ""}</span>` 
+          : ''}
+      </div>
+    ` 
+  
+  const input = container.querySelector('.search-input')
+  const copy_icon = container.querySelector('.icon')
 
-    input.addEventListener('focus', () => {
-      if (address) {
-        input.value = address
+  if (copy_icon) {
+    copy_icon.onclick = async () => {
+      try {
+        if (!input.value && address) input.value = address;
+
+        const textToCopy = input.value;
+        if (!textToCopy) return;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(textToCopy);
+          console.log("Copied via navigator.clipboard:", textToCopy);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = textToCopy;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+          console.log("Copied via execCommand fallback:", textToCopy);
+        }
+
+      } catch (err) {
+        console.error("Failed to copy:", err);
       }
-    })
+    };
   }
+}
+
+
+
 }
 
 function fallback_module () {
@@ -2153,6 +2008,173 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
+},{"STATE":1}],13:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = menu
+
+async function menu (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="menu-container"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const footer = shadow.querySelector('.menu-container')
+
+  await sdb.watch(onbatch)
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+
+    footer.innerHTML = `
+      <div class="tab-container">
+        <div class="icon">${dricons[0]}</div>   
+        <div class="label">Home</div>
+      </div>
+      <div class="tab-container">
+        <div class="icon">${dricons[1]}</div>   
+        <div class="label">Contacts</div>
+      </div>
+      <div class="tab-container">
+        <div class="icon">${dricons[2]}</div>   
+        <div class="label">Details</div>
+      </div>
+      <div class="tab-container">
+        <div class="icon">${dricons[3]}</div>   
+        <div class="label">More</div>
+      </div>
+` 
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'home.svg':{
+            '$ref': 'home.svg'
+          },
+          'contacts.svg': {
+            '$ref': 'contacts.svg'
+          },
+          'details.svg': {
+            '$ref': 'details.svg'
+          },
+          'more.svg': {
+            '$ref': 'more.svg'
+          },
+        },
+        'style/': {
+          'style.css': {
+            raw: `
+                .menu-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #fff;
+                    border: 1px solid #ccc;
+                    border-radius: 12px;
+                    padding: 10px;
+                    width: 100%;
+                    margin: 0 auto;
+                    font-family: Arial, sans-serif;
+                    box-sizing: border-box; 
+                }
+
+                .tab-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                    cursor: pointer;
+                    flex: 1;
+                }
+
+                .tab-container .icon {
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+
+                .tab-container .label {
+                    font-size: 12px;
+                }
+
+                /* Active (Home) */
+                .tab-container:first-child .icon,
+                .tab-container:first-child .label {
+                    color: #000;
+                    fill: #000; /* in case icons are SVG */
+                    font-weight: 600;
+                }
+
+                /* Inactive (others) */
+                .tab-container:not(:first-child) .icon,
+                .tab-container:not(:first-child) .label {
+                    color: #888;
+                    fill: #888;
+                }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/menu/menu.js")
 },{"STATE":1}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
@@ -2305,27 +2327,29 @@ async function receipt_row(opts = {}) {
   }
 
   async function ondata(data) {
-    let { label, value, is_link, is_total } = data[0] || {}
+    let { label, value, class_name } = data[0] || {}
 
-    let valueHtml = value || ""
+    let value_html = value || ""
 
-    if (is_link) {
-      valueHtml = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
+    // if the row has "link" style
+    if (class_name?.includes("link")) {
+      value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
     }
 
-    if (is_total && value) {
-      valueHtml = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
+    // if the row has "total" style, prepend btc icon
+    if (class_name?.includes("total") && value) {
+      value_html = `<span class="btc-icon">${dricons[0] || ""}</span> ${value}`
     }
-    
-    row.className = `receipt-row ${is_total ? "total" : ""}`
+
+    row.className = `receipt-row ${class_name || ""}`
 
     row.innerHTML = `
       <div class="receipt-label">${label}</div>
-      <div class="receipt-value">${valueHtml}</div>
-      ${is_total ? "" : `<div class="divider"></div>`}
+      <div class="receipt-value">${value_html}</div>
+      ${class_name?.includes("total") ? "" : `<div class="divider"></div>`}
     `
-    
   }
+
 
 }
 
@@ -2356,27 +2380,19 @@ function fallback_module() {
               }
 
               .receipt-value {
-                color: #000000;
+                color: #000;
                 font-size: 18px;
               }
 
               .receipt-row.total .receipt-value {
                 font-size: 28px;
                 font-weight: 600;
-                color: #000000;
               }
 
-              .receipt-link {
+              .receipt-row.link .receipt-value {
                 color: #4479FF;
                 text-decoration: none;
                 cursor: pointer;
-              }
-
-              .btc-icon {
-          
-                display: inline-block;
-                vertical-align: middle;
-                margin-right: 6px;
               }
 
               .divider {
@@ -2384,9 +2400,10 @@ function fallback_module() {
                 background: #ddd;
                 margin-top: 6px;
               }
+
             `
           }
-        },
+        },  
         'data/': {
           'opts.json': { raw: opts }
         }
@@ -2536,7 +2553,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":13,"qr_code":14}],17:[function(require,module,exports){
+},{"STATE":1,"input_field":12,"qr_code":14}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2832,7 +2849,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":4,"input_field":13}],19:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":4,"input_field":12}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2972,7 +2989,6 @@ async function switch_account (opts = {}) {
   let dricons = []
 
   shadow.innerHTML = `
-    <div class="component-label">Switch Account</div>  
     <div class="switch-account-container"></div>
     <style></style>
   `
@@ -2997,7 +3013,7 @@ async function switch_account (opts = {}) {
   }
 
   async function ondata (data) {
-    const { btc, lightning  } = data[0]
+    const { btc, lightning } = data[0]
 
     row.innerHTML = `
       <div class="container-title">
@@ -3012,8 +3028,20 @@ async function switch_account (opts = {}) {
         <div class="lightning-icon">${dricons[2]}Lightning</div>
         <div class="lightning-amount">${parseFloat(lightning).toFixed(4)}</div>       
       </div>
-` 
+    ` 
+
+    const closeBtn = row.querySelector('.close-icon')
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) {
+          dropdown.classList.add('hidden')   
+          dropdown.innerHTML = ''            
+        }
+      }
+    }
   }
+
 
   function fail (data, type) {
     throw new Error('invalid message', { cause: { data, type } })
@@ -3047,13 +3075,6 @@ function fallback_module () {
         'style/': {
           'style.css': {
             raw: `
-              .component-label{
-                font-size: 18px;
-                font-weight: bold;
-                font-family: Arial, sans-serif;
-                margin-block: 10px;
-              }
-
               .switch-account-container {
                 border: 1px solid #ccc;
                 border-radius: 10px;
@@ -3129,7 +3150,7 @@ function fallback_module () {
         'data/': {
           'opts.json': {
             raw: opts
-          }
+          },
         }
       }
     }
@@ -4889,7 +4910,10 @@ async function main () {
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
-      <div id="switch-account-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Switch Account</div>  
+        <div id="switch-account-container"></div>
+      </div>
       <div id="send-btc-container"></div>
       <div id="receive-btc-container"></div>
       <div id="transaction-receipt-container"></div>
@@ -5124,8 +5148,8 @@ function fallback_module () {
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
               { label: "Transaction Fees", value: "BTC 0.0001" },
               { label: "Recipient Receives", value: "BTC 0.0019" },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here", is_link: true },
-              { label: "Total Amount", value: "BTC 0.0020", is_total: true }
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  class_name: "link" },
+              { label: "Total Amount", value: "BTC 0.0020",  class_name: "total" }
             ]
           },
         mapping: {
@@ -5139,4 +5163,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":5,"../src/node_modules/contacts_list":8,"../src/node_modules/home_page":11,"../src/node_modules/receive_btc":16,"../src/node_modules/send_btc":18,"../src/node_modules/switch_account":20,"../src/node_modules/transaction_history":22,"../src/node_modules/transaction_receipt":24}]},{},[27]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":5,"../src/node_modules/contacts_list":8,"../src/node_modules/home_page":10,"../src/node_modules/receive_btc":16,"../src/node_modules/send_btc":18,"../src/node_modules/switch_account":20,"../src/node_modules/transaction_history":22,"../src/node_modules/transaction_receipt":24}]},{},[27]);

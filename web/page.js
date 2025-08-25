@@ -74,7 +74,10 @@ async function main () {
       <div id="transaction-history-container"></div> 
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
-      <div id="switch-account-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Switch Account</div>  
+        <div id="switch-account-container"></div>
+      </div>
       <div id="send-btc-container"></div>
       <div id="receive-btc-container"></div>
       <div id="transaction-receipt-container"></div>
@@ -309,8 +312,8 @@ function fallback_module () {
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
               { label: "Transaction Fees", value: "BTC 0.0001" },
               { label: "Recipient Receives", value: "BTC 0.0019" },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here", is_link: true },
-              { label: "Total Amount", value: "BTC 0.0020", is_total: true }
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  class_name: "link" },
+              { label: "Total Amount", value: "BTC 0.0020",  class_name: "total" }
             ]
           },
         mapping: {
