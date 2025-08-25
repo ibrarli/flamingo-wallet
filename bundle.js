@@ -2444,12 +2444,15 @@ async function receipt_row(opts = {}) {
       value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
       row.className = `receipt-row link`
     }
-
-    if (icon == "btc.svg" && value) {
-      value_html = `<span class="receipt-icon">${dricons[0]}</span> ${value}`
-      row.className = `receipt-row total`
+    
+    if (icon) {
+      if (icon == "btc.svg"){
+          value_html = `<span class="receipt-icon">${dricons[1]}</span> ${value}`
+          row.className = `receipt-row total`
+      } else {
+          value_html = `<span class="receipt-icon">${dricons[0]}</span> ${value}` // which would be our default icon it could be anything
+      } 
     }
-
     row.innerHTML = `
       <div class="receipt-label">${label}</div>
       <div class="receipt-value">${value_html}</div>
@@ -2466,6 +2469,7 @@ function fallback_module() {
     return {
       drive: {
         'icons/': {
+          'default.svg': { '$ref': 'default.svg'},
           'btc.svg': { '$ref': 'btc.svg' },
         },
         'style/': {
@@ -2489,7 +2493,7 @@ function fallback_module() {
                 font-size: 18px;
               }
 
-              .receipt-row.total .receipt-value {
+              .receipt-row.total  .receipt-value {
                 font-size: 28px;
                 font-weight: 600;
               }
@@ -2842,6 +2846,16 @@ async function send_btc(opts = {}) {
   address_input_component.append(address_component)
   btc_input_card_component.append(btc_component)
 
+  const closeBtn = shadow.querySelector('.x-icon')
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      const dropdown = el.parentNode
+      if (dropdown) {
+        dropdown.classList.add('hidden')   
+      }
+    }
+  }
+
   return el
 
   function fail(data, type) {
@@ -3133,16 +3147,15 @@ async function switch_account (opts = {}) {
       </div>
     ` 
 
-    // const closeBtn = row.querySelector('.close-icon')
-    // if (closeBtn) {
-    //   closeBtn.onclick = () => {
-    //     const dropdown = el.parentNode
-    //     if (dropdown) {
-    //       dropdown.classList.add('hidden')   
-    //       dropdown.innerHTML = ''            
-    //     }
-    //   }
-    // }
+    const closeBtn = row.querySelector('.close-icon')
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) {
+          dropdown.classList.add('hidden')   
+        }
+      }
+    }
   }
 
 
@@ -3248,6 +3261,9 @@ function fallback_module () {
                 white-space: nowrap;
               }
 
+              .close-icon{
+                cursor: pointer;
+              }
             `
           }
         },
