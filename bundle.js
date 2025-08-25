@@ -3410,7 +3410,7 @@ const transaction_row = require('transaction_row')
 module.exports = transaction_history
 
 async function transaction_history (opts = {}) {
-  const { id, sdb } = await get(opts?.sid)
+  const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
   const on = {
     style: inject,
@@ -3432,32 +3432,29 @@ async function transaction_history (opts = {}) {
 
   
   const subs = await sdb.watch(onbatch)
-   // Sub Drive Usage Example
-  const sub_drive = sdb.get(subs[0].sid)
-  console.log('sub_drive', sub_drive.list('style/'))
-  console.log('sub_drive', await sub_drive.get('style/theme.css'))
+  
 
   const grouped = {}
   console.log("test",sdb)
 
-  for (const sub of subs) {
+  // for (const sub of subs) {
 
-    const opts_file = await sdb.get(sub.sid)
-    console.log("opts_file",opts_file)
+  //   const opts_file = await sdb.get(sub.sid)
+  //   console.log("opts_file",opts_file)
 
-    const tx = opts_file.raw || {}
+  //   const tx = opts_file.raw || {}
 
-    const date = (tx.date || sub.date || 'Unknown').trim() 
+  //   const date = (tx.date || sub.date || 'Unknown').trim() 
 
-    if (!grouped[date]) grouped[date] = []
-    grouped[date].push({tx, sub_drive})
-  }
-  
-  // subs.forEach(sub => {
-  //   const date = (sub.date || 'Unknown').trim() 
   //   if (!grouped[date]) grouped[date] = []
-  //   grouped[date].push(sub)
-  // })
+  //   grouped[date].push({tx, sub_drive})
+  // }
+  
+  subs.forEach(sub => {
+    const date = (sub.date || 'Unknown').trim() 
+    if (!grouped[date]) grouped[date] = []
+    grouped[date].push(sub)
+  })
   
   for (const date in grouped) {
     const dateEl = document.createElement('div')
