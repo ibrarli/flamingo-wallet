@@ -1,5 +1,6 @@
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
+statedb.admin()
 const { sdb, get } = statedb(fallback_module)
 
 const contacts_list = require('../src/node_modules/contacts_list')
@@ -10,7 +11,10 @@ const send_btc = require('../src/node_modules/send_btc')
 const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
+const lightning_page = require('../src/node_modules/lightning_page')
 
+document.title = 'flamingo wallet'
+document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
 
 const state = {}
 
@@ -58,18 +62,20 @@ async function main () {
   console.log("Subscriptions received:", subs)
 
   const home_page_component = await home_page(subs[0], protocol)
-  const transaction_history_component = await transaction_history(subs[2], protocol)
-  const contacts_list_component = await contacts_list(subs[4], protocol)
-  const chat_view_compoent = await chat_view(subs[6],protocol)
-  const switch_account_component = await switch_account(subs[8], protocol)
-  const send_btc_component = await send_btc(subs[10], protocol)
-  const receive_btc_component = await receive_btc(subs[12], protocol)
-  const transaction_receipt_component = await transaction_receipt(subs[14], protocol)
+  const lightning_page_component = await lightning_page(subs[2], protocol)
+  const transaction_history_component = await transaction_history(subs[4], protocol)
+  const contacts_list_component = await contacts_list(subs[6], protocol)
+  const chat_view_compoent = await chat_view(subs[8],protocol)
+  const switch_account_component = await switch_account(subs[10], protocol)
+  const send_btc_component = await send_btc(subs[12], protocol)
+  const receive_btc_component = await receive_btc(subs[14], protocol)
+  const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
       <div id="home-page-container"></div> 
+      <div id="lightning-page-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label">Transaction History</div>  
         <div style="width: 400px; font-weight: 500px;"id="transaction-history-container"></div> 
@@ -92,6 +98,7 @@ async function main () {
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
+  page.querySelector('#lightning-page-container').appendChild(lightning_page_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
@@ -112,6 +119,14 @@ function fallback_module () {
     drive: {},
     _: {
       '../src/node_modules/home_page': {
+        $: '',
+        0: '',
+          mapping: {
+            style: 'style',
+            data: 'data'
+          }
+        },
+             '../src/node_modules/lightning_page': {
         $: '',
         0: '',
           mapping: {
