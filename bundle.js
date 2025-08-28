@@ -1486,10 +1486,16 @@ async function create_invoice(opts = {}) {
         </div>  
         <div class="x-icon"></div>
       </div>
-      <div class="btc-input-card"></div>
-      <div class="extra-input1"></div>
-      <div class="extra-input2"></div>
-      <div class="template1"></div>
+      <div class="scroll-area">
+        <div class="btc-input-card"></div>
+        <div class="extra-input1"></div>
+        <div class="extra-input2"></div>
+        <div class="divider"></div>
+        <div class="templates-heading">Use Templates</div>
+        <div class="template1"></div>
+        <div class="template2"></div>
+        <div class="template3"></div>
+      </div>
       <div class="create_button"></div>
     </div>
     <style></style>
@@ -1500,7 +1506,9 @@ async function create_invoice(opts = {}) {
   const btc_input_card_component = shadow.querySelector('.btc-input-card')
   const input1_component = shadow.querySelector('.extra-input1')
   const input2_component = shadow.querySelector('.extra-input2')
-  const template_container = shadow.querySelector('.template1')
+  const template1_container = shadow.querySelector('.template1')
+  const template2_container = shadow.querySelector('.template2')
+  const template3_container = shadow.querySelector('.template3')
 
   const subs = await sdb.watch(onbatch)
 
@@ -1508,13 +1516,18 @@ async function create_invoice(opts = {}) {
   const btc_component = await btc_input_card(subs[1])
   const input1 = await input_field(subs[2])
   const input2 = await input_field(subs[3])
-  const templates_component = await templates(subs[4])
+  const templates_component1 = await templates(subs[4])
+  const templates_component2 = await templates(subs[5])
+  const templates_component3 = await templates(subs[6])
+
 
   create_button_component.append(button_component)
   btc_input_card_component.append(btc_component)
   input1_component.append(input1)
   input2_component.append(input2)
-  template_container.append(templates_component)
+  template1_container.append(templates_component1)
+  template2_container.append(templates_component2)
+  template3_container.append(templates_component3)
 
   const closeBtn = shadow.querySelector('.x-icon')
   if (closeBtn) {
@@ -1618,6 +1631,16 @@ function fallback_module() {
         btc: 0.012,
         usd: 200
       },
+      5: {
+        date:"2024-12-25",
+        btc: 0.005,
+        usd: 80
+      },
+      6: {
+        date:"2024-01-01",
+        btc: 0.01,
+        usd: 150
+      }
     }
 
     return {
@@ -2259,6 +2282,9 @@ function fallback_module () {
         'style/': {
           'style.css': {
             raw: `
+              .input-field-container{
+                box-sizing: border-box;
+              }
               .contact-header {
                 font-size: 16px;
                 color: #666;
@@ -2273,6 +2299,8 @@ function fallback_module () {
                 border: 1px solid #ccc; 
                 border-radius: 6px; 
                 background-color: #f7f7f7ff; 
+                box-sizing: border-box;
+
               }
 
               .input-icon {
