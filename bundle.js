@@ -4247,7 +4247,7 @@ async function templates(opts = {}) {
   }
 
   async function ondata(data) {
-    const { date, btc, usd }  = data[0] || {}
+    const { date, btc}  = data[0] || {}
 
     const date_label = get_date_label(date)
 
