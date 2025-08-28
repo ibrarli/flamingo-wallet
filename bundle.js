@@ -4187,6 +4187,8 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const get_rate = require('rate_api/rate_api')
+
 module.exports = templates
 
 async function templates(opts = {}) {
@@ -4249,6 +4251,8 @@ async function templates(opts = {}) {
 
     const date_label = get_date_label(date)
 
+    const EXCHANGE_RATE = await get_rate('btc', 'usd')
+
     container.innerHTML =
       `
       <div class="template-left">
@@ -4256,7 +4260,7 @@ async function templates(opts = {}) {
       </div>
       <div class="template-right">
         <div class="btc-amount">${btc} BTC</div>
-        <div class="usd-amount">~$${usd}</div>
+        <div class="usd-amount">~$${btc * EXCHANGE_RATE}</div>
       </div>
         
       `
@@ -4323,7 +4327,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1}],27:[function(require,module,exports){
+},{"STATE":1,"rate_api/rate_api":19}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
