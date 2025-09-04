@@ -74,7 +74,10 @@ async function main () {
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
-      <div id="home-page-container"></div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label">Home Page</div>
+        <div id="home-page-container"></div> 
+      </div>
       <div id="lightning-page-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label">Transaction History</div>  
