@@ -4659,15 +4659,15 @@ async function transaction_list(opts = {}) {
   })
 
   see_all_btn.addEventListener('click', async () => {
-  const history_component = await transaction_history(subs[0])
+    const history_component = await transaction_history(subs[0])
 
-  // find the home_page root host element
-  let homePageHost = el.getRootNode().host
+    // find the home_page root host element
+    let homePageHost = el.getRootNode().host
 
-  if (homePageHost) {
-    homePageHost.replaceWith(history_component)
-  }
-})
+    if (homePageHost) {
+      homePageHost.replaceWith(history_component)
+    }
+  })
 
 
 
