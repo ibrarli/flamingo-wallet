@@ -328,7 +328,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":12,"receive_btc":23,"send_btc":25,"switch_account":27}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":13,"receive_btc":24,"send_btc":26,"switch_account":28}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1586,7 +1586,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":9,"search_bar":24,"square_button":26}],11:[function(require,module,exports){
+},{"STATE":1,"contact_row":9,"search_bar":25,"square_button":27}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1812,7 +1812,149 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":3,"button":6,"input_field":15,"templates":28}],12:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":6,"input_field":16,"templates":29}],12:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const address_input = require('input_field')
+const button = require('button')
+
+module.exports = details_menu
+
+async function details_menu(opts = {}) {
+  const { sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="details-menu-container">
+      <div class="container-title">
+        <div class="title">Address</div>
+        <div class="close-icon"></div>
+      </div>
+      <div class="address-input"></div>
+      <div class="secret-section">
+        <div class="secret-title">Secret Recovery Phrase</div>
+        <div class="secret-text-block" contenteditable="true"></div>
+      </div>
+      <div class="reveal-btn"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const address_input_component = shadow.querySelector('.address-input')
+  const reveal_btn_component = shadow.querySelector('.reveal-btn')
+  const closeBtn = shadow.querySelector('.close-icon')
+
+  const subs = await sdb.watch(onbatch)
+  const address_component = await address_input(subs[0])
+  const button_component = await button(subs[1])
+
+  address_input_component.append(address_component)
+  reveal_btn_component.append(button_component)
+
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      const parent = el.parentNode
+      if (parent) {
+        parent.classList.add('hidden')
+      }
+    }
+  }
+
+  return el
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+    const closeIcon = shadow.querySelector('.close-icon')
+    if (closeIcon) closeIcon.innerHTML = dricons[0]
+  }
+
+  async function ondata(data) {
+  }
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'input_field': { $: '' },
+      'button': { $: '' }
+    }
+  }
+
+  function api(opts) {
+    const input_field = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+        placeholder: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+        address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
+        icon: 'apple'
+      }
+    }
+
+    const button = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      },
+      1: {
+        label: 'Reveal'
+      }
+    }
+
+    return {
+      drive: {
+        'icons/': {
+          'x.svg': { '$ref': 'x.svg' },
+        },
+        'style/': {
+          'details_menu.css': {'$ref': 'details_menu.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+      _: { input_field, button }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/details_menu/details_menu.js")
+},{"STATE":1,"button":6,"input_field":16}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1946,7 +2088,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1}],13:[function(require,module,exports){
+},{"STATE":1}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2046,10 +2188,8 @@ function fallback_module () {
             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
-            tid: "3TgmbHfn...455p",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             tid: "Mark Kevin",
@@ -2058,10 +2198,8 @@ function fallback_module () {
             avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
           },
           {
-            tid: "7RwmbHfn...455p",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             tid: "Luis fedrick",
@@ -2147,7 +2285,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":14,"menu":18,"total_wealth":29,"transaction_list":31}],14:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":15,"menu":19,"total_wealth":30,"transaction_list":32}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2298,7 +2436,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],15:[function(require,module,exports){
+},{"STATE":1}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2488,7 +2626,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],16:[function(require,module,exports){
+},{"STATE":1}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2808,7 +2946,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":11,"general_button":12,"pay_invoice":20,"switch_account":27}],17:[function(require,module,exports){
+},{"STATE":1,"create_invoice":11,"general_button":13,"pay_invoice":21,"switch_account":28}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2908,10 +3046,8 @@ function fallback_module () {
             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
-            tid: "3TgmbHfn...455p",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             tid: "Mark Kevin",
@@ -2920,10 +3056,8 @@ function fallback_module () {
             avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
           },
           {
-            tid: "7RwmbHfn...455p",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             tid: "Luis fedrick",
@@ -3009,7 +3143,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":14,"lightning_buttons":16,"menu":18,"total_wealth":29,"transaction_list":31}],18:[function(require,module,exports){
+},{"STATE":1,"home_page_header":15,"lightning_buttons":17,"menu":19,"total_wealth":30,"transaction_list":32}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3176,7 +3310,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1}],19:[function(require,module,exports){
+},{"STATE":1}],20:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3284,7 +3418,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
-},{"STATE":1}],20:[function(require,module,exports){
+},{"STATE":1}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3441,7 +3575,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":6,"input_field":15}],21:[function(require,module,exports){
+},{"STATE":1,"button":6,"input_field":16}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3537,7 +3671,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":34}],22:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":35}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3679,7 +3813,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1}],23:[function(require,module,exports){
+},{"STATE":1}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3818,7 +3952,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":15,"qr_code":21}],24:[function(require,module,exports){
+},{"STATE":1,"input_field":16,"qr_code":22}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3945,7 +4079,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],25:[function(require,module,exports){
+},{"STATE":1}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4123,7 +4257,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":6,"input_field":15}],26:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":6,"input_field":16}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4239,7 +4373,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],27:[function(require,module,exports){
+},{"STATE":1}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4435,7 +4569,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],28:[function(require,module,exports){
+},{"STATE":1}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4583,7 +4717,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":5}],29:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4706,7 +4840,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":5}],30:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4843,7 +4977,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":33}],31:[function(require,module,exports){
+},{"STATE":1,"transaction_row":34}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4951,10 +5085,8 @@ function fallback_module () {
           },
           {
             dateString: "2025-08-01",
-            tid: "3TgmbHfn...455p",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             dateString: "2025-08-01",
@@ -4965,10 +5097,8 @@ function fallback_module () {
           },
           {
             dateString: "2025-07-31",
-            tid: "7RwmbHfn...455p",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             dateString: "2025-07-31",
@@ -4979,10 +5109,8 @@ function fallback_module () {
           },
           {
             dateString: "2025-07-31",
-            tid: "3TgmbHfn...455p",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
-            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
           },
           {
             dateString: "2025-07-28",
@@ -4993,10 +5121,8 @@ function fallback_module () {
           },
           {
             dateString: "2025-08-01",
-            tid: "7RwmbHfn...455p",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             dateString: "2025-07-28",
@@ -5007,10 +5133,8 @@ function fallback_module () {
           },
           {
             dateString: "2025-07-29",
-            tid: "3TgmbHfn...455p",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
-            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
           },
           {
             dateString: "2025-07-30",
@@ -5021,10 +5145,8 @@ function fallback_module () {
           },
           {
             dateString: "2025-05-10",
-            tid: "7RwmbHfn...455p",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
           }
         ]
       }
@@ -5064,7 +5186,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":30,"transaction_row":33}],32:[function(require,module,exports){
+},{"STATE":1,"transaction_history":31,"transaction_row":34}],33:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5189,7 +5311,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":22}],33:[function(require,module,exports){
+},{"STATE":1,"receipt_row":23}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5253,10 +5375,23 @@ async function transaction_row (opts = {}) {
     return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
   }
 
- async function ondata(data) {
-    const { avatar, tid, ttime, tamount, dateString } = data[0] || {}
+  function generateRandomId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const randomStr = Array.from({ length: 16 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
+    return randomStr.slice(0, 8) + '...' + randomStr.slice(-4)
+  }
 
-    const dateLabel = getDateLabel(dateString)
+  function generateAvatar(seed) {
+    return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(seed)}`
+  }
+
+  async function ondata(data) {
+    let { avatar, tid, ttime, tamount, dateString } = data[0] || {}
+
+    if (!tid) tid = generateRandomId()
+    if (!avatar) avatar = generateAvatar(tid)
+
+    const dateLabel = getDateLabel(dateString || new Date().toISOString())
 
     row.innerHTML = `
       <div class="transaction-detail">
@@ -5265,16 +5400,15 @@ async function transaction_row (opts = {}) {
         </div>
         <div class="transaction-data">
           <div class="transaction-id">${tid}</div>
-          <div class="transaction-time">${ttime}</div>
-          <div class="transaction-date">${dateLabel}</div> <!-- Auto-calculated -->
+          <div class="transaction-time">${ttime || '—'}</div>
+          <div class="transaction-date">${dateLabel}</div>
         </div>
       </div>  
       <div class="transaction-amount">
-        <span>${tamount} ₿</span>
+        <span>${tamount || '0'} ₿</span>
       </div> 
     `
   }
-
 }
 
 function fallback_module () {
@@ -5285,46 +5419,7 @@ function fallback_module () {
     return {
         drive: {
           'style/':{
-            'style.css':{
-              raw: `
-                .transaction-id {
-                  font-size: 20px;
-                  margin-top: 2px;
-                }
-                .transaction-row {
-                  display: flex;
-                  flex-direction: row;
-                  align-items:start;
-                  justify-content: space-between;
-                  margin-top: 12px;
-                  font-size: 14px;
-                }
-                .transaction-detail{
-                  display: flex;
-                  flex-direction: row;
-                  align-items: center;
-                  gap: 10px;
-                }
-                .transaction-avatar img {
-                  width: 40px;
-                  height: 40px;
-                  border-radius: 50%; 
-                  margin-right: 10px;
-                }
-                .transaction-data{
-                  display: flex;
-                  flex-direction: column;
-                  text-align: start;
-                }
-                .transaction-time {
-                  color: gray;
-                  text-align: start;
-                }
-                .transaction-amount {
-                  font-size: 20px;
-                }
-              `
-            }
+            'style.css':{ '$ref': 'transaction_row.css' }
           },
           'data/': {
             'opts.json': {
@@ -5336,9 +5431,8 @@ function fallback_module () {
   }
 }
 
-
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],34:[function(require,module,exports){
+},{"STATE":1}],35:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -6381,7 +6475,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -6399,7 +6493,7 @@ const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
 const btc_nodes = require('../src/node_modules/btc_nodes')
 const more_menu = require('../src/node_modules/more_menu')
-
+const details_menu = require('../src/node_modules/details_menu')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -6460,6 +6554,7 @@ async function main () {
   const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
   const btc_nodes_component = await btc_nodes(subs[18], protocol)
   const more_menu_component = await more_menu(subs[20], protocol)
+  const details_menu_component = await details_menu(subs[22], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -6496,6 +6591,10 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">More Menu</div>  
         <div id="more-menu-container"></div>
       </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Details Menu</div>  
+        <div id="details-menu-container"></div>
+      </div>
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
@@ -6509,6 +6608,7 @@ async function main () {
   page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
   page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
   page.querySelector('#more-menu-container').appendChild(more_menu_component)
+  page.querySelector('#details-menu-container').appendChild(details_menu_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -6550,10 +6650,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-08-01",
-                tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
               },
               {
                 dateString: "2025-08-01",
@@ -6564,10 +6662,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-31",
-                tid: "7RwmbHfn...455p",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
               },
               {
                 dateString: "2025-07-31",
@@ -6578,10 +6674,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-31",
-                tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-28",
@@ -6592,10 +6686,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-08-01",
-                tid: "7RwmbHfn...455p",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
               },
               {
                 dateString: "2025-07-28",
@@ -6606,10 +6698,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-29",
-                tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-30",
@@ -6620,10 +6710,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-05-10",
-                tid: "7RwmbHfn...455p",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
               }
             ]
           },
@@ -6766,9 +6854,18 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+       '../src/node_modules/details_menu': {
+        $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
       
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/chat_view":7,"../src/node_modules/contacts_list":10,"../src/node_modules/home_page":13,"../src/node_modules/lightning_page":17,"../src/node_modules/more_menu":19,"../src/node_modules/receive_btc":23,"../src/node_modules/send_btc":25,"../src/node_modules/switch_account":27,"../src/node_modules/transaction_history":30,"../src/node_modules/transaction_receipt":32}]},{},[35]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/chat_view":7,"../src/node_modules/contacts_list":10,"../src/node_modules/details_menu":12,"../src/node_modules/home_page":14,"../src/node_modules/lightning_page":18,"../src/node_modules/more_menu":20,"../src/node_modules/receive_btc":24,"../src/node_modules/send_btc":26,"../src/node_modules/switch_account":28,"../src/node_modules/transaction_history":31,"../src/node_modules/transaction_receipt":33}]},{},[36]);
