@@ -80,18 +80,18 @@ async function main () {
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Home Page</div>
+        <div class="component-label" style="padding-bottom:10px;">Home Page</div>
         <div id="home-page-container"></div> 
       </div>
       <div id="lightning-page-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Transaction History</div>  
-        <div style="width: 400px; font-weight: 500px;"id="transaction-history-container"></div> 
+        <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
       </div>
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Switch Account</div>  
+        <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
         <div id="switch-account-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 

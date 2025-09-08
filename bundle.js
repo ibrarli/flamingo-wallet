@@ -328,7 +328,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":11,"receive_btc":21,"send_btc":23,"switch_account":25}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":12,"receive_btc":23,"send_btc":25,"switch_account":27}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -679,7 +679,125 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/btc_input_card/btc_input_card.js")
-},{"STATE":1,"btc_usd_rate":4}],4:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],4:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = btc_nodes
+
+async function btc_nodes (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  let dricons = []
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="nodes-card"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const container = shadow.querySelector('.nodes-card')
+
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+   
+
+
+function iconject(data) {
+  dricons = data  
+}
+
+async function ondata (data) {
+  container.innerHTML = `
+    <div class="header">
+      <div class="dropdown">
+        <button class="dropdown-btn">Bitcoin Nodes <span class="arrow"></span></button>
+      </div>        
+      <button class="close-btn">✕</button>
+    </div>
+    <div class="node-btn-wrap">
+      <button class="node-btn">Node</button>
+    </div>
+    <div class="tab-indicator">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+    </div>
+    <div class="logs-wrap">
+      <label>Logs</label>
+      <textarea class="logs-textarea"></textarea>
+    </div>
+  `
+
+  // now insert icon if we already have it
+  if (dricons.length) {
+    const arrow_icons = shadow.querySelector('.arrow')
+    if (arrow_icons) {
+      arrow_icons.innerHTML = dricons[0]
+    }
+  }
+
+  const closeBtn = container.querySelector('.close-btn')
+  closeBtn.onclick = () => { container.innerHTML = "" }
+}
+
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'arrow-down.svg': { '$ref': 'arrow-down.svg' },
+        },
+        'style/': {
+          'style.css': { '$ref': 'btc_nodes.css' },
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          },
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/btc_nodes/btc_nodes.js")
+},{"STATE":1}],5:[function(require,module,exports){
 let cached_rate = null
 
 async function btc_usd_rate(from = 'btc', to = 'usd') {
@@ -698,7 +816,7 @@ async function btc_usd_rate(from = 'btc', to = 'usd') {
 }
 
 module.exports = btc_usd_rate
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -802,7 +920,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/button/button.js")
-},{"STATE":1}],6:[function(require,module,exports){
+},{"STATE":1}],7:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -921,7 +1039,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"button":5,"chat_view_header":7}],7:[function(require,module,exports){
+},{"STATE":1,"button":6,"chat_view_header":8}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1096,7 +1214,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
-},{"STATE":1}],8:[function(require,module,exports){
+},{"STATE":1}],9:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1326,7 +1444,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],9:[function(require,module,exports){
+},{"STATE":1}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1468,7 +1586,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":8,"search_bar":22,"square_button":24}],10:[function(require,module,exports){
+},{"STATE":1,"contact_row":9,"search_bar":24,"square_button":26}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1694,7 +1812,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":3,"button":5,"input_field":14,"templates":26}],11:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":6,"input_field":15,"templates":28}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1828,7 +1946,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1}],12:[function(require,module,exports){
+},{"STATE":1}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2029,7 +2147,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":13,"menu":17,"total_wealth":27,"transaction_list":29}],13:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":14,"menu":18,"total_wealth":29,"transaction_list":31}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2180,7 +2298,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],14:[function(require,module,exports){
+},{"STATE":1}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2370,7 +2488,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],15:[function(require,module,exports){
+},{"STATE":1}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2690,7 +2808,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":10,"general_button":11,"pay_invoice":18,"switch_account":25}],16:[function(require,module,exports){
+},{"STATE":1,"create_invoice":11,"general_button":12,"pay_invoice":20,"switch_account":27}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2891,7 +3009,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":13,"lightning_buttons":15,"menu":17,"total_wealth":27,"transaction_list":29}],17:[function(require,module,exports){
+},{"STATE":1,"home_page_header":14,"lightning_buttons":16,"menu":18,"total_wealth":29,"transaction_list":31}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3058,7 +3176,115 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1}],18:[function(require,module,exports){
+},{"STATE":1}],19:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = more_menu
+
+async function more_menu(opts = {}) {
+  const { sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let icons = []
+
+  shadow.innerHTML = `
+    <div class="more-menu-container"></div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.more-menu-container')
+
+  await sdb.watch(onbatch)
+  return el
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata() {
+    row.innerHTML = `
+      <div class="container-title">
+        <div class="title">More</div>
+        <div class="close-icon">${icons[0]}</div>
+      </div>
+      <div class="option-container">
+        <div class="dot-icon">${icons[1]}</div>
+        <div class="option-label">Nodes</div>
+      </div>
+      <div class="option-container">
+        <div class="dot-icon">${icons[1]}</div>
+        <div class="option-label">Peers</div>
+      </div>
+    `
+
+    const closeBtn = row.querySelector('.close-icon')
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) {
+          dropdown.classList.add('hidden')
+        }
+      }
+    }
+  }
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject(data) {
+    icons = data
+  }
+}
+
+function fallback_module() {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance(opts) {
+    return {
+      drive: {
+        'icons/': {
+          'x.svg': { '$ref': 'x.svg' },
+          'dot.svg': { '$ref': 'dot.svg' },
+        },
+        'style/': {
+          'style.css': { '$ref': 'more_menu.css' },
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
+},{"STATE":1}],20:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3215,7 +3441,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":5,"input_field":14}],19:[function(require,module,exports){
+},{"STATE":1,"button":6,"input_field":15}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3311,7 +3537,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":32}],20:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":34}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3453,7 +3679,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1}],21:[function(require,module,exports){
+},{"STATE":1}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3592,7 +3818,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":14,"qr_code":19}],22:[function(require,module,exports){
+},{"STATE":1,"input_field":15,"qr_code":21}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3719,7 +3945,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],23:[function(require,module,exports){
+},{"STATE":1}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3897,7 +4123,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":5,"input_field":14}],24:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":6,"input_field":15}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4013,7 +4239,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],25:[function(require,module,exports){
+},{"STATE":1}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4209,7 +4435,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],26:[function(require,module,exports){
+},{"STATE":1}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4357,7 +4583,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":4}],27:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4480,7 +4706,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":4}],28:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4518,6 +4744,9 @@ async function transaction_history (opts = {}) {
   const grouped = {}
   console.log("test",sdb)
 
+  // const sub_drive = sdb.get(subs[0].sid)
+  // console.log('sub_drive', sub_drive.list('style/'))
+  // console.log('sub_drive', sub_drive.list('/data'))
   // for (const sub of subs) {
 
   //   const opts_file = await sdb.get(sub.sid)
@@ -4612,8 +4841,9 @@ function fallback_module () {
   }
 }
 
+
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":31}],29:[function(require,module,exports){
+},{"STATE":1,"transaction_row":33}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4834,7 +5064,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":28,"transaction_row":31}],30:[function(require,module,exports){
+},{"STATE":1,"transaction_history":30,"transaction_row":33}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4959,7 +5189,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":20}],31:[function(require,module,exports){
+},{"STATE":1,"receipt_row":22}],33:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5108,7 +5338,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],32:[function(require,module,exports){
+},{"STATE":1}],34:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -6151,7 +6381,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],33:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -6167,6 +6397,9 @@ const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
+const btc_nodes = require('../src/node_modules/btc_nodes')
+const more_menu = require('../src/node_modules/more_menu')
+
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -6225,34 +6458,44 @@ async function main () {
   const send_btc_component = await send_btc(subs[12], protocol)
   const receive_btc_component = await receive_btc(subs[14], protocol)
   const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
+  const btc_nodes_component = await btc_nodes(subs[18], protocol)
+  const more_menu_component = await more_menu(subs[20], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Home Page</div>
+        <div class="component-label" style="padding-bottom:10px;">Home Page</div>
         <div id="home-page-container"></div> 
       </div>
       <div id="lightning-page-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Transaction History</div>  
-        <div style="width: 400px; font-weight: 500px;"id="transaction-history-container"></div> 
+        <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
       </div>
       <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Switch Account</div>  
+        <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
         <div id="switch-account-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Send btc</div>  
+        <div class="component-label" style="padding-bottom:10px;">Send btc</div>  
         <div id="send-btc-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Receive btc</div>  
+        <div class="component-label" style="padding-bottom:10px;">Receive btc</div>  
         <div id="receive-btc-container"></div>
       </div>
       <div id="transaction-receipt-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">btc nodes</div>  
+        <div id="btc-nodes-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">More Menu</div>  
+        <div id="more-menu-container"></div>
+      </div>
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
@@ -6264,6 +6507,8 @@ async function main () {
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
   page.querySelector('#receive-btc-container').appendChild(receive_btc_component)
   page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
+  page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
+  page.querySelector('#more-menu-container').appendChild(more_menu_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -6503,9 +6748,27 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+      '../src/node_modules/btc_nodes': {
+        $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/more_menu': {
+        $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
       
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/chat_view":6,"../src/node_modules/contacts_list":9,"../src/node_modules/home_page":12,"../src/node_modules/lightning_page":16,"../src/node_modules/receive_btc":21,"../src/node_modules/send_btc":23,"../src/node_modules/switch_account":25,"../src/node_modules/transaction_history":28,"../src/node_modules/transaction_receipt":30}]},{},[33]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/chat_view":7,"../src/node_modules/contacts_list":10,"../src/node_modules/home_page":13,"../src/node_modules/lightning_page":17,"../src/node_modules/more_menu":19,"../src/node_modules/receive_btc":23,"../src/node_modules/send_btc":25,"../src/node_modules/switch_account":27,"../src/node_modules/transaction_history":30,"../src/node_modules/transaction_receipt":32}]},{},[35]);
