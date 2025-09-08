@@ -14,7 +14,7 @@ const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
 const btc_nodes = require('../src/node_modules/btc_nodes')
 const more_menu = require('../src/node_modules/more_menu')
-
+const details_menu = require('../src/node_modules/details_menu')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -75,6 +75,7 @@ async function main () {
   const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
   const btc_nodes_component = await btc_nodes(subs[18], protocol)
   const more_menu_component = await more_menu(subs[20], protocol)
+  const details_menu_component = await details_menu(subs[22], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -111,6 +112,10 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">More Menu</div>  
         <div id="more-menu-container"></div>
       </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Details Menu</div>  
+        <div id="details-menu-container"></div>
+      </div>
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
@@ -124,6 +129,7 @@ async function main () {
   page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
   page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
   page.querySelector('#more-menu-container').appendChild(more_menu_component)
+  page.querySelector('#details-menu-container').appendChild(details_menu_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -165,10 +171,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-08-01",
-                tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
               },
               {
                 dateString: "2025-08-01",
@@ -179,10 +183,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-31",
-                tid: "7RwmbHfn...455p",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
               },
               {
                 dateString: "2025-07-31",
@@ -193,10 +195,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-31",
-                tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-28",
@@ -207,10 +207,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-08-01",
-                tid: "7RwmbHfn...455p",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
               },
               {
                 dateString: "2025-07-28",
@@ -221,10 +219,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-29",
-                tid: "3TgmbHfn...455p",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
-                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
               },
               {
                 dateString: "2025-07-30",
@@ -235,10 +231,8 @@ function fallback_module () {
               },
               {
                 dateString: "2025-05-10",
-                tid: "7RwmbHfn...455p",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
               }
             ]
           },
@@ -373,6 +367,15 @@ function fallback_module () {
         }
       },
       '../src/node_modules/more_menu': {
+        $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+       '../src/node_modules/details_menu': {
         $: '',
         0: '',
         mapping: {
