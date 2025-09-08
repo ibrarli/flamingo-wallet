@@ -12,6 +12,7 @@ const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
+const btc_nodes = require('../src/node_modules/btc_nodes')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -70,6 +71,7 @@ async function main () {
   const send_btc_component = await send_btc(subs[12], protocol)
   const receive_btc_component = await receive_btc(subs[14], protocol)
   const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
+  const btc_nodes_component = await btc_nodes(subs[18], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -90,14 +92,18 @@ async function main () {
         <div id="switch-account-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Send btc</div>  
+        <div class="component-label" style="padding-bottom:10px;">Send btc</div>  
         <div id="send-btc-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label">Receive btc</div>  
+        <div class="component-label" style="padding-bottom:10px;">Receive btc</div>  
         <div id="receive-btc-container"></div>
       </div>
       <div id="transaction-receipt-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">btc nodes</div>  
+        <div id="btc-nodes-container"></div>
+      </div>
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
@@ -109,6 +115,7 @@ async function main () {
   page.querySelector('#send-btc-container').appendChild(send_btc_component)
   page.querySelector('#receive-btc-container').appendChild(receive_btc_component)
   page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
+  page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -330,6 +337,25 @@ function fallback_module () {
         }
       },
       '../src/node_modules/transaction_receipt': {
+        $: '',
+        0: {
+        value: [
+              { label: "Sent By", value: "Cypher" },
+              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
+              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+              { label: "Transaction Fees", value: "BTC 0.0001" },
+              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
+              { label: "Total Amount", value: "BTC 0.0020",  icon: "btc.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+        '../src/node_modules/btc_nodes': {
         $: '',
         0: {
         value: [
