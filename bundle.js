@@ -4381,7 +4381,7 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = switch_account
 
-async function switch_account (opts = {}) {
+async function switch_account (opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -4397,13 +4397,16 @@ async function switch_account (opts = {}) {
   let dricons = []
 
   shadow.innerHTML = `
-    <div class="switch-account-container"></div>
+    <div class="switch-account-container">
+      <div class="account-content"></div>
+    </div>
     <style></style>
   `
   const style = shadow.querySelector('style')
-  const row = shadow.querySelector('.switch-account-container')
+  const content = shadow.querySelector('.account-content')
 
-  await sdb.watch(onbatch)
+  const subs = await sdb.watch(onbatch)
+
   return el
 
   async function onbatch (batch) {
@@ -4423,32 +4426,68 @@ async function switch_account (opts = {}) {
   async function ondata (data) {
     const { btc, lightning } = data[0]
 
-    row.innerHTML = `
+    content.innerHTML = `
       <div class="container-title">
         <div class="title">Switch Account</div>
         <div class="close-icon">${dricons[0]}</div>   
       </div>
-      <div class="account-container">
+      <div class="account-container btc-container">
         <div class="btc-icon">${dricons[1]}BTC</div>
         <div class="btc-amount">${parseFloat(btc).toFixed(4)}</div>       
       </div>
-      <div class="account-container">
+      <div class="account-container lightning-container">
         <div class="lightning-icon">${dricons[2]}Lightning</div>
         <div class="lightning-amount">${parseFloat(lightning).toFixed(4)}</div>       
       </div>
     ` 
 
-    const closeBtn = row.querySelector('.close-icon')
-    if (closeBtn) {
-      closeBtn.onclick = () => {
+    // Close button
+    const close_btn = content.querySelector('.close-icon')
+    if (close_btn) {
+      close_btn.onclick = () => {
         const dropdown = el.parentNode
-        if (dropdown) {
-          dropdown.classList.add('hidden')   
-        }
+        if (dropdown) dropdown.classList.add('hidden')
+      }
+    }
+
+    // BTC container - back to your original approach but with lazy loading
+    const btc_container = content.querySelector('.btc-container')
+    if (btc_container) {
+      btc_container.onclick = async () => {
+        // Use setTimeout to delay and avoid circular dependency
+        setTimeout(async () => {
+          try {
+            const home_page = require('home_page')
+            const homeEl = await home_page(subs[0])
+
+            let host = el.getRootNode().host || el
+            host.replaceWith(homeEl)
+          } catch (error) {
+            console.error('Failed to navigate to home_page:', error)
+          }
+        }, 0)
+      }
+    }
+
+    // Lightning container - back to your original approach but with lazy loading
+    const lightning_container = content.querySelector('.lightning-container')
+    if (lightning_container) {
+      lightning_container.onclick = async () => {
+        // Use setTimeout to delay and avoid circular dependency
+        setTimeout(async () => {
+          try {
+            const lightning_page = require('lightning_page')
+            const lightningEl = await lightning_page(subs[1])
+
+            let host = el.getRootNode().host || el
+            host.replaceWith(lightningEl)
+          } catch (error) {
+            console.error('Failed to navigate to lightning_page:', error)
+          }
+        }, 0)
       }
     }
   }
-
 
   function fail (data, type) {
     throw new Error('invalid message', { cause: { data, type } })
@@ -4457,119 +4496,58 @@ async function switch_account (opts = {}) {
   function iconject (data) {
     dricons = data
   }
-
 }
 
+// ================== fallback ==================
 function fallback_module () {
   return {
-    api: fallback_instance
+    api: fallback_instance,
+    _: {
+      // Fixed paths as per your error message
+      'home_page': { $: '../src/node_modules/home_page:0' },
+      'lightning_page': { $: '../src/node_modules/lightning_page:1' }
+    }
   }
 
   function fallback_instance (opts) {
+    const home_page = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: ''
+    }
+
+    const lightning_page = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      1: ''
+    }
+
     return {
       drive: {
         'icons/': {
-          'x.svg':{
-            '$ref': 'x.svg'
-          },
-          'btc.svg': {
-            '$ref': 'btc.svg'
-          },
-          'lightning.svg': {
-            '$ref': 'lightning.svg'
-          },
+          'x.svg': { '$ref': 'x.svg' },
+          'btc.svg': { '$ref': 'btc.svg' },
+          'lightning.svg': { '$ref': 'lightning.svg' }
         },
         'style/': {
-          'style.css': {
-            raw: `
-              .switch-account-container {
-                border: 1px solid #ccc;
-                border-radius: 10px;
-                padding: 16px;
-                width: 250px;
-                background: white;
-                font-family: Arial, sans-serif;
-                color: black;
-                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.20);
-              }
-
-              .container-title{
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 20px;
-              }
-
-              .container-title svg{
-                width: 25px;
-                height: 25px;
-              }
-
-              .title{
-                font-size: 24px;
-              }
-
-              .account-container {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 16px;
-                padding-inline: 10px;
-                gap: 8px;
-                padding-block: 20px;
-                border-radius: 8px; /* Optional: for smooth edges */
-                transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-              }
-
-              .account-container:hover {
-                background-color: #f0f0f0ff;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-                transform: translateY(-2px);
-                cursor: pointer;
-              }
-
-              .btc-icon,
-              .lightning-icon {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                color: #2e2e2e;
-                font-size: 18px;
-                white-space: nowrap;
-              }
-
-              .account-container svg {
-                width: 25px;
-                height: 25px;
-                display: inline-block;
-                vertical-align: middle;
-              }
-
-              .btc-amount,
-              .lightning-amount {
-                color: #2e2e2e;
-                font-size: 18px;
-                margin-left: 8px;
-                white-space: nowrap;
-              }
-
-              .close-icon{
-                cursor: pointer;
-              }
-            `
-          }
+          'style.css': { '$ref': 'switch_account.css' }
         },
         'data/': {
-          'opts.json': {
-            raw: opts
-          },
+          'opts.json': { raw: opts }
         }
-      }
+      },
+      _: { home_page, lightning_page }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],29:[function(require,module,exports){
+},{"STATE":1,"home_page":14,"lightning_page":18}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5361,7 +5339,7 @@ async function transaction_row (opts = {}) {
     style.textContent = data[0]
   }
 
-  function getDateLabel(dateString) {
+  function get_date_label(dateString) {
     const today = new Date()
     const target = new Date(dateString)
 
@@ -5375,23 +5353,23 @@ async function transaction_row (opts = {}) {
     return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
   }
 
-  function generateRandomId() {
+  function generate_random_id() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
     const randomStr = Array.from({ length: 16 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
     return randomStr.slice(0, 8) + '...' + randomStr.slice(-4)
   }
 
-  function generateAvatar(seed) {
+  function generate_avatar(seed) {
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(seed)}`
   }
 
   async function ondata(data) {
     let { avatar, tid, ttime, tamount, dateString } = data[0] || {}
 
-    if (!tid) tid = generateRandomId()
-    if (!avatar) avatar = generateAvatar(tid)
+    if (!tid) tid = generate_random_id()
+    if (!avatar) avatar = generate_avatar(tid)
 
-    const dateLabel = getDateLabel(dateString || new Date().toISOString())
+    const dateLabel = get_date_label(dateString || new Date().toISOString())
 
     row.innerHTML = `
       <div class="transaction-detail">
