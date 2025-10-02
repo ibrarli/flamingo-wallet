@@ -4379,6 +4379,10 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+// require pages early
+const home_page = require('home_page')
+const lightning_page = require('lightning_page')
+
 module.exports = switch_account
 
 async function switch_account (opts = {}, protocol) {
@@ -4450,41 +4454,31 @@ async function switch_account (opts = {}, protocol) {
       }
     }
 
-    // BTC container - back to your original approach but with lazy loading
+    // BTC container
     const btc_container = content.querySelector('.btc-container')
     if (btc_container) {
       btc_container.onclick = async () => {
-        // Use setTimeout to delay and avoid circular dependency
-        setTimeout(async () => {
-          try {
-            const home_page = require('home_page')
-            const homeEl = await home_page(subs[0])
-
-            let host = el.getRootNode().host || el
-            host.replaceWith(homeEl)
-          } catch (error) {
-            console.error('Failed to navigate to home_page:', error)
-          }
-        }, 0)
+        try {
+          const homeEl = await home_page(subs[0])
+          let host = el.getRootNode().host || el
+          host.replaceWith(homeEl)
+        } catch (error) {
+          console.error('Failed to navigate to home_page:', error)
+        }
       }
     }
 
-    // Lightning container - back to your original approach but with lazy loading
+    // Lightning container
     const lightning_container = content.querySelector('.lightning-container')
     if (lightning_container) {
       lightning_container.onclick = async () => {
-        // Use setTimeout to delay and avoid circular dependency
-        setTimeout(async () => {
-          try {
-            const lightning_page = require('lightning_page')
-            const lightningEl = await lightning_page(subs[1])
-
-            let host = el.getRootNode().host || el
-            host.replaceWith(lightningEl)
-          } catch (error) {
-            console.error('Failed to navigate to lightning_page:', error)
-          }
-        }, 0)
+        try {
+          const lightningEl = await lightning_page(subs[1])
+          let host = el.getRootNode().host || el
+          host.replaceWith(lightningEl)
+        } catch (error) {
+          console.error('Failed to navigate to lightning_page:', error)
+        }
       }
     }
   }
@@ -4503,9 +4497,8 @@ function fallback_module () {
   return {
     api: fallback_instance,
     _: {
-      // Fixed paths as per your error message
-      'home_page': { $: '../src/node_modules/home_page:0' },
-      'lightning_page': { $: '../src/node_modules/lightning_page:1' }
+      'home_page': { $: '' },
+      'lightning_page': { $: '' }
     }
   }
 
