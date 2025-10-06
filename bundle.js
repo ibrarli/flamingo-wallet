@@ -328,7 +328,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":13,"receive_btc":24,"send_btc":26,"switch_account":28}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":13,"receive_btc":26,"send_btc":28,"switch_account":30}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1586,7 +1586,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":9,"search_bar":25,"square_button":27}],11:[function(require,module,exports){
+},{"STATE":1,"contact_row":9,"search_bar":27,"square_button":29}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1812,7 +1812,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":3,"button":6,"input_field":16,"templates":29}],12:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":6,"input_field":17,"templates":31}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1954,7 +1954,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/details_menu/details_menu.js")
-},{"STATE":1,"button":6,"input_field":16}],13:[function(require,module,exports){
+},{"STATE":1,"button":6,"input_field":17}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2094,100 +2094,98 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const home_page_header = require('home_page_header')
+const action_buttons = require('action_buttons')
 const transaction_list = require('transaction_list')
 const total_wealth = require('total_wealth')
-const action_buttons = require('action_buttons')
-const menu = require('menu')
-const home_page_header = require('home_page_header')
 
-module.exports = home_page
+module.exports = home_contents
 
-async function home_page (opts = {}) {
+async function home_contents (opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata
-  }
+  const on = { style: inject, data: ondata }
 
   const el = document.createElement('div')
-  el.id = "homepage" 
+  el.id = "home_contents"
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="home-page-container" id="homepage"></div>
+    <div class="home-contents-container"></div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-
-  const container = shadow.querySelector('.home-page-container')
+  const container = shadow.querySelector('.home-contents-container')
 
   const subs = await sdb.watch(onbatch)
-  
-  const transaction_list_component = await transaction_list(subs[0])
-  const total_wealth_component = await total_wealth(subs[1])
-  const action_buttons_component = await action_buttons(subs[2])
-  const footer_component = await menu(subs[3])
-  const home_page_header_component = await home_page_header(subs[4])
 
-  container.appendChild(home_page_header_component)
-  container.appendChild(action_buttons_component)
-  container.appendChild(transaction_list_component)
-  container.appendChild(total_wealth_component)
-  container.appendChild(footer_component)
+  // ✅ load components in order
+  const home_page_header_component = await home_page_header(subs[0])
+  const action_buttons_component = await action_buttons(subs[1])
+  const transaction_list_component = await transaction_list(subs[2])
+  const total_wealth_component = await total_wealth(subs[3])
+
+  // ✅ append all four in order
+  container.append(
+    home_page_header_component,
+    action_buttons_component,
+    transaction_list_component,
+    total_wealth_component
+  )
 
   return el
 
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  async function onbatch (batch) {
-    for (const { type, paths } of batch){
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
       const func = on[type] || fail
       await func(data, type)
     }
   }
 
-  function inject (data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata(data) {
+  function inject(data) { style.textContent = data[0] }
+  function ondata(data) {}
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
   }
 }
-
 
 function fallback_module () {
   return {
     api,
-    _: {
-      'transaction_list':{ $: '' },
-      'total_wealth':{ $: '' },
-      'action_buttons':{ $: '' },
-      'menu':{ $: '' },
-      'home_page_header':{ $: '' }
-    } 
+    _: { 
+      'home_page_header': { $: '' },
+      'action_buttons': { $: '' },
+      'transaction_list': { $: '' },
+      'total_wealth': { $: '' }
+    }
   }
-  function api(opts){
+
+  function api(opts) {
+    const home_page_header = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: { wallet: 'btc', amount: "0.9616" }
+    }
+
+    const action_buttons = {
+      mapping: { style: 'style', data: 'data' },
+      0: { buttons: { wallet: 'lightning' } }
+    }
 
     const transaction_list = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-      },
+      mapping: { style: 'style', data: 'data' },
       0: {
         value: [
-          {
+       {
             tid: "Luis fedrick",
             ttime: "11:30 AM",
             tamount: "+ 0.02456",
             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
+            tid: "skdmf932ksdmf0234lsd",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
           },
@@ -2198,6 +2196,7 @@ function fallback_module () {
             avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
           },
           {
+            tid: "QWErty9834asdLKJhf",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
           },
@@ -2206,17 +2205,12 @@ function fallback_module () {
             ttime: "11:30 AM",
             tamount: "+ 0.02456",
             avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-        ]
+          },    ]
       }
     }
-    
+
     const total_wealth = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: {
         value: {
           total: 0.9862,
@@ -2227,65 +2221,86 @@ function fallback_module () {
       }
     }
 
-     const action_buttons = {
-        mapping: { 
-          style: 'style',
-          data: 'data'
-        },
-        0: {
-          buttons: {
-            wallet: 'lightning',
-          }
-        }
-      }
-   
-    const menu = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
+    return {
+      drive: {
+        'style/': { 'home_contents.css': { '$ref': 'home_contents.css' } },
+        'data/': { 'opts.json': { raw: opts } }
       },
-      0: ""
+      _: { home_page_header, action_buttons, transaction_list, total_wealth }
     }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
+},{"STATE":1,"action_buttons":2,"home_page_header":16,"total_wealth":32,"transaction_list":34}],15:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
 
-    const home_page_header = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0: {
-        wallet: 'btc',
-        amount: "0.9616"
-      } 
+const menu = require('menu')
+
+module.exports = home_page
+
+async function home_page(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = { style: inject, data: ondata }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="home-page-container"></div>
+    <style></style>
+  `
+  const container = shadow.querySelector('.home-page-container')
+  const style = shadow.querySelector('style')
+
+  const subs = await sdb.watch(onbatch)
+  const menu_component = await menu(subs[0])
+  container.appendChild(menu_component)
+
+  return el
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) { style.textContent = data[0] }
+  function ondata(data) {}
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: { menu: { $: '' } }
+  }
+
+  function api(opts) {
+    const menu = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: ''
     }
 
     return {
       drive: {
         'style/': {
-          'home_page.css':{
-            '$ref': 'home_page.css'
-          }
+          'home_page.css': { '$ref': 'home_page.css' }
         },
-        'data/': {
-          'opts.json':{
-            raw: opts
-          }
-        }
+        'data/': { 'opts.json': { raw: opts } }
       },
-      _:{
-        transaction_list,
-        total_wealth,
-        action_buttons,
-        menu,
-        home_page_header
-      }
+      _: { menu }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":15,"menu":19,"total_wealth":30,"transaction_list":32}],15:[function(require,module,exports){
+},{"STATE":1,"menu":21}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2436,7 +2451,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],16:[function(require,module,exports){
+},{"STATE":1}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2626,7 +2641,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],17:[function(require,module,exports){
+},{"STATE":1}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2946,7 +2961,116 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":11,"general_button":13,"pay_invoice":21,"switch_account":28}],18:[function(require,module,exports){
+},{"STATE":1,"create_invoice":11,"general_button":13,"pay_invoice":23,"switch_account":30}],19:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+
+module.exports = lightning_menu
+
+async function lightning_menu (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="main-container">
+      <div class="menu-container"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const footer = shadow.querySelector('.menu-container')
+  const content = shadow.querySelector('.content-container')
+
+  const subs = await sdb.watch(onbatch)
+
+  
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    footer.innerHTML = `
+      <div class="tab-container active" data-tab="home">
+        <div class="icon">${dricons[0]}</div>   
+        <div class="label">Home</div>
+      </div>
+      <div class="tab-container" data-tab="contacts">
+        <div class="icon">${dricons[1]}</div>   
+        <div class="label">Contacts</div>
+      </div>
+      <div class="tab-container" data-tab="details">
+        <div class="icon">${dricons[2]}</div>   
+        <div class="label">Details</div>
+      </div>
+      <div class="tab-container" data-tab="more">
+        <div class="icon">${dricons[3]}</div>   
+        <div class="label">More</div>
+      </div>
+    `
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+   
+  }
+
+  function fallback_instance (opts) {
+   
+    return {
+      drive: {
+        'icons/': {
+          'home.svg': { '$ref': 'home.svg' },
+          'contacts.svg': { '$ref': 'contacts.svg' },
+          'details.svg': { '$ref': 'details.svg' },
+          'more.svg': { '$ref': 'more.svg' },
+        },
+        'style/': {
+          'lightning_menu.css': { '$ref': 'lightning_menu.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/lightning_menu/lightning_menu.js")
+},{"STATE":1}],20:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2955,7 +3079,7 @@ const { sdb, get } = statedb(fallback_module)
 const transaction_list = require('transaction_list')
 const total_wealth = require('total_wealth')
 const lightning_buttons = require('lightning_buttons')
-const menu = require('menu')
+const lightning_menu = require('lightning_menu')
 const home_page_header = require('home_page_header')
 
 module.exports = lightning_page
@@ -2987,7 +3111,7 @@ async function lightning_page (opts = {}) {
   const transaction_list_component = await transaction_list(subs[0])
   const total_wealth_component = await total_wealth(subs[1])
   const lightning_buttons_component = await lightning_buttons(subs[2])
-  const footer_component = await menu(subs[3])
+  const footer_component = await lightning_menu(subs[3])
   const home_page_header_component = await home_page_header(subs[4])
 
   container.appendChild(home_page_header_component)
@@ -3026,7 +3150,7 @@ function fallback_module () {
       'transaction_list':{ $: '' },
       'total_wealth':{ $: '' },
       'lightning_buttons':{ $: '' },
-      'menu':{ $: '' },
+      'lightning_menu':{ $: '' },
       'home_page_header':{ $: '' }
     } 
   }
@@ -3046,6 +3170,7 @@ function fallback_module () {
             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
+            tid: "skdmf932ksdmf0234lsd",
             ttime: "02:15 PM",
             tamount: "+ 0.03271",
           },
@@ -3056,6 +3181,7 @@ function fallback_module () {
             avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
           },
           {
+            tid: "QWErty9834asdLKJhf",
             ttime: "04:45 PM",
             tamount: "- 0.03791",
           },
@@ -3097,7 +3223,7 @@ function fallback_module () {
       }
     }
    
-    const menu = {
+    const lightning_menu = {
       mapping: {
         style: 'style',
         data: 'data',
@@ -3135,7 +3261,7 @@ function fallback_module () {
         transaction_list,
         total_wealth,
         lightning_buttons,
-        menu,
+        lightning_menu,
         home_page_header
       }
     }
@@ -3143,174 +3269,210 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":15,"lightning_buttons":17,"menu":19,"total_wealth":30,"transaction_list":32}],19:[function(require,module,exports){
+},{"STATE":1,"home_page_header":16,"lightning_buttons":18,"lightning_menu":19,"total_wealth":32,"transaction_list":34}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const home_contents = require('home_contents')
+const contacts_list = require('contacts_list')
+const details_menu = require('details_menu')
+const more_menu = require('more_menu')
+
 module.exports = menu
 
-async function menu (opts = {}) {
+async function menu(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
-
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
-  }
+  const on = { style: inject, data: ondata, icons: iconject }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
-  let dricons = []
-
   shadow.innerHTML = `
-    <div class="menu-container"></div>
+    <div class="main-container">
+      <div class="content-container"></div>
+      <div class="menu-container"></div>
+    </div>
     <style></style>
   `
+
   const style = shadow.querySelector('style')
   const footer = shadow.querySelector('.menu-container')
+  const content = shadow.querySelector('.content-container')
 
-  await sdb.watch(onbatch)
+  let dricons = []
+  const subs = await sdb.watch(onbatch)
+
+  // ✅ Create all components once
+  const home_component = await home_contents(subs[0])
+  const contacts_component = await contacts_list(subs[1])
+  const details_component = await details_menu(subs[2])
+  const more_component = await more_menu(subs[3])
+
+  // ✅ Append all, hide except Home
+  content.appendChild(home_component)
+  content.appendChild(contacts_component)
+  content.appendChild(details_component)
+  content.appendChild(more_component)
+
+  contacts_component.style.display = 'none'
+  details_component.style.display = 'none'
+  more_component.style.display = 'none'
+
   return el
 
-  async function onbatch (batch) {
+  async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
       const func = on[type] || fail
       await func(data, type)
     }
   }
 
-  function inject (data) {
+  function inject(data) {
     style.textContent = data[0]
   }
 
-  async function ondata (data) {
-
+  async function ondata(data) {
     footer.innerHTML = `
-      <div class="tab-container">
-        <div class="icon">${dricons[0]}</div>   
+      <div class="tab-container active" data-tab="home">
+        <div class="icon">${dricons[0]}</div>
         <div class="label">Home</div>
       </div>
-      <div class="tab-container">
-        <div class="icon">${dricons[1]}</div>   
+      <div class="tab-container" data-tab="contacts">
+        <div class="icon">${dricons[1]}</div>
         <div class="label">Contacts</div>
       </div>
-      <div class="tab-container">
-        <div class="icon">${dricons[2]}</div>   
+      <div class="tab-container" data-tab="details">
+        <div class="icon">${dricons[2]}</div>
         <div class="label">Details</div>
       </div>
-      <div class="tab-container">
-        <div class="icon">${dricons[3]}</div>   
+      <div class="tab-container" data-tab="more">
+        <div class="icon">${dricons[3]}</div>
         <div class="label">More</div>
       </div>
-` 
+    `
+
+    footer.querySelectorAll('.tab-container').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabType = tab.dataset.tab
+        footer.querySelectorAll('.tab-container').forEach(t => t.classList.remove('active'))
+        tab.classList.add('active')
+
+        // ✅ Hide all first
+        home_component.style.display = 'none'
+        contacts_component.style.display = 'none'
+        details_component.style.display = 'none'
+        more_component.style.display = 'none'
+
+        // ✅ Show only the selected one
+        if (tabType === 'home') home_component.style.display = ''
+        if (tabType === 'contacts') contacts_component.style.display = ''
+        if (tabType === 'details') details_component.style.display = ''
+        if (tabType === 'more') more_component.style.display = ''
+      })
+    })
   }
 
-  function fail (data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  function iconject (data) {
+  function iconject(data) {
     dricons = data
   }
 
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
 }
 
-function fallback_module () {
+function fallback_module() {
   return {
-    api: fallback_instance
+    api: fallback_instance,
+    _: {
+      home_contents: { $: '' },
+      contacts_list: { $: '' },
+      details_menu: { $: '' },
+      more_menu: { $: '' }
+    }
   }
 
-  function fallback_instance (opts) {
+  function fallback_instance(opts) {
+    const home_contents = {
+      mapping: { style: 'style', data: 'data' },
+      0: { text: '🏠 Home Content Loaded' }
+    }
+
+    const contacts_list = {
+      mapping: { style: 'style', data: 'data' },
+      0: {
+        value: [
+          {
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+            name: 'Mark Kevin',
+            message: 'Payment Received successfully',
+            time: '3 hr',
+            unread: 5,
+            online: true,
+            lightining: true
+          },
+          {
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+            name: 'David Clark',
+            message: 'You have a new message from Mark',
+            time: '1 hr',
+            unread: 5,
+            online: false,
+            lightining: false
+          },
+          {
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+            name: 'David Clark',
+            message: 'Received funds',
+            time: '1 hr',
+            unread: 0,
+            online: true,
+            lightining: true
+          },
+          {
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+            name: 'Sara Ahmed',
+            message: 'Invoice sent',
+            time: '2 hr',
+            unread: 0,
+            online: false,
+            lightining: false
+          }
+        ]
+      }
+    }
+
+    const details_menu = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: { text: '📋 Details Menu Content Loaded' }
+    }
+
+    const more_menu = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: { text: '⚙️ More Menu Content Loaded' }
+    }
+
     return {
       drive: {
         'icons/': {
-          'home.svg':{
-            '$ref': 'home.svg'
-          },
-          'contacts.svg': {
-            '$ref': 'contacts.svg'
-          },
-          'details.svg': {
-            '$ref': 'details.svg'
-          },
-          'more.svg': {
-            '$ref': 'more.svg'
-          },
+          'home.svg': { '$ref': 'home.svg' },
+          'contacts.svg': { '$ref': 'contacts.svg' },
+          'details.svg': { '$ref': 'details.svg' },
+          'more.svg': { '$ref': 'more.svg' }
         },
-        'style/': {
-          'style.css': {
-            raw: `
-                .menu-container {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    background: #fff;
-                    border: 1px solid #ccc;
-                    border-radius: 12px;
-                    padding: 10px;
-                    width: 100%;
-                    margin: 0 auto;
-                    font-family: Arial, sans-serif;
-                    box-sizing: border-box; 
-                }
-
-                .tab-container {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 4px;
-                    cursor: pointer;
-                    flex: 1;
-                }
-
-                .tab-container .icon {
-                    width: 24px;
-                    height: 24px;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-
-                .tab-container .label {
-                    font-size: 12px;
-                }
-
-                /* Active (Home) */
-                .tab-container:first-child .icon,
-                .tab-container:first-child .label {
-                    color: #000;
-                    fill: #000; /* in case icons are SVG */
-                    font-weight: 600;
-                }
-
-                /* Inactive (others) */
-                .tab-container:not(:first-child) .icon,
-                .tab-container:not(:first-child) .label {
-                    color: #888;
-                    fill: #888;
-                }
-            `
-          }
-        },
-        'data/': {
-          'opts.json': {
-            raw: opts
-          }
-        }
-      }
+        'style/': { 'menu.css': { '$ref': 'menu.css' } },
+        'data/': { 'opts.json': { raw: opts } }
+      },
+      _: { home_contents, contacts_list, details_menu, more_menu }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1}],20:[function(require,module,exports){
+},{"STATE":1,"contacts_list":10,"details_menu":12,"home_contents":14,"more_menu":22}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3418,7 +3580,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
-},{"STATE":1}],21:[function(require,module,exports){
+},{"STATE":1}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3575,7 +3737,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":6,"input_field":16}],22:[function(require,module,exports){
+},{"STATE":1,"button":6,"input_field":17}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3671,7 +3833,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":35}],23:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":37}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3813,7 +3975,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1}],24:[function(require,module,exports){
+},{"STATE":1}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3952,7 +4114,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":16,"qr_code":22}],25:[function(require,module,exports){
+},{"STATE":1,"input_field":17,"qr_code":24}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4079,7 +4241,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],26:[function(require,module,exports){
+},{"STATE":1}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4257,7 +4419,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":6,"input_field":16}],27:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":6,"input_field":17}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4373,15 +4535,13 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],28:[function(require,module,exports){
+},{"STATE":1}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 // require pages early
-const home_page = require('home_page')
-const lightning_page = require('lightning_page')
 
 module.exports = switch_account
 
@@ -4459,6 +4619,7 @@ async function switch_account (opts = {}, protocol) {
     if (btc_container) {
       btc_container.onclick = async () => {
         try {
+          const home_page = require('home_page')
           const homeEl = await home_page(subs[0])
           let host = el.getRootNode().host || el
           host.replaceWith(homeEl)
@@ -4473,6 +4634,7 @@ async function switch_account (opts = {}, protocol) {
     if (lightning_container) {
       lightning_container.onclick = async () => {
         try {
+          const lightning_page = require('lightning_page')
           const lightningEl = await lightning_page(subs[1])
           let host = el.getRootNode().host || el
           host.replaceWith(lightningEl)
@@ -4540,7 +4702,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1,"home_page":14,"lightning_page":18}],29:[function(require,module,exports){
+},{"STATE":1,"home_page":15,"lightning_page":20}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4688,7 +4850,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":5}],30:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4811,7 +4973,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":5}],31:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":5}],33:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4948,7 +5110,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":34}],32:[function(require,module,exports){
+},{"STATE":1,"transaction_row":36}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5157,7 +5319,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":31,"transaction_row":34}],33:[function(require,module,exports){
+},{"STATE":1,"transaction_history":33,"transaction_row":36}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5282,7 +5444,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":23}],34:[function(require,module,exports){
+},{"STATE":1,"receipt_row":25}],36:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5303,8 +5465,7 @@ async function transaction_row (opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="transaction-row">
-    </div>
+    <div class="transaction-row"></div>
     <style></style>
   `
 
@@ -5314,7 +5475,7 @@ async function transaction_row (opts = {}) {
 
   return el
 
-  function fail(data, type) {
+  function fail (data, type) {
     throw new Error('invalid message', { cause: { data, type } })
   }
 
@@ -5332,7 +5493,7 @@ async function transaction_row (opts = {}) {
     style.textContent = data[0]
   }
 
-  function get_date_label(dateString) {
+  function get_date_label (dateString) {
     const today = new Date()
     const target = new Date(dateString)
 
@@ -5346,23 +5507,44 @@ async function transaction_row (opts = {}) {
     return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
   }
 
-  function generate_random_id() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    const randomStr = Array.from({ length: 16 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('')
-    return randomStr.slice(0, 8) + '...' + randomStr.slice(-4)
+  function shorten_tid (tid) {
+    if (tid.length > 14) {
+      return tid.slice(0, 8) + '...' + tid.slice(-4)
+    }
+    return tid
   }
 
-  function generate_avatar(seed) {
+  function generate_avatar (seed) {
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(seed)}`
   }
 
-  async function ondata(data) {
+  function is_random_string (str) {
+    if (!str) return true
+    if (/[0-9@#$_-]/.test(str)) return true
+    if (str.length > 12 && !/\s/.test(str)) return true
+
+    const upper = (str.match(/[A-Z]/g) || []).length
+    const lower = (str.match(/[a-z]/g) || []).length
+    if ((upper > 4 && lower > 4) && !/\s/.test(str)) return true
+
+    return false
+  }
+
+  async function ondata (data) {
     let { avatar, tid, ttime, tamount, dateString } = data[0] || {}
 
-    if (!tid) tid = generate_random_id()
-    if (!avatar) avatar = generate_avatar(tid)
+    if (!tid) tid = "No id found"
 
-    const dateLabel = get_date_label(dateString || new Date().toISOString())
+    if (!avatar) {
+      if (is_random_string(tid)) {
+        avatar = generate_avatar(tid)
+      } else {
+        avatar = 'https://cdn-icons-png.flaticon.com/512/847/847969.png'
+      }
+    }
+
+    const display_tid = shorten_tid(tid)
+    const date_label = get_date_label(dateString || new Date().toISOString())
 
     row.innerHTML = `
       <div class="transaction-detail">
@@ -5370,9 +5552,9 @@ async function transaction_row (opts = {}) {
           <img src="${avatar}" alt="avatar" />
         </div>
         <div class="transaction-data">
-          <div class="transaction-id">${tid}</div>
+          <div class="transaction-id">${display_tid}</div>
           <div class="transaction-time">${ttime || '—'}</div>
-          <div class="transaction-date">${dateLabel}</div>
+          <div class="transaction-date">${date_label}</div>
         </div>
       </div>  
       <div class="transaction-amount">
@@ -5388,22 +5570,21 @@ function fallback_module () {
   }
   function api (opts) {
     return {
-        drive: {
-          'style/':{
-            'style.css':{ '$ref': 'transaction_row.css' }
-          },
-          'data/': {
-            'opts.json': {
-              raw: opts
-            }
+      drive: {
+        'style/': {
+          'style.css': { '$ref': 'transaction_row.css' }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
           }
         }
+      }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],35:[function(require,module,exports){
+},{"STATE":1}],37:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -6446,7 +6627,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],36:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -6621,6 +6802,7 @@ function fallback_module () {
               },
               {
                 dateString: "2025-08-01",
+                tid: "ajd83hs9fk3l02msdkf",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
               },
@@ -6633,6 +6815,7 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-31",
+                tid: "XyzA1b2C3d4E5f6G7",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
               },
@@ -6645,6 +6828,7 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-31",
+                tid: "92hd82hsja7sd8h3jsd2",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
               },
@@ -6669,6 +6853,7 @@ function fallback_module () {
               },
               {
                 dateString: "2025-07-29",
+                tid: "jK83hf02sd93ls0dn4fj",
                 ttime: "02:15 PM",
                 tamount: "+ 0.03271",
               },
@@ -6681,6 +6866,7 @@ function fallback_module () {
               },
               {
                 dateString: "2025-05-10",
+                tid: "r8t7y6u5i4o3p2a1s0d9f8g7",
                 ttime: "04:45 PM",
                 tamount: "- 0.03791",
               }
@@ -6839,4 +7025,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/chat_view":7,"../src/node_modules/contacts_list":10,"../src/node_modules/details_menu":12,"../src/node_modules/home_page":14,"../src/node_modules/lightning_page":18,"../src/node_modules/more_menu":20,"../src/node_modules/receive_btc":24,"../src/node_modules/send_btc":26,"../src/node_modules/switch_account":28,"../src/node_modules/transaction_history":31,"../src/node_modules/transaction_receipt":33}]},{},[36]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/chat_view":7,"../src/node_modules/contacts_list":10,"../src/node_modules/details_menu":12,"../src/node_modules/home_page":15,"../src/node_modules/lightning_page":20,"../src/node_modules/more_menu":22,"../src/node_modules/receive_btc":26,"../src/node_modules/send_btc":28,"../src/node_modules/switch_account":30,"../src/node_modules/transaction_history":33,"../src/node_modules/transaction_receipt":35}]},{},[38]);
