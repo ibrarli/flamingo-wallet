@@ -88,8 +88,11 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
+        <div id="contacts-list-container" ></div>  
       </div>
-      <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
