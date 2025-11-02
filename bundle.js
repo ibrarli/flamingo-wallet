@@ -1317,7 +1317,7 @@ function fallback_module () {
                   padding: 12px 0px;
                   font-family: Arial, sans-serif;
                   color: black;
-                  width: 100%;
+                  width: 95%;
                   box-sizing: border-box;
                   cursor: pointer;
                 }
@@ -1470,7 +1470,6 @@ async function contacts_list(opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="component-label">Contacts List</div>
     <div class="contact-list-container">
       <div class="contact-list-header">Contacts</div>
       <div class="top-bar"></div>
@@ -1840,6 +1839,7 @@ async function details_menu(opts = {}) {
 
   shadow.innerHTML = `
     <div class="details-menu-container">
+      <div class="details-menu-header">Details Menu</div>
       <div class="container-title">
         <div class="title">Address</div>
         <div class="close-icon"></div>
@@ -6719,8 +6719,11 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
+        <div id="contacts-list-container" ></div>  
       </div>
-      <div id="contacts-list-container" ></div>   
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
