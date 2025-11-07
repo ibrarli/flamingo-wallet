@@ -12,9 +12,14 @@ const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
+const send_to = require('../src/node_modules/send_to')
 const btc_nodes = require('../src/node_modules/btc_nodes')
 const more_menu = require('../src/node_modules/more_menu')
 const details_menu = require('../src/node_modules/details_menu')
+const btc_req_msg = require('../src/node_modules/btc_req_msg')
+const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
+const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
+const light_transaction_receipt = require('../src/node_modules/light_transaction_receipt')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -76,7 +81,12 @@ async function main () {
   const btc_nodes_component = await btc_nodes(subs[18], protocol)
   const more_menu_component = await more_menu(subs[20], protocol)
   const details_menu_component = await details_menu(subs[22], protocol)
-
+  const btc_req_msg_component = await btc_req_msg(subs[24], protocol)
+  const send_to_component = await send_to(subs[26], protocol)
+  const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
+  const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
+  const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
+  
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
@@ -85,6 +95,10 @@ async function main () {
         <div id="home-page-container"></div> 
       </div>
       <div id="lightning-page-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Send to</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="send-to-container"></div> 
+      </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
@@ -119,10 +133,27 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">Details Menu</div>  
         <div id="details-menu-container"></div>
       </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
+        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Create Invoice Confirmation</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="create-invoice-confirmation-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Pay Invoice Confirmation</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pay-invoice-confirmation-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">lightning transaction Receipt</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="light-transaction-receipt-container"></div> 
+      </div> 
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#lightning-page-container').appendChild(lightning_page_component)
+  page.querySelector('#send-to-container').appendChild(send_to_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
@@ -133,7 +164,11 @@ async function main () {
   page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
   page.querySelector('#more-menu-container').appendChild(more_menu_component)
   page.querySelector('#details-menu-container').appendChild(details_menu_component)
-
+  page.querySelector('#btc-req-msg-container').appendChild(btc_req_msg_component)
+  page.querySelector('#create-invoice-confirmation-container').appendChild(create_invoice_confirmation_component)
+  page.querySelector('#pay-invoice-confirmation-container').appendChild(pay_invoice_confirmation_component)
+  page.querySelector('#light-transaction-receipt-container').appendChild(light_transaction_receipt_component)
+ 
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -392,7 +427,123 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-      
+      '../src/node_modules/btc_req_msg': {
+        $: '',
+        0: {
+          "avatar": "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+          "name": "Mark Kevin",
+          "amount": 0.0019,
+          "date": "25 June 2025",
+          "status": "send", // or "paid", "expired"
+          "is_me": false
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+
+      '../src/node_modules/send_to': {
+        $: '',
+        0: {
+          value: [
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'Mark Kevin',
+              message: 'Payment Received successfully',
+              time: '3 hr',
+              unread: 5,
+              online: true,
+              lightining: true
+            },
+            {
+              avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'David Clark',
+              message: 'You have a new message from Mark',
+              time: '1 hr',
+              unread: 5,
+              online: false,
+              lightining: false
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'David Clark',
+              message: 'Received funds',
+              time: '1 hr',
+              unread: 0,
+              online: true,
+              lightining: true
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'Sara Ahmed',
+              message: 'Invoice sent',
+              time: '2 hr',
+              unread: 0,
+              online: false,
+              lightining: false
+            }
+          ]
+        },
+        mapping: {
+          style: 'style',
+          data: 'data'
+        }
+      },
+      '../src/node_modules/create_invoice_confirmation': {
+        $: '',
+        0: {
+        value: [
+              { label: "Label", value: "Work Payment" },
+              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+              { label: "Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/pay_invoice_confirmation': {
+        $: '',
+        0: {
+        value: [
+              { label: "Total", value: "0.0020 BTC", convert: true },
+              { label: "Fee", value: "0.00001 BTC" },
+              { label: "Recipient Address", value: "7RwmbHfn...455p" },
+              { label: "Processing time", value: "< 5 minutes" },
+              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/light_transaction_receipt': {
+        $: '',
+        0: {
+        value: [
+              { label: "Paid By", value: "Cypher" },
+              { label: "Recipient", value: "Luis fedrick - 1FfmbHfn...455p" },
+              { label: "Label", value: "Work Payment" },
+              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+              { label: "Transaction Fees", value: "BTC 0.0001" },
+              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
+              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
     }
   }
 }

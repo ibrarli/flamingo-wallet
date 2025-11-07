@@ -328,7 +328,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":13,"receive_btc":26,"send_btc":28,"switch_account":30}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":15,"receive_btc":30,"send_btc":32,"switch_account":37}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -679,7 +679,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/btc_input_card/btc_input_card.js")
-},{"STATE":1,"btc_usd_rate":5}],4:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -798,6 +798,209 @@ function fallback_module () {
 
 }).call(this)}).call(this,"/src/node_modules/btc_nodes/btc_nodes.js")
 },{"STATE":1}],5:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const state_db = STATE(__filename)
+const { sdb, get } = state_db(fallback_module)
+
+module.exports = btc_req_msg
+
+async function btc_req_msg(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject_style,
+    data: render_data,
+    icons: inject_icons,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+  shadow.innerHTML = `
+    <div class="btc_req_wrapper"></div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const wrapper = shadow.querySelector('.btc_req_wrapper')
+  let dricons = []
+
+  await sdb.watch(on_batch)
+  return el
+
+  function throw_error(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function on_batch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const fn = on[type] || throw_error
+      await fn(data, type)
+    }
+  }
+
+  function inject_style(data) {
+    style.textContent = data[0]
+  }
+
+  function inject_icons(data) {
+    dricons = data
+  }
+
+  function render_data(data) {
+    const { avatar, name, amount, date, status, is_me } = data[0]
+
+    // status-based colors
+    let border_color = '#DDB473'
+    let btn_color = '#F7931A'
+    let bg_color = '#FFFCE7'
+    let status_element = ''
+
+   if (status === 'send') {
+      status_element = `<button class="send_btn" style="background:${btn_color};">${'Send'}</button>`
+    } else if (status === 'paid') {
+      border_color = '#87DD73'
+      bg_color = '#ECFFE7'
+      status_element = `<span class="status_text">Paid √</span>`
+    } else if (status === 'expired') {
+      border_color = '#C83535'
+      bg_color = '#FFE7E7'
+      status_element = `<span class="status_text">Expired</span>`
+    }
+
+    wrapper.innerHTML = `
+      <div class="btc_row ${is_me ? 'self' : ''}">
+        ${!is_me ? `<img class="avatar_outside" src="${avatar}" />` : ''}
+        <div class="btc_box" style="border:2px solid ${border_color}; background:${bg_color}">
+          <div class="btc_top">
+            <span>
+              <span class="name_text">${name}</span>
+              <span class="req_text"> requests </span>
+              <span class="amount_text">BTC ${amount} </span>
+              <span class="btc_icon">${dricons[0] || '₿'}</span>
+            </span>
+          </div>
+          <div class="btc_bottom">
+            <span class="btc_expire">Expire at ${date}</span>
+            ${status_element}
+          </div>
+        </div>
+      </div>
+    `
+  }
+}
+
+function fallback_module() {
+  return {
+    api: fallback_instance,
+  }
+
+  function fallback_instance(opts) {
+    return {
+      drive: {
+         'icons/': {
+            'btc.svg': {
+              '$ref': 'btc.svg'
+            }
+          },
+        'style/': {
+          'style.css': {
+            raw: `
+            .btc_row {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+              margin: 12px 0;
+            }
+
+            .btc_row.self {
+              justify-content: flex-end;
+            }
+
+            .avatar_outside {
+              width: 60px;
+              height: 60px;
+              border-radius: 50%;
+              object-fit: cover;
+            }
+
+            .btc_box {
+              border-radius: 14px;
+              padding: 14px;
+              min-width: 280px;
+              border-width: 2px !important;
+            }
+
+            .btc_top {
+              display: flex;
+              flex-direction: column;
+              gap: 3px;
+            }
+
+            .btc_bottom {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-top: 6px; 
+            }
+
+            .name_text {
+              font-size: 16px;
+              font-weight: 600;
+              color: #222;
+            }
+
+
+            .req_text {
+              font-size: 15px;
+              color: #777; 
+            }
+
+            .amount_text {
+              font-size: 16px;
+              font-weight: 700;
+              color: #000; /* BTC amount stays black */
+            }
+
+            .btc_icon {
+              margin-left: 4px;
+            }
+
+            .btc_expire {
+              color: #555;
+              font-weight: 500;
+              font-size: 11px;
+            }
+
+            .send_btn {
+              padding: 6px 16px;
+              border-radius: 999px;
+              font-size: 13px; 
+              font-weight: 600;
+              cursor: pointer;
+              border: none;
+              color: #fff;
+            }
+
+            .status_text {
+              font-size: 12px;
+              font-weight: 600;
+            }`
+           }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      }
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/btc_req_msg/btc_req_msg.js")
+},{"STATE":1}],6:[function(require,module,exports){
 let cached_rate = null
 
 async function btc_usd_rate(from = 'btc', to = 'usd') {
@@ -816,7 +1019,7 @@ async function btc_usd_rate(from = 'btc', to = 'usd') {
 }
 
 module.exports = btc_usd_rate
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -920,7 +1123,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/button/button.js")
-},{"STATE":1}],7:[function(require,module,exports){
+},{"STATE":1}],8:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -953,7 +1156,7 @@ async function chat_view(opts = {}) {
   `
 
   const style = shadow.querySelector('style')
-
+ 
   const header_component = shadow.querySelector('.chat-view-header')
   const request_button_component = shadow.querySelector('.request-button')
 
@@ -1039,7 +1242,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"button":6,"chat_view_header":8}],8:[function(require,module,exports){
+},{"STATE":1,"button":7,"chat_view_header":9}],9:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1214,7 +1417,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
-},{"STATE":1}],9:[function(require,module,exports){
+},{"STATE":1}],10:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1444,7 +1647,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],10:[function(require,module,exports){
+},{"STATE":1}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1585,7 +1788,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":9,"search_bar":27,"square_button":29}],11:[function(require,module,exports){
+},{"STATE":1,"contact_row":10,"search_bar":31,"square_button":36}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1811,7 +2014,150 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":3,"button":6,"input_field":17,"templates":31}],12:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19,"templates":38}],13:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const receipt_row = require('receipt_row')
+const send_button = require('button') 
+
+module.exports = create_invoice_confirmation
+
+async function create_invoice_confirmation(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  let dricons = []
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="invoice-card">
+      <div class="invoice-header">
+        <div class="title-container">
+          <div class="invoice-title">Create Lighting invoice</div>
+          <div class="light-icon-small"></div>
+        </div>
+        <div class="close-icon"></div>
+      </div>
+      <div class="receipt-rows"></div>
+      <div class="send-button"></div>
+      <style></style>
+    </div>
+  `
+
+  const style = shadow.querySelector('style')
+  const rows_el = shadow.querySelector('.receipt-rows')
+  const send_button_container = shadow.querySelector('.send-button')
+
+  const subs = await sdb.watch(onbatch)
+
+
+  if (subs.length > 0) {
+    const button = await send_button(subs[0])
+    send_button_container.replaceWith(button)
+  }
+
+  for (let i = 1; i < subs.length; i++) {
+    const row = await receipt_row(subs[i]) 
+    rows_el.append(row)
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+    const light_icon = shadow.querySelectorAll('.light-icon-small')
+    const close_icon = shadow.querySelector('.close-icon')
+
+    light_icon.forEach(el => el.innerHTML = dricons[0])
+    close_icon.innerHTML = dricons[1]                  
+  }
+
+  async function ondata(data) {
+    
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'button': { $: '' },
+      'receipt_row': { 
+        $: '' 
+      }
+    }
+  }
+
+  function api(opts) {
+    const button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+        label: 'Send'
+      }
+    }
+    const receipt_row = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      }
+    }
+    opts.value.forEach((row, index) => {
+      receipt_row[index + 1] = row
+    })
+
+    return {
+      drive: {
+        'icons/': {
+          'lightning.svg': { '$ref': 'lightning.svg' },
+          'x.svg': { '$ref': 'x.svg' }
+        },
+        'style/': {
+          'create_invoice_confirmation.css': { '$ref': 'create_invoice_confirmation.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+      _: { button, receipt_row }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/create_invoice_confirmation/create_invoice_confirmation.js")
+},{"STATE":1,"button":7,"receipt_row":29}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1954,7 +2300,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/details_menu/details_menu.js")
-},{"STATE":1,"button":6,"input_field":17}],13:[function(require,module,exports){
+},{"STATE":1,"button":7,"input_field":19}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2088,7 +2434,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1}],14:[function(require,module,exports){
+},{"STATE":1}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2231,7 +2577,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":16,"total_wealth":32,"transaction_list":34}],15:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":18,"total_wealth":39,"transaction_list":41}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2300,7 +2646,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"menu":21}],16:[function(require,module,exports){
+},{"STATE":1,"menu":24}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2451,7 +2797,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],17:[function(require,module,exports){
+},{"STATE":1}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2641,7 +2987,131 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],18:[function(require,module,exports){
+},{"STATE":1}],20:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const receipt_row = require('receipt_row')
+
+module.exports = light_transaction_receipt
+
+async function light_transaction_receipt(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  let dricons = []
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="receipt-card">
+      <div class="receipt-header">
+        <div class="title-container">
+          <div class="receipt-title">Lightning Transaction</div>
+          <div class="light-icon-small"></div>
+        </div>
+        <div class="close-icon"></div>
+      </div>
+      <div class="receipt-rows"></div>
+      <style></style>
+    </div>
+  `
+
+  const style = shadow.querySelector('style')
+  const rows_el = shadow.querySelector('.receipt-rows')
+
+  const subs = await sdb.watch(onbatch)
+
+  for (let i = 0; i < subs.length; i++) {
+    const row = await receipt_row(subs[i]) 
+    rows_el.append(row)
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+    const btcIcons = shadow.querySelectorAll('.light-icon-small')
+    const closeIcon = shadow.querySelector('.close-icon')
+
+    btcIcons.forEach(el => el.innerHTML = dricons[0])
+    closeIcon.innerHTML = dricons[1]                  
+  }
+
+  async function ondata(data) {
+    
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'receipt_row': { 
+        $: '' 
+      }
+    }
+  }
+
+  function api(opts) {
+    
+    const receipt_row = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      }
+    }
+    opts.value.forEach((row, index) => {
+      receipt_row[index] = row
+    })
+
+    return {
+      drive: {
+        'icons/': {
+          'lightning.svg': { '$ref': 'lightning.svg' },
+          'x.svg': { '$ref': 'x.svg' }
+        },
+        'style/': {
+          'light_transaction_receipt.css': { '$ref': 'light_transaction_receipt.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+      _: { receipt_row }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/light_transaction_receipt/light_transaction_receipt.js")
+},{"STATE":1,"receipt_row":29}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2961,7 +3431,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":11,"general_button":13,"pay_invoice":23,"switch_account":30}],19:[function(require,module,exports){
+},{"STATE":1,"create_invoice":12,"general_button":15,"pay_invoice":26,"switch_account":37}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3070,7 +3540,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/lightning_menu/lightning_menu.js")
-},{"STATE":1}],20:[function(require,module,exports){
+},{"STATE":1}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3269,7 +3739,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":16,"lightning_buttons":18,"lightning_menu":19,"total_wealth":32,"transaction_list":34}],21:[function(require,module,exports){
+},{"STATE":1,"home_page_header":18,"lightning_buttons":21,"lightning_menu":22,"total_wealth":39,"transaction_list":41}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3472,7 +3942,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1,"contacts_list":10,"details_menu":12,"home_contents":14,"more_menu":22}],22:[function(require,module,exports){
+},{"STATE":1,"contacts_list":11,"details_menu":14,"home_contents":16,"more_menu":25}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3580,7 +4050,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
-},{"STATE":1}],23:[function(require,module,exports){
+},{"STATE":1}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3737,7 +4207,153 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":6,"input_field":17}],24:[function(require,module,exports){
+},{"STATE":1,"button":7,"input_field":19}],27:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const receipt_row = require('receipt_row')
+const send_button = require('button') 
+
+module.exports = pay_invoice_confirmation
+
+async function pay_invoice_confirmation(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  let dricons = []
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="invoice-card">
+      <div class="invoice-header">
+        <div class="invoice-title-section">
+          <div class="invoice-confirmation">Confirmation</div>
+          <div class="invoice-amount">
+            <div class="light-icon-small"></div>
+            <div class="invoice-value">0.0020</div>
+          </div>       
+        </div>
+        <div class="close-icon"></div>
+      </div>
+      <div class="receipt-rows"></div>
+      <div class="send-button"></div>
+      <style></style>
+    </div>
+    `
+
+  const style = shadow.querySelector('style')
+  const rows_el = shadow.querySelector('.receipt-rows')
+  const send_button_container = shadow.querySelector('.send-button')
+
+  const subs = await sdb.watch(onbatch)
+
+
+  if (subs.length > 0) {
+    const button = await send_button(subs[0])
+    send_button_container.replaceWith(button)
+  }
+
+  for (let i = 1; i < subs.length; i++) {
+    const row = await receipt_row(subs[i]) 
+    rows_el.append(row)
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+    const light_icon = shadow.querySelectorAll('.light-icon-small')
+    const close_icon = shadow.querySelector('.close-icon')
+
+    light_icon.forEach(el => el.innerHTML = dricons[0])
+    close_icon.innerHTML = dricons[1]                  
+  }
+
+  async function ondata(data) {
+    
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'button': { $: '' },
+      'receipt_row': { 
+        $: '' 
+      }
+    }
+  }
+
+  function api(opts) {
+    const button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+        label: 'Pay invoice'
+      }
+    }
+    const receipt_row = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      }
+    }
+    opts.value.forEach((row, index) => {
+      receipt_row[index + 1] = row
+    })
+
+    return {
+      drive: {
+        'icons/': {
+          'lightning.svg': { '$ref': 'lightning.svg' },
+          'x.svg': { '$ref': 'x.svg' }
+        },
+        'style/': {
+          'pay_invoice_confirmation.css': { '$ref': 'pay_invoice_confirmation.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+      _: { button, receipt_row }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/pay_invoice_confirmation/pay_invoice_confirmation.js")
+},{"STATE":1,"button":7,"receipt_row":29}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3833,13 +4449,15 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":37}],25:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":44}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 module.exports = receipt_row
+
+const btc_usd_rate = require('btc_usd_rate')
 
 async function receipt_row(opts = {}) {
   const { id, sdb } = await get(opts.sid)
@@ -3852,6 +4470,8 @@ async function receipt_row(opts = {}) {
   }
 
   let dricons = []
+  let current_unit = 'BTC'
+  let btc_to_usd = await btc_usd_rate()
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
@@ -3885,11 +4505,11 @@ async function receipt_row(opts = {}) {
   }
 
   function iconject(data) {
-    dricons = data 
+    dricons = data
   }
 
   async function ondata(data) {
-    let { label, value, link, icon } = data[0] || {}
+    let { label, value, link, icon, convert } = data[0] || {}
 
     let value_html = value || ""
 
@@ -3897,20 +4517,57 @@ async function receipt_row(opts = {}) {
       value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
       row.className = `receipt-row link`
     }
-    
+
     if (icon) {
-      if (icon == "btc.svg"){
-          value_html = `<span class="receipt-icon">${dricons[1]}</span> ${value}`
-          row.className = `receipt-row total`
+      if (icon == "btc.svg") {
+        value_html = `<span class="receipt-icon">${dricons[1]}</span> ${value}`
+        row.className = `receipt-row total`
+      } else if (icon == "lightning.svg") {
+        value_html = `<span class="receipt-icon">${dricons[2]}</span> ${value}`
+        row.className = `receipt-row total`
       } else {
-          value_html = `<span class="receipt-icon">${dricons[0]}</span> ${value}` // which would be our default icon it could be anything
-      } 
+        value_html = `<span class="receipt-icon">${dricons[0]}</span> ${value}`
+      }
     }
+
+    // Base layout
     row.innerHTML = `
       <div class="receipt-label">${label}</div>
-      <div class="receipt-value">${value_html}</div>
+      <div class="receipt-bottom">
+        <div class="receipt-value">${value_html}</div>
+        ${convert ? `
+          <div class="convert-buttons">
+            <button class="convert-btn btc active">BTC</button>
+            <button class="convert-btn usd">USD</button>
+          </div>` : ""}
+      </div>
       ${icon ? "" : `<div class="divider"></div>`}
     `
+
+    if (convert) {
+      const btc_btn = row.querySelector('.convert-btn.btc')
+      const usd_btn = row.querySelector('.convert-btn.usd')
+      const value_el = row.querySelector('.receipt-value')
+
+      btc_btn.onclick = () => {
+        current_unit = 'BTC'
+        btc_btn.classList.add('active')
+        usd_btn.classList.remove('active')
+        value_el.innerHTML = `${value}`
+      }
+
+      usd_btn.onclick = () => {
+        current_unit = 'USD'
+        usd_btn.classList.add('active')
+        btc_btn.classList.remove('active')
+
+        let btc_value = parseFloat(value)
+        if (isNaN(btc_value)) btc_value = 0
+
+        let usd_value = (btc_value * btc_to_usd).toFixed(2)
+        value_el.innerHTML = `$${usd_value}`
+      }
+    }
   }
 }
 
@@ -3922,50 +4579,15 @@ function fallback_module() {
     return {
       drive: {
         'icons/': {
-          'default.svg': { '$ref': 'default.svg'},
+          'default.svg': { '$ref': 'default.svg' },
           'btc.svg': { '$ref': 'btc.svg' },
+          'lightning.svg': { '$ref': 'lightning.svg' },
         },
         'style/': {
-         'style.css': {
-            raw: `
-              .receipt-row {
-                padding: 8px 0;
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-              }
-
-              .receipt-label {
-                color: #6D6E6F;
-                font-size: 14px;
-                margin-bottom: 4px;
-              }
-
-              .receipt-value {
-                color: #000;
-                font-size: 18px;
-              }
-
-              .receipt-row.total  .receipt-value {
-                font-size: 28px;
-                font-weight: 600;
-              }
-
-              .receipt-row.link .receipt-value {
-                color: #4479FF;
-                text-decoration: none;
-                cursor: pointer;
-              }
-
-              .divider {
-                height: 1px;
-                background: #ddd;
-                margin-top: 6px;
-              }
-
-            `
+          'receipt_row.css': {
+           '$ref':'receipt_row.css'
           }
-        },  
+        },
         'data/': {
           'opts.json': { raw: opts }
         }
@@ -3973,9 +4595,8 @@ function fallback_module() {
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1}],26:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4114,7 +4735,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":17,"qr_code":24}],27:[function(require,module,exports){
+},{"STATE":1,"input_field":19,"qr_code":28}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4241,7 +4862,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],28:[function(require,module,exports){
+},{"STATE":1}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4419,7 +5040,405 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":6,"input_field":17}],29:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19}],33:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const search_bar = require('search_bar') 
+const square_button = require('square_button') 
+const send_to_contact = require('send_to_contact')
+const share_invoice_via = require('share_invoice_via')
+
+module.exports = send_to
+
+async function send_to(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="send-to-container"> 
+      <div class="contact-list-container">
+        <div class="contact-list-header">Send to</div>
+        <div class="top-bar"></div>
+      </div>
+      <div class="contacts-container"></div>
+      <div class="invoice-share-section"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const contacts_container = shadow.querySelector('.contacts-container')
+  const top_bar = shadow.querySelector('.top-bar')
+  const invoice_section = shadow.querySelector('.invoice-share-section')
+
+  const subs = await sdb.watch(onbatch)
+  
+  if (subs.length > 0) {
+    const search = await search_bar(subs[0])
+    const button = await square_button(subs[1])
+    const invoice_share = await share_invoice_via(subs[2])
+    top_bar.append(search)
+    top_bar.append(button)  
+    invoice_section.append(invoice_share)
+  }
+
+  for (let i = 3; i < subs.length; i++) {
+    const contact = await send_to_contact(subs[i]) 
+    contacts_container.append(contact)
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'search_bar': { $: '' },
+      'send_to_contact': { $: '' },
+      'share_invoice_via': { $: ''},
+      'square_button': { $: '' },
+    }
+  }
+
+  function api(opts) {
+    const search_bar = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+      }
+    }
+
+    const square_button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      1: {
+      }
+    }
+
+    const share_invoice_via = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      2: {
+      }
+    }
+
+    const send_to_contact = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+
+      }
+    }
+
+    opts.value.forEach((contact, index) => {
+      send_to_contact[index + 3] = contact
+    })
+
+    return {
+      drive: {
+        'style/': {
+          'send_to.css': {
+            '$ref': 'send_to.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        search_bar,
+        square_button,
+        share_invoice_via,
+        send_to_contact
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/send_to/send_to.js")
+},{"STATE":1,"search_bar":31,"send_to_contact":34,"share_invoice_via":35,"square_button":36}],34:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = send_to_contact
+
+async function send_to_contact (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+  
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="contact-row"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.contact-row')
+  
+  let dricons = []
+  let selected = false
+
+  await sdb.watch(onbatch)
+
+  row.onclick = () => {
+    selected = !selected
+    update_tick()
+    update_selection()
+  }
+
+  return el
+
+
+  function update_tick() {
+    const avatarWrapper = row.querySelector('.contact-avatar')
+    if (!avatarWrapper) return
+
+    const oldTick = avatarWrapper.querySelector('.green-tick')
+    if (oldTick) oldTick.remove()
+
+    if (selected && dricons[0]) {
+      avatarWrapper.innerHTML += `
+        <div class="green-tick">
+          ${dricons[0] || ''}
+        </div>
+      `
+    }
+  }
+
+  function update_selection() {
+    if (selected) {
+      row.classList.add('selected')
+    } else {
+      row.classList.remove('selected')
+    }
+  }
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const { avatar, name } = data[0]
+
+    row.innerHTML = `
+      <div class="contact-left">
+        <div class="contact-avatar">
+          <img src="${avatar}" alt="avatar" />
+        </div>
+        <div class="contact-info">
+          <div class="contact-name">${name}</div>
+        </div>
+      </div>
+    `
+
+    update_tick() 
+    update_selection()
+  }
+
+   function iconject (data) {
+    dricons = data
+  }
+}
+
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+        drive: {
+          'icons/': {
+            'green-tick.svg': {
+              '$ref': 'green-tick.svg'
+            },
+          },
+          'style/':{
+            'send_to_contact.css': {
+              '$ref': 'send_to_contact.css'
+            },
+          },
+          'data/': {
+            'opts.json': {
+              raw: opts
+            }
+          }
+        }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/send_to_contact/send_to_contact.js")
+},{"STATE":1}],35:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = create_invoice_via
+
+async function create_invoice_via (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject_style,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="invoice-container">
+      <div class="header">Share invoice via</div>
+      <div class="divider"></div>
+      <div class="apps-row"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const apps_row = shadow.querySelector('.apps-row')
+
+  let dricons = []
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject_style (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata () {
+    const app_names = ['Instagram', 'WhatsApp', 'Facebook', 'Binance', 'Meta', 'Trust']
+
+    apps_row.innerHTML = app_names.map((name, i) => `
+      <div class="app-item">
+        <div class="icon-box">
+          ${dricons[i] || ''}
+        </div>
+        <div class="app-name">${name}</div>
+      </div>
+    `).join('')
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'instagram.svg': { '$ref': 'instagram.svg' },
+          'whatsapp.svg': { '$ref': 'whatsapp.svg' },
+          'facebook.svg': { '$ref': 'facebook.svg' },
+          'binance.svg': { '$ref': 'binance.svg' },
+          'meta.svg': { '$ref': 'meta.svg' },
+          'trustwallet.svg': { '$ref': 'trustwallet.svg' },
+        },
+        'style/': {
+          'share_invoice_via.css': {
+            '$ref': 'share_invoice_via.css'
+          }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      }
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/share_invoice_via/share_invoice_via.js")
+},{"STATE":1}],36:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4535,7 +5554,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],30:[function(require,module,exports){
+},{"STATE":1}],37:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4702,7 +5721,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1,"home_page":15,"lightning_page":20}],31:[function(require,module,exports){
+},{"STATE":1,"home_page":17,"lightning_page":23}],38:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4850,7 +5869,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":5}],32:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],39:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4973,7 +5992,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":5}],33:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],40:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5110,7 +6129,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":36}],34:[function(require,module,exports){
+},{"STATE":1,"transaction_row":43}],41:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5319,7 +6338,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":33,"transaction_row":36}],35:[function(require,module,exports){
+},{"STATE":1,"transaction_history":40,"transaction_row":43}],42:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5444,7 +6463,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":25}],36:[function(require,module,exports){
+},{"STATE":1,"receipt_row":29}],43:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5584,7 +6603,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],37:[function(require,module,exports){
+},{"STATE":1}],44:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -6627,7 +7646,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],38:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -6643,9 +7662,14 @@ const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
+const send_to = require('../src/node_modules/send_to')
 const btc_nodes = require('../src/node_modules/btc_nodes')
 const more_menu = require('../src/node_modules/more_menu')
 const details_menu = require('../src/node_modules/details_menu')
+const btc_req_msg = require('../src/node_modules/btc_req_msg')
+const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
+const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
+const light_transaction_receipt = require('../src/node_modules/light_transaction_receipt')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -6707,7 +7731,12 @@ async function main () {
   const btc_nodes_component = await btc_nodes(subs[18], protocol)
   const more_menu_component = await more_menu(subs[20], protocol)
   const details_menu_component = await details_menu(subs[22], protocol)
-
+  const btc_req_msg_component = await btc_req_msg(subs[24], protocol)
+  const send_to_component = await send_to(subs[26], protocol)
+  const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
+  const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
+  const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
+  
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
@@ -6716,6 +7745,10 @@ async function main () {
         <div id="home-page-container"></div> 
       </div>
       <div id="lightning-page-container"></div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Send to</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="send-to-container"></div> 
+      </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
@@ -6750,10 +7783,27 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">Details Menu</div>  
         <div id="details-menu-container"></div>
       </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
+        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Create Invoice Confirmation</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="create-invoice-confirmation-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Pay Invoice Confirmation</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pay-invoice-confirmation-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">lightning transaction Receipt</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="light-transaction-receipt-container"></div> 
+      </div> 
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#lightning-page-container').appendChild(lightning_page_component)
+  page.querySelector('#send-to-container').appendChild(send_to_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
@@ -6764,7 +7814,11 @@ async function main () {
   page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
   page.querySelector('#more-menu-container').appendChild(more_menu_component)
   page.querySelector('#details-menu-container').appendChild(details_menu_component)
-
+  page.querySelector('#btc-req-msg-container').appendChild(btc_req_msg_component)
+  page.querySelector('#create-invoice-confirmation-container').appendChild(create_invoice_confirmation_component)
+  page.querySelector('#pay-invoice-confirmation-container').appendChild(pay_invoice_confirmation_component)
+  page.querySelector('#light-transaction-receipt-container').appendChild(light_transaction_receipt_component)
+ 
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -7023,9 +8077,125 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-      
+      '../src/node_modules/btc_req_msg': {
+        $: '',
+        0: {
+          "avatar": "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+          "name": "Mark Kevin",
+          "amount": 0.0019,
+          "date": "25 June 2025",
+          "status": "send", // or "paid", "expired"
+          "is_me": false
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+
+      '../src/node_modules/send_to': {
+        $: '',
+        0: {
+          value: [
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'Mark Kevin',
+              message: 'Payment Received successfully',
+              time: '3 hr',
+              unread: 5,
+              online: true,
+              lightining: true
+            },
+            {
+              avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'David Clark',
+              message: 'You have a new message from Mark',
+              time: '1 hr',
+              unread: 5,
+              online: false,
+              lightining: false
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'David Clark',
+              message: 'Received funds',
+              time: '1 hr',
+              unread: 0,
+              online: true,
+              lightining: true
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'Sara Ahmed',
+              message: 'Invoice sent',
+              time: '2 hr',
+              unread: 0,
+              online: false,
+              lightining: false
+            }
+          ]
+        },
+        mapping: {
+          style: 'style',
+          data: 'data'
+        }
+      },
+      '../src/node_modules/create_invoice_confirmation': {
+        $: '',
+        0: {
+        value: [
+              { label: "Label", value: "Work Payment" },
+              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+              { label: "Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/pay_invoice_confirmation': {
+        $: '',
+        0: {
+        value: [
+              { label: "Total", value: "0.0020 BTC", convert: true },
+              { label: "Fee", value: "0.00001 BTC" },
+              { label: "Recipient Address", value: "7RwmbHfn...455p" },
+              { label: "Processing time", value: "< 5 minutes" },
+              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/light_transaction_receipt': {
+        $: '',
+        0: {
+        value: [
+              { label: "Paid By", value: "Cypher" },
+              { label: "Recipient", value: "Luis fedrick - 1FfmbHfn...455p" },
+              { label: "Label", value: "Work Payment" },
+              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+              { label: "Transaction Fees", value: "BTC 0.0001" },
+              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
+              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+            ]
+          },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/chat_view":7,"../src/node_modules/contacts_list":10,"../src/node_modules/details_menu":12,"../src/node_modules/home_page":15,"../src/node_modules/lightning_page":20,"../src/node_modules/more_menu":22,"../src/node_modules/receive_btc":26,"../src/node_modules/send_btc":28,"../src/node_modules/switch_account":30,"../src/node_modules/transaction_history":33,"../src/node_modules/transaction_receipt":35}]},{},[38]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_transaction_receipt":20,"../src/node_modules/lightning_page":23,"../src/node_modules/more_menu":25,"../src/node_modules/pay_invoice_confirmation":27,"../src/node_modules/receive_btc":30,"../src/node_modules/send_btc":32,"../src/node_modules/send_to":33,"../src/node_modules/switch_account":37,"../src/node_modules/transaction_history":40,"../src/node_modules/transaction_receipt":42}]},{},[45]);
