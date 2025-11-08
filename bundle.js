@@ -5051,9 +5051,9 @@ const square_button = require('square_button')
 const send_to_contact = require('send_to_contact')
 const share_invoice_via = require('share_invoice_via')
 
-module.exports = send_to
+module.exports = send_invoice_modal
 
-async function send_to(opts = {}) {
+async function send_invoice_modal(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -5178,8 +5178,8 @@ function fallback_module() {
     return {
       drive: {
         'style/': {
-          'send_to.css': {
-            '$ref': 'send_to.css'
+          'send_invoice_modal.css': {
+            '$ref': 'send_invoice_modal.css'
           }
         },
         'data/': {
@@ -5198,7 +5198,7 @@ function fallback_module() {
   }
 }
 
-}).call(this)}).call(this,"/src/node_modules/send_to/send_to.js")
+}).call(this)}).call(this,"/src/node_modules/send_invoice_modal/send_invoice_modal.js")
 },{"STATE":1,"search_bar":31,"send_to_contact":34,"share_invoice_via":35,"square_button":36}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
@@ -7662,7 +7662,7 @@ const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
-const send_to = require('../src/node_modules/send_to')
+const send_invoice_modal = require('../src/node_modules/send_invoice_modal')
 const btc_nodes = require('../src/node_modules/btc_nodes')
 const more_menu = require('../src/node_modules/more_menu')
 const details_menu = require('../src/node_modules/details_menu')
@@ -7732,7 +7732,7 @@ async function main () {
   const more_menu_component = await more_menu(subs[20], protocol)
   const details_menu_component = await details_menu(subs[22], protocol)
   const btc_req_msg_component = await btc_req_msg(subs[24], protocol)
-  const send_to_component = await send_to(subs[26], protocol)
+  const send_invoice_modal_component = await send_invoice_modal(subs[26], protocol)
   const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
   const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
   const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
@@ -7746,12 +7746,16 @@ async function main () {
       </div>
       <div id="lightning-page-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Send to</div>  
+        <div class="component-label" style="padding-bottom:10px;">send_invoice_modal</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="send-to-container"></div> 
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Create Invoice Confirmation</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="create-invoice-confirmation-container"></div> 
       </div> 
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
@@ -7788,10 +7792,6 @@ async function main () {
         <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Create Invoice Confirmation</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="create-invoice-confirmation-container"></div> 
-      </div> 
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Pay Invoice Confirmation</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pay-invoice-confirmation-container"></div> 
       </div> 
@@ -7803,7 +7803,7 @@ async function main () {
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#lightning-page-container').appendChild(lightning_page_component)
-  page.querySelector('#send-to-container').appendChild(send_to_component)
+  page.querySelector('#send-to-container').appendChild(send_invoice_modal_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
@@ -8094,7 +8094,7 @@ function fallback_module () {
         }
       },
 
-      '../src/node_modules/send_to': {
+      '../src/node_modules/send_invoice_modal': {
         $: '',
         0: {
           value: [
@@ -8198,4 +8198,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_transaction_receipt":20,"../src/node_modules/lightning_page":23,"../src/node_modules/more_menu":25,"../src/node_modules/pay_invoice_confirmation":27,"../src/node_modules/receive_btc":30,"../src/node_modules/send_btc":32,"../src/node_modules/send_to":33,"../src/node_modules/switch_account":37,"../src/node_modules/transaction_history":40,"../src/node_modules/transaction_receipt":42}]},{},[45]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_transaction_receipt":20,"../src/node_modules/lightning_page":23,"../src/node_modules/more_menu":25,"../src/node_modules/pay_invoice_confirmation":27,"../src/node_modules/receive_btc":30,"../src/node_modules/send_btc":32,"../src/node_modules/send_invoice_modal":33,"../src/node_modules/switch_account":37,"../src/node_modules/transaction_history":40,"../src/node_modules/transaction_receipt":42}]},{},[45]);
