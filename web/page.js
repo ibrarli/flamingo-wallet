@@ -12,7 +12,7 @@ const receive_btc = require('../src/node_modules/receive_btc')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const lightning_page = require('../src/node_modules/lightning_page')
-const send_to = require('../src/node_modules/send_to')
+const send_invoice_modal = require('../src/node_modules/send_invoice_modal')
 const btc_nodes = require('../src/node_modules/btc_nodes')
 const more_menu = require('../src/node_modules/more_menu')
 const details_menu = require('../src/node_modules/details_menu')
@@ -82,7 +82,7 @@ async function main () {
   const more_menu_component = await more_menu(subs[20], protocol)
   const details_menu_component = await details_menu(subs[22], protocol)
   const btc_req_msg_component = await btc_req_msg(subs[24], protocol)
-  const send_to_component = await send_to(subs[26], protocol)
+  const send_invoice_modal_component = await send_invoice_modal(subs[26], protocol)
   const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
   const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
   const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
@@ -96,7 +96,7 @@ async function main () {
       </div>
       <div id="lightning-page-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Send to</div>  
+        <div class="component-label" style="padding-bottom:10px;">send_invoice_modal</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="send-to-container"></div> 
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
@@ -153,7 +153,7 @@ async function main () {
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#lightning-page-container').appendChild(lightning_page_component)
-  page.querySelector('#send-to-container').appendChild(send_to_component)
+  page.querySelector('#send-to-container').appendChild(send_invoice_modal_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
   page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
@@ -444,7 +444,7 @@ function fallback_module () {
         }
       },
 
-      '../src/node_modules/send_to': {
+      '../src/node_modules/send_invoice_modal': {
         $: '',
         0: {
           value: [
