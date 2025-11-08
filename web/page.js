@@ -108,6 +108,10 @@ async function main () {
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="create-invoice-confirmation-container"></div> 
       </div> 
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Pay Invoice Confirmation</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pay-invoice-confirmation-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
         <div id="contacts-list-container" ></div>  
       </div>
@@ -141,10 +145,6 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
         <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
       </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Pay Invoice Confirmation</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pay-invoice-confirmation-container"></div> 
-      </div> 
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">lightning transaction Receipt</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="light-transaction-receipt-container"></div> 
