@@ -19,7 +19,7 @@ const details_menu = require('../src/node_modules/details_menu')
 const btc_req_msg = require('../src/node_modules/btc_req_msg')
 const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
 const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
-const light_transaction_receipt = require('../src/node_modules/light_transaction_receipt')
+const light_transaction_receipt = require('../src/node_modules/light_tx_receipt')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -121,6 +121,10 @@ async function main () {
       </div>
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
+        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
         <div id="switch-account-container"></div>
       </div>
@@ -144,10 +148,6 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Details Menu</div>  
         <div id="details-menu-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
-        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
       </div>
     </div>
   `
@@ -388,10 +388,10 @@ function fallback_module () {
               { label: "Sent By", value: "Cypher" },
               { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "BTC 0.0001" },
-              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
+              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
               { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
-              { label: "Total Amount", value: "BTC 0.0020",  icon: "btc.svg" }
+              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
             ]
           },
         mapping: {
@@ -434,7 +434,7 @@ function fallback_module () {
           "name": "Mark Kevin",
           "amount": 0.0019,
           "date": "25 June 2025",
-          "status": "send", // or "paid", "expired"
+          "status": "expired", // or "paid", "expired"
           "is_me": false
         },
         mapping: {
@@ -497,7 +497,7 @@ function fallback_module () {
         value: [
               { label: "Label", value: "Work Payment" },
               { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
-              { label: "Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+              { label: "Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {
@@ -510,11 +510,11 @@ function fallback_module () {
         $: '',
         0: {
         value: [
-              { label: "Total", value: "0.0020 BTC", convert: true },
-              { label: "Fee", value: "0.00001 BTC" },
+              { label: "Amount", value: "0.0030 BTC", convert: true },
+              { label: "Fee", value: "0.0001 BTC", convert: true },
               { label: "Recipient Address", value: "7RwmbHfn...455p" },
               { label: "Processing time", value: "< 5 minutes" },
-              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+              { label: "Total (inc. fee)", value: "0.0031 BTC ",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {
@@ -523,7 +523,7 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-      '../src/node_modules/light_transaction_receipt': {
+      '../src/node_modules/light_tx_receipt': {
         $: '',
         0: {
         value: [
@@ -532,10 +532,10 @@ function fallback_module () {
               { label: "Label", value: "Work Payment" },
               { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "BTC 0.0001" },
-              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
+              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
               { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
-              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+              { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {

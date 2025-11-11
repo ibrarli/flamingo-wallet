@@ -852,44 +852,36 @@ async function btc_req_msg(opts = {}) {
   }
 
   function render_data(data) {
-    const { avatar, name, amount, date, status, is_me } = data[0]
+    const { avatar, name, amount, date, is_me } = data[0]
 
-    // status-based colors
-    let border_color = '#DDB473'
-    let btn_color = '#F7931A'
-    let bg_color = '#FFFCE7'
-    let status_element = ''
-
-   if (status === 'send') {
-      status_element = `<button class="send_btn" style="background:${btn_color};">${'Send'}</button>`
-    } else if (status === 'paid') {
-      border_color = '#87DD73'
-      bg_color = '#ECFFE7'
-      status_element = `<span class="status_text">Paid √</span>`
-    } else if (status === 'expired') {
-      border_color = '#C83535'
-      bg_color = '#FFE7E7'
-      status_element = `<span class="status_text">Expired</span>`
-    }
-
-    wrapper.innerHTML = `
-      <div class="btc_row ${is_me ? 'self' : ''}">
-        ${!is_me ? `<img class="avatar_outside" src="${avatar}" />` : ''}
-        <div class="btc_box" style="border:2px solid ${border_color}; background:${bg_color}">
-          <div class="btc_top">
-            <span>
-              <span class="name_text">${name}</span>
-              <span class="req_text"> requests </span>
-              <span class="amount_text">BTC ${amount} </span>
-              <span class="btc_icon">${dricons[0] || '₿'}</span>
-            </span>
-          </div>
-          <div class="btc_bottom">
-            <span class="btc_expire">Expire at ${date}</span>
-            ${status_element}
+    // Helper to build each variant box
+    function render_variant(label, border_color, bg_color, btn_color) {
+      return `
+        <div class="btc_row ${is_me ? 'self' : ''}">
+          ${!is_me ? `<img class="avatar_outside" src="${avatar}" />` : ''}
+          <div class="btc_box" style="border:2px solid ${border_color}; background:${bg_color}">
+            <div class="btc_top">
+              <span>
+                <span class="name_text">${name}</span>
+                <span class="req_text"> requests </span>
+                <span class="amount_text">BTC ${amount} </span>
+                <span class="btc_icon">${dricons[0] || '₿'}</span>
+              </span>
+            </div>
+            <div class="btc_bottom">
+              <span class="btc_expire">Expire at ${date}</span>
+              <button class="status_btn" style="background:${btn_color};">${label}</button>
+            </div>
           </div>
         </div>
-      </div>
+      `
+    }
+
+    // Always show all three variants
+    wrapper.innerHTML = `
+      ${render_variant('Send', '#DDB473', '#FFFCE7', '#F7931A')}
+      ${render_variant('Paid', '#87DD73', '#ECFFE7', '#4CAF50')}
+      ${render_variant('Expired', '#C83535', '#FFE7E7', '#C83535')}
     `
   }
 }
@@ -902,95 +894,15 @@ function fallback_module() {
   function fallback_instance(opts) {
     return {
       drive: {
-         'icons/': {
-            'btc.svg': {
-              '$ref': 'btc.svg'
-            }
-          },
+        'icons/': {
+          'btc.svg': {
+            '$ref': 'btc.svg'
+          }
+        },
         'style/': {
-          'style.css': {
-            raw: `
-            .btc_row {
-              display: flex;
-              align-items: flex-start;
-              gap: 12px;
-              margin: 12px 0;
-            }
-
-            .btc_row.self {
-              justify-content: flex-end;
-            }
-
-            .avatar_outside {
-              width: 60px;
-              height: 60px;
-              border-radius: 50%;
-              object-fit: cover;
-            }
-
-            .btc_box {
-              border-radius: 14px;
-              padding: 14px;
-              min-width: 280px;
-              border-width: 2px !important;
-            }
-
-            .btc_top {
-              display: flex;
-              flex-direction: column;
-              gap: 3px;
-            }
-
-            .btc_bottom {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-top: 6px; 
-            }
-
-            .name_text {
-              font-size: 16px;
-              font-weight: 600;
-              color: #222;
-            }
-
-
-            .req_text {
-              font-size: 15px;
-              color: #777; 
-            }
-
-            .amount_text {
-              font-size: 16px;
-              font-weight: 700;
-              color: #000; /* BTC amount stays black */
-            }
-
-            .btc_icon {
-              margin-left: 4px;
-            }
-
-            .btc_expire {
-              color: #555;
-              font-weight: 500;
-              font-size: 11px;
-            }
-
-            .send_btn {
-              padding: 6px 16px;
-              border-radius: 999px;
-              font-size: 13px; 
-              font-weight: 600;
-              cursor: pointer;
-              border: none;
-              color: #fff;
-            }
-
-            .status_text {
-              font-size: 12px;
-              font-weight: 600;
-            }`
-           }
+          'btc_req_msg.css': {
+            '$ref': 'btc_req_msg.css'
+          }
         },
         'data/': {
           'opts.json': { raw: opts }
@@ -2995,9 +2907,9 @@ const { sdb, get } = statedb(fallback_module)
 
 const receipt_row = require('receipt_row')
 
-module.exports = light_transaction_receipt
+module.exports = light_tx_receipt
 
-async function light_transaction_receipt(opts = {}) {
+async function light_tx_receipt(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -3099,7 +3011,7 @@ function fallback_module() {
           'x.svg': { '$ref': 'x.svg' }
         },
         'style/': {
-          'light_transaction_receipt.css': { '$ref': 'light_transaction_receipt.css' }
+          'light_tx_receipt.css': { '$ref': 'light_tx_receipt.css' }
         },
         'data/': {
           'opts.json': { raw: opts }
@@ -3110,7 +3022,7 @@ function fallback_module() {
   }
 }
 
-}).call(this)}).call(this,"/src/node_modules/light_transaction_receipt/light_transaction_receipt.js")
+}).call(this)}).call(this,"/src/node_modules/light_tx_receipt/light_tx_receipt.js")
 },{"STATE":1,"receipt_row":29}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
@@ -4240,7 +4152,7 @@ async function pay_invoice_confirmation(opts = {}) {
           <div class="invoice-confirmation">Confirmation</div>
           <div class="invoice-amount">
             <div class="light-icon-small"></div>
-            <div class="invoice-value">0.0020</div>
+            <div class="invoice-value" id="invoice-value">0.0000</div>
           </div>       
         </div>
         <div class="close-icon"></div>
@@ -4254,6 +4166,7 @@ async function pay_invoice_confirmation(opts = {}) {
   const style = shadow.querySelector('style')
   const rows_el = shadow.querySelector('.receipt-rows')
   const send_button_container = shadow.querySelector('.send-button')
+
 
   const subs = await sdb.watch(onbatch)
 
@@ -4297,9 +4210,16 @@ async function pay_invoice_confirmation(opts = {}) {
   }
 
   async function ondata(data) {
+
+    const {value} = data?.[0] || {}
+    const btc_value = value[0].value
+    const valueEl = shadow.querySelector('.invoice-value')
     
+    valueEl.textContent = btc_value
+
   }
 }
+
 
 function fallback_module() {
   return {
@@ -4512,6 +4432,7 @@ async function receipt_row(opts = {}) {
     let { label, value, link, icon, convert } = data[0] || {}
 
     let value_html = value || ""
+    let icon_html = ""
 
     if (link) {
       value_html = `<a href="${value}" target="_blank" class="receipt-link">${value}</a>`
@@ -4520,14 +4441,15 @@ async function receipt_row(opts = {}) {
 
     if (icon) {
       if (icon == "btc.svg") {
-        value_html = `<span class="receipt-icon">${dricons[1]}</span> ${value}`
+        icon_html = `<span class="receipt-icon">${dricons[1]}</span>`
         row.className = `receipt-row total`
       } else if (icon == "lightning.svg") {
-        value_html = `<span class="receipt-icon">${dricons[2]}</span> ${value}`
+        icon_html = `<span class="receipt-icon">${dricons[2]}</span>`
         row.className = `receipt-row total`
       } else {
-        value_html = `<span class="receipt-icon">${dricons[0]}</span> ${value}`
+        icon_html = `<span class="receipt-icon">${dricons[0]}</span>`
       }
+      value_html = `${icon_html}${value}`
     }
 
     // Base layout
@@ -4542,30 +4464,61 @@ async function receipt_row(opts = {}) {
           </div>` : ""}
       </div>
       ${icon ? "" : `<div class="divider"></div>`}
+      <div class="copy-popup">Copied!</div>
     `
+
+    const value_el = row.querySelector('.receipt-value')
+    const popup_el = row.querySelector('.copy-popup')
+
+    value_el.ondblclick = () => {
+      const textToCopy = value_el.textContent.replace(/^\$/, '').trim()
+
+      // Copy fallback
+      const doCopy = () => {
+        const textarea = document.createElement('textarea')
+        textarea.value = textToCopy
+        document.body.appendChild(textarea)
+        textarea.select()
+        try { document.execCommand('copy') } 
+        catch (err) { console.error('Failed to copy:', err) }
+        document.body.removeChild(textarea)
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).catch(doCopy)
+      } else {
+        doCopy()
+      }
+
+      
+
+      // Show popup above the value
+      popup_el.style.top = `${value_el.offsetTop - 25}px` // 25px above
+      popup_el.style.left = `${value_el.offsetLeft}px` // align left with value
+      popup_el.style.opacity = 1
+
+      setTimeout(() => { popup_el.style.opacity = 0 }, 800)
+    }
 
     if (convert) {
       const btc_btn = row.querySelector('.convert-btn.btc')
       const usd_btn = row.querySelector('.convert-btn.usd')
-      const value_el = row.querySelector('.receipt-value')
 
       btc_btn.onclick = () => {
         current_unit = 'BTC'
         btc_btn.classList.add('active')
         usd_btn.classList.remove('active')
-        value_el.innerHTML = `${value}`
+        value_el.innerHTML = `${icon_html}${value}`
       }
 
       usd_btn.onclick = () => {
         current_unit = 'USD'
         usd_btn.classList.add('active')
         btc_btn.classList.remove('active')
-
         let btc_value = parseFloat(value)
         if (isNaN(btc_value)) btc_value = 0
-
         let usd_value = (btc_value * btc_to_usd).toFixed(2)
-        value_el.innerHTML = `$${usd_value}`
+        value_el.innerHTML = `${icon_html}$${usd_value}`
       }
     }
   }
@@ -4584,9 +4537,7 @@ function fallback_module() {
           'lightning.svg': { '$ref': 'lightning.svg' },
         },
         'style/': {
-          'receipt_row.css': {
-           '$ref':'receipt_row.css'
-          }
+          'receipt_row.css': { '$ref':'receipt_row.css' }
         },
         'data/': {
           'opts.json': { raw: opts }
@@ -7669,7 +7620,7 @@ const details_menu = require('../src/node_modules/details_menu')
 const btc_req_msg = require('../src/node_modules/btc_req_msg')
 const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
 const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
-const light_transaction_receipt = require('../src/node_modules/light_transaction_receipt')
+const light_transaction_receipt = require('../src/node_modules/light_tx_receipt')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -7771,6 +7722,10 @@ async function main () {
       </div>
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
+        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
         <div id="switch-account-container"></div>
       </div>
@@ -7794,10 +7749,6 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Details Menu</div>  
         <div id="details-menu-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
-        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
       </div>
     </div>
   `
@@ -8038,10 +7989,10 @@ function fallback_module () {
               { label: "Sent By", value: "Cypher" },
               { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "BTC 0.0001" },
-              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
+              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
               { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
-              { label: "Total Amount", value: "BTC 0.0020",  icon: "btc.svg" }
+              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
             ]
           },
         mapping: {
@@ -8084,7 +8035,7 @@ function fallback_module () {
           "name": "Mark Kevin",
           "amount": 0.0019,
           "date": "25 June 2025",
-          "status": "send", // or "paid", "expired"
+          "status": "expired", // or "paid", "expired"
           "is_me": false
         },
         mapping: {
@@ -8147,7 +8098,7 @@ function fallback_module () {
         value: [
               { label: "Label", value: "Work Payment" },
               { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
-              { label: "Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+              { label: "Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {
@@ -8160,11 +8111,11 @@ function fallback_module () {
         $: '',
         0: {
         value: [
-              { label: "Total", value: "0.0020 BTC", convert: true },
-              { label: "Fee", value: "0.00001 BTC" },
+              { label: "Amount", value: "0.0030 BTC", convert: true },
+              { label: "Fee", value: "0.0001 BTC", convert: true },
               { label: "Recipient Address", value: "7RwmbHfn...455p" },
               { label: "Processing time", value: "< 5 minutes" },
-              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+              { label: "Total (inc. fee)", value: "0.0031 BTC ",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {
@@ -8173,7 +8124,7 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-      '../src/node_modules/light_transaction_receipt': {
+      '../src/node_modules/light_tx_receipt': {
         $: '',
         0: {
         value: [
@@ -8182,10 +8133,10 @@ function fallback_module () {
               { label: "Label", value: "Work Payment" },
               { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "BTC 0.0001" },
-              { label: "Recipient Receives", value: "BTC 0.0019" },
+              { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
+              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
               { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
-              { label: "Total Amount", value: "BTC 0.0020",  icon: "lightning.svg" }
+              { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {
@@ -8198,4 +8149,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_transaction_receipt":20,"../src/node_modules/lightning_page":23,"../src/node_modules/more_menu":25,"../src/node_modules/pay_invoice_confirmation":27,"../src/node_modules/receive_btc":30,"../src/node_modules/send_btc":32,"../src/node_modules/send_invoice_modal":33,"../src/node_modules/switch_account":37,"../src/node_modules/transaction_history":40,"../src/node_modules/transaction_receipt":42}]},{},[45]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_tx_receipt":20,"../src/node_modules/lightning_page":23,"../src/node_modules/more_menu":25,"../src/node_modules/pay_invoice_confirmation":27,"../src/node_modules/receive_btc":30,"../src/node_modules/send_btc":32,"../src/node_modules/send_invoice_modal":33,"../src/node_modules/switch_account":37,"../src/node_modules/transaction_history":40,"../src/node_modules/transaction_receipt":42}]},{},[45]);
