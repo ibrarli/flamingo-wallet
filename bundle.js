@@ -7,13 +7,12 @@ const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const general_button = require('general_button')
-const switch_account = require('switch_account')
-const send_btc = require('send_btc')      
-const receive_btc = require('receive_btc') 
+const send_btc = require('send_btc')
+const receive_btc = require('receive_btc')
 
 module.exports = action_buttons
 
-async function action_buttons (opts = {}, protocol) {
+async function action_buttons(opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -24,8 +23,7 @@ async function action_buttons (opts = {}, protocol) {
 
   const _ = {
     send_general: null,
-    receive_general: null,
-    wallet_general: null
+    receive_general: null
   }
 
   const el = document.createElement('div')
@@ -33,9 +31,6 @@ async function action_buttons (opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="action-buttons-container">
-        <div class="wallet-buttons wallet-button-container" id="wallet-button-container">
-            <div class="dropdown-container hidden"></div>
-        </div>
         <div class="send-receive-buttons">
             <div id="send-button-container">
               <div class="send-dropdown hidden"></div>
@@ -49,69 +44,44 @@ async function action_buttons (opts = {}, protocol) {
   `
 
   const style = shadow.querySelector('style')
-  const wallet_container = shadow.querySelector('#wallet-button-container')
-
-  // Dropdown elements
-  const wallet_dropdown = wallet_container.querySelector('.dropdown-container')
   const send_dropdown = shadow.querySelector('.send-dropdown')
   const receive_dropdown = shadow.querySelector('.receive-dropdown')
 
   const subs = await sdb.watch(onbatch)
 
-  if (protocol) {
-    protocol({ from: 'action_buttons', notify: on_message })
-  }
+  const sendUp = protocol ? protocol((msgToActionButtons) => {
+    console.log('[action_buttons] message from parent ->', msgToActionButtons)
+  }) : null
 
   // Create buttons
   const send_button = await general_button(subs[0], button_protocol('send_general'))
   const receive_button = await general_button(subs[1], button_protocol('receive_general'))
-  const wallet_button = await general_button(subs[2], button_protocol('wallet_general'))
 
-  // Insert buttons
   shadow.querySelector('#send-button-container').prepend(send_button)
   shadow.querySelector('#receive-button-container').prepend(receive_button)
-  wallet_container.insertBefore(wallet_button, wallet_dropdown)
 
-  // Set default actions
   send_button._action = 'send_message'
   receive_button._action = 'receive_message'
-  wallet_button._action = 'wallet_action'
 
-  // Dropdown states
   let send_el = null
   let receive_el = null
-  let switch_el = null
-
-  // -------------------- Helpers --------------------
 
   function close_all_dropdowns(except) {
     if (except !== 'send') send_dropdown.classList.add('hidden')
     if (except !== 'receive') receive_dropdown.classList.add('hidden')
-    if (except !== 'wallet') wallet_dropdown.classList.add('hidden')
   }
 
   function handle_outside_click(event) {
     const target = event.target
-    console.log("Clicked element:", target)
-
     const clicked_inside_dropdown =
       send_dropdown.contains(target) ||
-      receive_dropdown.contains(target) ||
-      wallet_dropdown.contains(target)
-
+      receive_dropdown.contains(target)
     const clicked_button =
       send_button.contains(target) ||
-      receive_button.contains(target) ||
-      wallet_button.contains(target)
-
-    console.log("Inside dropdown?", clicked_inside_dropdown)
-    console.log("On button?", clicked_button)
+      receive_button.contains(target)
 
     if (!clicked_inside_dropdown && !clicked_button) {
-      console.log("Closing all dropdowns")
       close_all_dropdowns(null)
-    } else {
-      console.log("Keeping dropdown open")
     }
   }
 
@@ -132,7 +102,7 @@ async function action_buttons (opts = {}, protocol) {
     close_all_dropdowns('send')
 
     if (!send_el) {
-      send_el = await send_btc(subs[4], {
+      send_el = await send_btc(subs[2], {
         onClose: () => send_dropdown.classList.add('hidden')
       })
       send_dropdown.appendChild(send_el)
@@ -154,35 +124,13 @@ async function action_buttons (opts = {}, protocol) {
     close_all_dropdowns('receive')
 
     if (!receive_el) {
-      receive_el = await receive_btc(subs[5], {
+      receive_el = await receive_btc(subs[3], {
         onClose: () => receive_dropdown.classList.add('hidden')
       })
       receive_dropdown.appendChild(receive_el)
     }
 
     receive_dropdown.classList.remove('hidden')
-  }
-
-  // Wallet button
-  wallet_button.onclick = async (event) => {
-    event.stopPropagation()
-    if (wallet_button._action !== 'wallet_action') return
-
-    if (!wallet_dropdown.classList.contains('hidden')) {
-      wallet_dropdown.classList.add('hidden')
-      return
-    }
-
-    close_all_dropdowns('wallet')
-
-    if (!switch_el) {
-      switch_el = await switch_account(subs[3], {
-        onClose: () => wallet_dropdown.classList.add('hidden')
-      })
-      wallet_dropdown.appendChild(switch_el)
-    }
-
-    wallet_dropdown.classList.remove('hidden')
   }
 
   // -------------------- Initial Config --------------------
@@ -197,26 +145,15 @@ async function action_buttons (opts = {}, protocol) {
     data: { name: 'Receive', action: 'receive_message' }
   })
 
-  _.wallet_general?.({
-    type: 'button_name',
-    data: { name: 'Wallet', action: 'wallet_action' }
-  })
-
-  const action = {
-    send_message,
-    receive_message,
-    wallet_action
-  }
-
   return el
 
   // ------------------------- Helpers -------------------------
 
-  function fail (data, type) {
+  function fail(data, type) {
     throw new Error('Invalid message type', { cause: { data, type } })
   }
 
-  async function onbatch (batch) {
+  async function onbatch(batch) {
     for (const { type, paths } of batch) {
       const data = await Promise.all(
         paths.map(path => drive.get(path).then(file => file.raw))
@@ -226,109 +163,57 @@ async function action_buttons (opts = {}, protocol) {
     }
   }
 
-  function inject (data) {
+  function inject(data) {
     style.textContent = data[0]
   }
 
-  async function ondata (data) {
+  async function ondata(data) {
     const buttonData = data[0]?.value || {}
   }
 
-  function button_protocol (key) {
+  function button_protocol(key) {
     return send => {
       _[key] = send
       return send
     }
   }
 
-  function on_message (message) {
-    const { type, data } = message
-    ;(action[type] || fail)(data, type)
-  }
-
   // Action handlers
-  function send_message (data, type) {
+  function send_message(data, type) {
     console.log('Send button clicked - handling send action')
   }
 
-  function receive_message (data, type) {
+  function receive_message(data, type) {
     console.log('Receive button clicked - handling receive action')
-  }
-
-  function wallet_action (data, type) {
-    console.log('Wallet button clicked - handling wallet action')
   }
 }
 
 // ============ Fallback Setup for STATE ============
-function fallback_module () {
+function fallback_module() {
   return {
     api,
     _: {
       'general_button': { $: '' },
-      'switch_account': { $: '' },
       'send_btc': { $: '' },
       'receive_btc': { $: '' }
     }
   }
 
-  function api (opts = {}) {
+  function api(opts) {
     const general_button = {
-      mapping: {
-        style: 'style',
-        data: 'data'
-      },
+      mapping: { style: 'style', data: 'data' },
       0: {}, // send button
-      1: {}, // receive button
-      2: {}  // wallet button
+      1: {}  // receive button
     }
 
-    const switch_account = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      3: {
-        btc: 0.789,
-        lightning: 0.9000
-      } 
-    }
+    const send_btc = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: '' }
+    const receive_btc = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 3: '' }
 
-    const send_btc = {
-      mapping: { 
-        style: 'style', 
-        data: 'data', 
-        icons: 'icons' 
-      },
-      4: ''
-    }
-
-    const receive_btc = {
-      mapping: { 
-        style: 'style', 
-        data: 'data', 
-        icons: 'icons' 
-      },
-      5: ''
-    }
-
-    return {
-      drive: {
-        'style/': {
-          'action_buttons.css': { '$ref': 'action_buttons.css' }
-        },
-        'data/': {
-          'opts.json': { raw: opts }
-        }
-      },
-      _: { general_button, switch_account, send_btc, receive_btc }
-    }
+    return { drive: { 'style/': { 'action_buttons.css': { '$ref': 'action_buttons.css' } } }, _: { general_button, send_btc, receive_btc } }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":15,"receive_btc":30,"send_btc":32,"switch_account":37}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":15,"receive_btc":32,"send_btc":34}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1700,7 +1585,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":10,"search_bar":31,"square_button":36}],12:[function(require,module,exports){
+},{"STATE":1,"contact_row":10,"search_bar":33,"square_button":38}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1926,7 +1811,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19,"templates":38}],13:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19,"templates":40}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2069,7 +1954,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice_confirmation/create_invoice_confirmation.js")
-},{"STATE":1,"button":7,"receipt_row":29}],14:[function(require,module,exports){
+},{"STATE":1,"button":7,"receipt_row":31}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2356,10 +2241,14 @@ const home_page_header = require('home_page_header')
 const action_buttons = require('action_buttons')
 const transaction_list = require('transaction_list')
 const total_wealth = require('total_wealth')
+const lightning_buttons = require('lightning_buttons')
+const wallet_button = require('wallet_button')
+const light_page_header = require('light_page_header')
+const light_tx_list = require('light_tx_list')
 
 module.exports = home_contents
 
-async function home_contents (opts = {}) {
+async function home_contents(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -2379,21 +2268,71 @@ async function home_contents (opts = {}) {
 
   const subs = await sdb.watch(onbatch)
 
-  // ✅ load components in order
-  const home_page_header_component = await home_page_header(subs[0])
-  const action_buttons_component = await action_buttons(subs[1])
+  // -------------------- Create components --------------------
+  // Pass opts with wallet info for initial BTC view
+  const headerOpts = { wallet: 'btc', amount: '0.9616' }
+  const home_page_header_component = await home_page_header(subs[0], headerOpts)
+  const action_buttons_component = await action_buttons(subs[1], home_protocol)
   const transaction_list_component = await transaction_list(subs[2])
   const total_wealth_component = await total_wealth(subs[3])
+  const lightning_buttons_component = await lightning_buttons(subs[4], home_protocol)
+  const wallet_button_component = await wallet_button(subs[5], home_protocol)
+  const light_page_header_component = await light_page_header(subs[6])
+  const light_tx_list_component = await light_tx_list(subs[7])
 
-  // ✅ append all four in order
+  // default view: BTC wallet components
   container.append(
     home_page_header_component,
+    wallet_button_component,
     action_buttons_component,
     transaction_list_component,
     total_wealth_component
   )
 
   return el
+
+  // -------------------- Protocol to handle child messages --------------------
+  function home_protocol(sendToChild) {
+    return async function (messageFromChild) {
+      console.log('[child -> home_contents]:', messageFromChild)
+
+      if (messageFromChild?.from === 'switch_account' && messageFromChild.type === 'switch') {
+        const wallet = messageFromChild.data
+
+        if (wallet === 'btc') {
+          // Update header dynamically
+          home_page_header_component._update?.({ wallet: 'btc', amount: '0.9616' })
+
+          // Re-append BTC view components
+          container.innerHTML = ''
+          container.append(
+            home_page_header_component,
+            wallet_button_component,
+            action_buttons_component,
+            transaction_list_component,
+            total_wealth_component
+          )
+
+          console.log('Switched to BTC wallet view')
+        } else if (wallet === 'lightning') {
+          // Update header dynamically
+          home_page_header_component._update?.({ wallet: 'lightning', amount: '0.0246' })
+
+          // Show Lightning buttons instead of BTC action buttons
+          container.innerHTML = ''
+          container.append(
+            light_page_header_component,
+            wallet_button_component,
+            lightning_buttons_component,
+            light_tx_list_component,
+            total_wealth_component
+          )
+
+          console.log('Switched to Lightning wallet view')
+        }
+      }
+    }
+  }
 
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
@@ -2405,91 +2344,68 @@ async function home_contents (opts = {}) {
 
   function inject(data) { style.textContent = data[0] }
   function ondata(data) {}
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
 }
 
-function fallback_module () {
+// ------------------ Fallback for STATE ------------------
+function fallback_module() {
   return {
     api,
-    _: { 
+    _: {
       'home_page_header': { $: '' },
       'action_buttons': { $: '' },
       'transaction_list': { $: '' },
-      'total_wealth': { $: '' }
+      'total_wealth': { $: '' },
+      'lightning_buttons': { $: '' },
+      'wallet_button': { $: '' },
+      'light_page_header': { $: '' },
+      'light_tx_list': { $: '' }
     }
   }
 
   function api(opts) {
     const home_page_header = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
-      0: { wallet: 'btc', amount: "0.9616" }
+      0: { wallet: 'btc', amount: '0.9616' }
     }
-
-    const action_buttons = {
-      mapping: { style: 'style', data: 'data' },
-      0: { buttons: { wallet: 'lightning' } }
-    }
-
+    const action_buttons = { mapping: { style: 'style', data: 'data' }, 0: { buttons: { wallet: 'btc' } } }
     const transaction_list = {
       mapping: { style: 'style', data: 'data' },
-      0: {
-        value: [
-       {
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            tid: "skdmf932ksdmf0234lsd",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
-          },
-          {
-            tid: "Mark Kevin",
-            ttime: "03:45 PM",
-            tamount: "- 0.00421",
-            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"     
-          },
-          {
-            tid: "QWErty9834asdLKJhf",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          },
-          {
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-          },    ]
-      }
+      0: { value: [
+        { tid: 'Luis fedrick', ttime: '11:30 AM', tamount: '+0.02456', avatar: 'https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=' },
+        { tid: 'skdmf932ksdmf0234lsd', ttime: '02:15 PM', tamount: '+0.03271', avatar: '' },
+        { tid: 'Mark Kevin', ttime: '03:45 PM', tamount: '-0.00421', avatar: 'https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+      ]}
     }
-
     const total_wealth = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
-      0: {
-        value: {
-          total: 0.9862,
-          usd: 1000,
-          lightning: 0.02456,
-          bitcoin: 0.96164
-        }
-      }
+      0: { value: { total: 0.9862, usd: 1000, lightning: 0.02456, bitcoin: 0.96164 } }
+    }
+    const lightning_buttons = { mapping: { style: 'style', data: 'data' }, 0: { buttons: { wallet: 'lightning' } } }
+    const wallet_button = { mapping: { style: 'style', data: 'data' }, 0: { buttons: { wallet: 'btc' } } }
+    const light_page_header = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: { wallet: 'lightning', amount: '0.0246' }
+    }
+    const light_tx_list = {
+      mapping: { style: 'style', data: 'data' },
+      0: { value: [
+        { tid: 'skdmf932ksdmf0234lsd', ttime: '09:15 AM', tamount: '-0.00123', avatar: '' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+        { tid: 'skdmf932hiuo1h2oihio', ttime: '04:20 PM', tamount: '-0.00234', avatar: '' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+      ]}
     }
 
     return {
-      drive: {
-        'style/': { 'home_contents.css': { '$ref': 'home_contents.css' } },
-        'data/': { 'opts.json': { raw: opts } }
-      },
-      _: { home_page_header, action_buttons, transaction_list, total_wealth }
+      drive: { 'style/': { 'home_contents.css': { '$ref': 'home_contents.css' } }, 'data/': { 'opts.json': { raw: opts } } },
+      _: { home_page_header, action_buttons, transaction_list, total_wealth, lightning_buttons, wallet_button, light_page_header, light_tx_list }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":18,"total_wealth":39,"transaction_list":41}],17:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":18,"light_page_header":20,"light_tx_list":21,"lightning_buttons":23,"total_wealth":41,"transaction_list":43,"wallet_button":47}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2558,7 +2474,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"menu":24}],18:[function(require,module,exports){
+},{"STATE":1,"menu":26}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2905,6 +2821,366 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+module.exports = light_page_header
+
+async function light_page_header (opts = {}) {
+    const { id, sdb } = await get(opts.sid)
+    const { drive } = sdb
+
+    const on = {
+        style: inject,
+        data: ondata,
+        icons: iconject,
+    }
+
+    const el = document.createElement('div')
+    const shadow = el.attachShadow({ mode: 'closed' })
+
+    let dricons = []
+
+    shadow.innerHTML = `
+        <div class="header-container">
+   
+        </div>
+        <style></style>
+    `
+
+    const style = shadow.querySelector('style')
+    const container = shadow.querySelector('.header-container')
+
+    await sdb.watch(onbatch)
+    return el
+
+    async function onbatch (batch) {
+        for (const { type, paths } of batch) {
+        const data = await Promise.all(
+            paths.map(path => drive.get(path).then(file => file.raw))
+        )
+        const func = on[type] || fail
+        await func(data, type)
+        }
+    }
+
+    function inject (data) {
+        style.textContent = data[0]
+    }
+
+    async function ondata (data) {
+      const { wallet, amount } = data[0]
+  
+      let heading = ""
+      let icon = ""
+      let display_amount = amount > 0 ? amount : "0.00"
+
+      if (wallet == "btc"){
+        heading = "Bitcoin Wallet"
+        icon = dricons[0]
+      } else if (wallet == "lightning"){
+        heading = "Lightning Wallet"
+        icon = dricons[1]
+      } else{
+        console.log("Wrong wallet")
+      }
+
+      container.innerHTML = `
+          <div class="heading">${heading}</div>
+          <div class="wallet-row">
+            <div class="icon-slot">${icon}</div>
+            <div class="wallet-amount">${display_amount}</div>
+          </div>
+      ` 
+    }
+
+
+    function fail (data, type) {
+        throw new Error('invalid message', { cause: { data, type } })
+    }
+
+    function iconject (data) {
+        dricons = data
+    } 
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'btc.svg': {
+            '$ref': 'btc.svg'
+          },
+          'lightning.svg': {
+            '$ref': 'lightning.svg'
+          },
+        },
+        'style/': {
+          'style.css': {
+            raw: `
+              .header-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+              }
+
+              .heading {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                text-align: center;
+              }
+
+              .wallet-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                justify-content: center;
+              }
+
+              .icon-slot svg {
+                width: 32px;
+                height: 32px;
+              }
+
+              .wallet-amount {
+                font-size: 28px;
+                font-weight: bold;
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/light_page_header/light_page_header.js")
+},{"STATE":1}],21:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const transaction_row = require('transaction_row')
+const transaction_history = require('transaction_history') 
+
+module.exports = light_tx_list
+
+
+async function light_tx_list(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'open' })
+
+  shadow.innerHTML = `
+    <!-- <div class="component-label">Transaction List</div> -->
+    <div class="transaction-list-container">
+      <div class="transaction-list-header">  
+        <div class="transaction-list-title"> Transactions </div>
+        <div class="transaction-list-see-all"> See all</div>
+      </div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const container_el = shadow.querySelector('.transaction-list-container')
+  const see_all_btn = shadow.querySelector('.transaction-list-see-all')
+
+  const subs = await sdb.watch(onbatch)
+
+  subs.slice(1, 5).forEach(async sub => {
+      container_el.append(await transaction_row(sub))
+  })
+
+  see_all_btn.addEventListener('click', async () => {
+    const history_component = await transaction_history(subs[0])
+
+    // find the home_page root host element
+    let homePageHost = el.getRootNode().host
+
+    if (homePageHost) {
+      homePageHost.replaceWith(history_component)
+    }
+  })
+
+
+
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent =  data[0]
+  }
+
+  async function ondata(data) {
+  }
+}
+
+function fallback_module () {
+  return {
+    api,
+    _: {
+      'transaction_history':{ $: ''},
+      'transaction_row':{ $: '' },
+    } 
+  }
+  function api(opts){
+    const transaction_history = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      },
+      0: {
+        value:[
+          {
+            dateString: "2025-08-01",
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-08-01",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+          },
+          {
+            dateString: "2025-08-01",
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
+          },
+          {
+            dateString: "2025-07-31",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+          },
+          {
+            dateString: "2025-07-31",
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-07-31",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+          },
+          {
+            dateString: "2025-07-28",
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-08-01",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+          },
+          {
+            dateString: "2025-07-28",
+            tid: "Luis fedrick",
+            ttime: "11:30 AM",
+            tamount: "+ 0.02456",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-07-29",
+            ttime: "02:15 PM",
+            tamount: "+ 0.03271",
+          },
+          {
+            dateString: "2025-07-30",
+            tid: "Mark Kevin",
+            ttime: "03:45 PM",
+            tamount: "- 0.00421",
+            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+          },
+          {
+            dateString: "2025-05-10",
+            ttime: "04:45 PM",
+            tamount: "- 0.03791",
+          }
+        ]
+      }
+    }
+
+
+    const transaction_row = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      }
+    }
+    opts.value.forEach((transaction, index) => {
+      transaction_row[index] = transaction
+      console.log("Transaction Row:", transaction)
+    })
+    return {
+      drive: {
+        'style/': {
+          'light_tx_list.css':{
+            '$ref': 'light_tx_list.css'
+          }
+        },
+        'data/': {
+          'opts.json':{
+            raw: opts
+          }
+        }
+      },
+      _:{
+        transaction_history,
+        transaction_row
+      }
+    }
+  }
+}
+
+
+}).call(this)}).call(this,"/src/node_modules/light_tx_list/light_tx_list.js")
+},{"STATE":1,"transaction_history":42,"transaction_row":45}],22:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 const receipt_row = require('receipt_row')
 
 module.exports = light_tx_receipt
@@ -3023,42 +3299,30 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_receipt/light_tx_receipt.js")
-},{"STATE":1,"receipt_row":29}],21:[function(require,module,exports){
+},{"STATE":1,"receipt_row":31}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const general_button = require('general_button')
-const switch_account = require('switch_account')
-const pay_invoice = require('pay_invoice')      
-const create_invoice = require('create_invoice')   // changed here ✅
+const pay_invoice = require('pay_invoice')
+const create_invoice = require('create_invoice')
 
 module.exports = lightning_buttons
 
-async function lightning_buttons (opts = {}, protocol) {
+async function lightning_buttons(opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata
-  }
-
-  const _ = {
-    pay_general: null,
-    create_general: null,
-    wallet_general: null
-  }
+  const on = { style: inject, data: ondata }
+  const _ = { pay_general: null, create_general: null }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
     <div class="lightning-buttons-container">
-        <div class="wallet-buttons wallet-button-container" id="wallet-button-container">
-            <div class="dropdown-container hidden"></div>
-        </div>
         <div class="pay-create-buttons">
             <div id="pay-button-container">
               <div class="pay-dropdown hidden"></div>
@@ -3072,278 +3336,119 @@ async function lightning_buttons (opts = {}, protocol) {
   `
 
   const style = shadow.querySelector('style')
-  const wallet_container = shadow.querySelector('#wallet-button-container')
-
-  // Dropdown elements
-  const wallet_dropdown = wallet_container.querySelector('.dropdown-container')
   const pay_dropdown = shadow.querySelector('.pay-dropdown')
   const create_dropdown = shadow.querySelector('.create-dropdown')
 
   const subs = await sdb.watch(onbatch)
 
+  // -------------------- Protocol setup --------------------
+  let sendUp = () => {}
   if (protocol) {
-    protocol({ from: 'lightning_buttons', notify: on_message })
+    sendUp = protocol(message => {
+      console.log('[lightning_buttons -> home_contents]:', message)
+    })
   }
 
-  // Create buttons
+  // -------------------- Create buttons --------------------
   const pay_button = await general_button(subs[0], button_protocol('pay_general'))
   const create_button = await general_button(subs[1], button_protocol('create_general'))
-  const wallet_button = await general_button(subs[2], button_protocol('wallet_general'))
 
-  // Insert buttons
   shadow.querySelector('#pay-button-container').prepend(pay_button)
   shadow.querySelector('#create-button-container').prepend(create_button)
-  wallet_container.insertBefore(wallet_button, wallet_dropdown)
 
-  // Set default actions
   pay_button._action = 'pay_message'
   create_button._action = 'create_message'
-  wallet_button._action = 'wallet_action'
 
-  // Dropdown states
-  let pay_el = null
-  let create_el = null
-  let switch_el = null
+  let pay_el = null, create_el = null
 
   // -------------------- Helpers --------------------
-
   function close_all_dropdowns(except) {
     if (except !== 'pay') pay_dropdown.classList.add('hidden')
     if (except !== 'create') create_dropdown.classList.add('hidden')
-    if (except !== 'wallet') wallet_dropdown.classList.add('hidden')
   }
 
   function handle_outside_click(event) {
     const target = event.target
-    const clicked_inside_dropdown =
-      pay_dropdown.contains(target) ||
-      create_dropdown.contains(target) ||
-      wallet_dropdown.contains(target)
-
-    const clicked_button =
-      pay_button.contains(target) ||
-      create_button.contains(target) ||
-      wallet_button.contains(target)
-
-    if (!clicked_inside_dropdown && !clicked_button) {
-      close_all_dropdowns(null)
-    }
+    const inside = pay_dropdown.contains(target) || create_dropdown.contains(target)
+    const onButton = pay_button.contains(target) || create_button.contains(target)
+    if (!inside && !onButton) close_all_dropdowns(null)
   }
-
   shadow.addEventListener('click', handle_outside_click)
 
-  // -------------------- Dropdown Toggles --------------------
-
-  // Pay Invoice button
-  pay_button.onclick = async (event) => {
-    event.stopPropagation()
+  // -------------------- Button Clicks --------------------
+  pay_button.onclick = async (e) => {
+    e.stopPropagation()
     if (pay_button._action !== 'pay_message') return
-
-    if (!pay_dropdown.classList.contains('hidden')) {
-      pay_dropdown.classList.add('hidden')
-      return
-    }
-
+    if (!pay_dropdown.classList.contains('hidden')) { pay_dropdown.classList.add('hidden'); return }
     close_all_dropdowns('pay')
-
     if (!pay_el) {
-      pay_el = await pay_invoice(subs[4], {   // still pay_invoice
-        onClose: () => pay_dropdown.classList.add('hidden')
-      })
+      pay_el = await pay_invoice(subs[2], { onClose: () => pay_dropdown.classList.add('hidden') })
       pay_dropdown.appendChild(pay_el)
     }
-
     pay_dropdown.classList.remove('hidden')
+
+    sendUp({ from: 'lightning_buttons', type: 'pay', data: null })
   }
 
-  // Create Invoice button
-  create_button.onclick = async (event) => {
-    event.stopPropagation()
+  create_button.onclick = async (e) => {
+    e.stopPropagation()
     if (create_button._action !== 'create_message') return
-
-    if (!create_dropdown.classList.contains('hidden')) {
-      create_dropdown.classList.add('hidden')
-      return
-    }
-
+    if (!create_dropdown.classList.contains('hidden')) { create_dropdown.classList.add('hidden'); return }
     close_all_dropdowns('create')
-
     if (!create_el) {
-      create_el = await create_invoice(subs[5], {   // changed here ✅
-        onClose: () => create_dropdown.classList.add('hidden')
-      })
+      create_el = await create_invoice(subs[3], { onClose: () => create_dropdown.classList.add('hidden') })
       create_dropdown.appendChild(create_el)
     }
-
     create_dropdown.classList.remove('hidden')
-  }
 
-  // Wallet button
-  wallet_button.onclick = async (event) => {
-    event.stopPropagation()
-    if (wallet_button._action !== 'wallet_action') return
-
-    if (!wallet_dropdown.classList.contains('hidden')) {
-      wallet_dropdown.classList.add('hidden')
-      return
-    }
-
-    close_all_dropdowns('wallet')
-
-    if (!switch_el) {
-      switch_el = await switch_account(subs[3], {
-        onClose: () => wallet_dropdown.classList.add('hidden')
-      })
-      wallet_dropdown.appendChild(switch_el)
-    }
-
-    wallet_dropdown.classList.remove('hidden')
+    sendUp({ from: 'lightning_buttons', type: 'create', data: null })
   }
 
   // -------------------- Initial Config --------------------
+  _.pay_general?.({ type: 'button_name', data: { name: 'Pay Invoice', action: 'pay_message' } })
+  _.create_general?.({ type: 'button_name', data: { name: 'Create Invoice', action: 'create_message' } })
 
-  _.pay_general?.({
-    type: 'button_name',
-    data: { name: 'Pay Invoice', action: 'pay_message' }
-  })
-
-  _.create_general?.({
-    type: 'button_name',
-    data: { name: 'Create Invoice', action: 'create_message' }
-  })
-
-  _.wallet_general?.({
-    type: 'button_name',
-    data: { name: 'Wallet', action: 'wallet_action' }
-  })
-
-  const action = {
-    pay_message,
-    create_message,
-    wallet_action
-  }
-
+  const action = { pay_message, create_message }
   return el
 
-  // ------------------------- Helpers -------------------------
-
-  function fail (data, type) {
-    throw new Error('Invalid message type', { cause: { data, type } })
-  }
-
-  async function onbatch (batch) {
+  // -------------------- Helpers --------------------
+  function fail(data, type) { throw new Error('Invalid message type', { cause: { data, type } }) }
+  async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
+      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
       const handler = on[type] || fail
       handler(data, type)
     }
   }
+  function inject(data) { style.textContent = data[0] }
+  async function ondata(data) { const buttonData = data[0]?.value || {} }
+  function button_protocol(key) { return send => { _[key] = send; return send } }
 
-  function inject (data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata (data) {
-    const buttonData = data[0]?.value || {}
-  }
-
-  function button_protocol (key) {
-    return send => {
-      _[key] = send
-      return send
-    }
-  }
-
-  function on_message (message) {
-    const { type, data } = message
-    ;(action[type] || fail)(data, type)
-  }
-
-  // Action handlers
-  function pay_message (data, type) {
-    console.log('Pay Invoice button clicked - handling pay action')
-  }
-
-  function create_message (data, type) {
-    console.log('Create Invoice button clicked - handling create action')
-  }
-
-  function wallet_action (data, type) {
-    console.log('Wallet button clicked - handling wallet action')
-  }
+  // -------------------- Action Handlers --------------------
+  function pay_message(data, type) { sendUp({ from: 'lightning_buttons', type: 'pay', data }) }
+  function create_message(data, type) { sendUp({ from: 'lightning_buttons', type: 'create', data }) }
 }
 
-// ============ Fallback Setup for STATE ============
-function fallback_module () {
+// ------------------ Fallback for STATE ------------------
+function fallback_module() {
   return {
     api,
-    _: {
-      'general_button': { $: '' },
-      'switch_account': { $: '' },
-      'pay_invoice': { $: '' },
-      'create_invoice': { $: '' }   // changed here ✅
-    }
+    _: { 'general_button': { $: '' }, 'pay_invoice': { $: '' }, 'create_invoice': { $: '' } }
   }
 
-  function api (opts = {}) {
-    const general_button = {
-      mapping: {
-        style: 'style',
-        data: 'data'
-      },
-      0: {}, // pay button
-      1: {}, // create button
-      2: {}  // wallet button
-    }
-
-    const switch_account = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      3: {
-        btc: 0.789,
-        lightning: 0.9000
-      } 
-    }
-
-    const pay_invoice = {
-      mapping: { 
-        style: 'style', 
-        data: 'data', 
-        icons: 'icons' 
-      },
-      4: ''
-    }
-
-    const create_invoice = {   // changed here ✅
-      mapping: { 
-        style: 'style', 
-        data: 'data', 
-        icons: 'icons' 
-      },
-      5: ''
-    }
+  function api(opts = {}) {
+    const general_button = { mapping: { style: 'style', data: 'data' }, 0: {}, 1: {} }
+    const pay_invoice = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: '' }
+    const create_invoice = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 3: '' }
 
     return {
-      drive: {
-        'style/': {
-          'lightning_buttons.css': { '$ref': 'lightning_buttons.css' }
-        },
-        'data/': {
-          'opts.json': { raw: opts }
-        }
-      },
-      _: { general_button, switch_account, pay_invoice, create_invoice }  // updated here ✅
+      drive: { 'style/': { 'lightning_buttons.css': { '$ref': 'lightning_buttons.css' } }, 'data/': { 'opts.json': { raw: opts } } },
+      _: { general_button, pay_invoice, create_invoice }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":12,"general_button":15,"pay_invoice":26,"switch_account":37}],22:[function(require,module,exports){
+},{"STATE":1,"create_invoice":12,"general_button":15,"pay_invoice":28}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3452,7 +3557,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/lightning_menu/lightning_menu.js")
-},{"STATE":1}],23:[function(require,module,exports){
+},{"STATE":1}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3651,7 +3756,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":18,"lightning_buttons":21,"lightning_menu":22,"total_wealth":39,"transaction_list":41}],24:[function(require,module,exports){
+},{"STATE":1,"home_page_header":18,"lightning_buttons":23,"lightning_menu":24,"total_wealth":41,"transaction_list":43}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3854,7 +3959,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1,"contacts_list":11,"details_menu":14,"home_contents":16,"more_menu":25}],25:[function(require,module,exports){
+},{"STATE":1,"contacts_list":11,"details_menu":14,"home_contents":16,"more_menu":27}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3962,7 +4067,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
-},{"STATE":1}],26:[function(require,module,exports){
+},{"STATE":1}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4119,7 +4224,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":7,"input_field":19}],27:[function(require,module,exports){
+},{"STATE":1,"button":7,"input_field":19}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4273,7 +4378,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice_confirmation/pay_invoice_confirmation.js")
-},{"STATE":1,"button":7,"receipt_row":29}],28:[function(require,module,exports){
+},{"STATE":1,"button":7,"receipt_row":31}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4369,7 +4474,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":44}],29:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":46}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4547,7 +4652,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1,"btc_usd_rate":6}],30:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4686,7 +4791,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":19,"qr_code":28}],31:[function(require,module,exports){
+},{"STATE":1,"input_field":19,"qr_code":30}],33:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4813,7 +4918,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],32:[function(require,module,exports){
+},{"STATE":1}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4991,7 +5096,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19}],33:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5150,7 +5255,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_invoice_modal/send_invoice_modal.js")
-},{"STATE":1,"search_bar":31,"send_to_contact":34,"share_invoice_via":35,"square_button":36}],34:[function(require,module,exports){
+},{"STATE":1,"search_bar":33,"send_to_contact":36,"share_invoice_via":37,"square_button":38}],36:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5287,7 +5392,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_to_contact/send_to_contact.js")
-},{"STATE":1}],35:[function(require,module,exports){
+},{"STATE":1}],37:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5389,7 +5494,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/share_invoice_via/share_invoice_via.js")
-},{"STATE":1}],36:[function(require,module,exports){
+},{"STATE":1}],38:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5505,7 +5610,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],37:[function(require,module,exports){
+},{"STATE":1}],39:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5541,6 +5646,14 @@ async function switch_account (opts = {}, protocol) {
 
   const subs = await sdb.watch(onbatch)
 
+  // protocol pattern:
+  // protocol expects a function (sendToSwitch) and returns a function (sendFromSwitch).
+  // child calls protocol(sendToSwitch) and receives send() to send messages up.
+  const send = protocol ? protocol(function (messageToSwitch) {
+    // parent -> switch_account messages (not used currently)
+    console.log('[switch_account] message from parent ->', messageToSwitch)
+  }) : null
+
   return el
 
   async function onbatch (batch) {
@@ -5558,22 +5671,22 @@ async function switch_account (opts = {}, protocol) {
   }
 
   async function ondata (data) {
-    const { btc, lightning } = data[0]
+    const { btc, lightning } = data[0] || {}
 
     content.innerHTML = `
       <div class="container-title">
         <div class="title">Switch Account</div>
-        <div class="close-icon">${dricons[0]}</div>   
+        <div class="close-icon">${dricons[0] || '✕'}</div>   
       </div>
       <div class="account-container btc-container">
-        <div class="btc-icon">${dricons[1]}BTC</div>
-        <div class="btc-amount">${parseFloat(btc).toFixed(4)}</div>       
+        <div class="btc-icon">${dricons[1] || '₿'} BTC</div>
+        <div class="btc-amount">${typeof btc !== 'undefined' ? parseFloat(btc).toFixed(4) : '0.0000'}</div>       
       </div>
       <div class="account-container lightning-container">
-        <div class="lightning-icon">${dricons[2]}Lightning</div>
-        <div class="lightning-amount">${parseFloat(lightning).toFixed(4)}</div>       
+        <div class="lightning-icon">${dricons[2] || '⚡'} Lightning</div>
+        <div class="lightning-amount">${typeof lightning !== 'undefined' ? parseFloat(lightning).toFixed(4) : '0.0000'}</div>       
       </div>
-    ` 
+    `
 
     // Close button
     const close_btn = content.querySelector('.close-icon')
@@ -5584,33 +5697,21 @@ async function switch_account (opts = {}, protocol) {
       }
     }
 
-    // BTC container
+    // BTC Click: send protocol message up
     const btc_container = content.querySelector('.btc-container')
     if (btc_container) {
-      btc_container.onclick = async () => {
-        try {
-          const home_page = require('home_page')
-          const homeEl = await home_page(subs[0])
-          let host = el.getRootNode().host || el
-          host.replaceWith(homeEl)
-        } catch (error) {
-          console.error('Failed to navigate to home_page:', error)
-        }
+      btc_container.onclick = () => {
+        console.log('BTC clicked')
+        if (send) send({ type: 'switch', data: 'btc' })
       }
     }
 
-    // Lightning container
+    // Lightning Click: send protocol message up
     const lightning_container = content.querySelector('.lightning-container')
     if (lightning_container) {
-      lightning_container.onclick = async () => {
-        try {
-          const lightning_page = require('lightning_page')
-          const lightningEl = await lightning_page(subs[1])
-          let host = el.getRootNode().host || el
-          host.replaceWith(lightningEl)
-        } catch (error) {
-          console.error('Failed to navigate to lightning_page:', error)
-        }
+      lightning_container.onclick = () => {
+        console.log('Lightning clicked')
+        if (send) send({ type: 'switch', data: 'lightning' })
       }
     }
   }
@@ -5628,31 +5729,9 @@ async function switch_account (opts = {}, protocol) {
 function fallback_module () {
   return {
     api: fallback_instance,
-    _: {
-      'home_page': { $: '' },
-      'lightning_page': { $: '' }
-    }
   }
 
   function fallback_instance (opts) {
-    const home_page = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0: ''
-    }
-
-    const lightning_page = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      1: ''
-    }
-
     return {
       drive: {
         'icons/': {
@@ -5667,12 +5746,11 @@ function fallback_module () {
           'opts.json': { raw: opts }
         }
       },
-      _: { home_page, lightning_page }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1,"home_page":17,"lightning_page":23}],38:[function(require,module,exports){
+},{"STATE":1}],40:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5820,7 +5898,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":6}],39:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],41:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5943,7 +6021,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":6}],40:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":6}],42:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6080,7 +6158,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":43}],41:[function(require,module,exports){
+},{"STATE":1,"transaction_row":45}],43:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6289,7 +6367,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":40,"transaction_row":43}],42:[function(require,module,exports){
+},{"STATE":1,"transaction_history":42,"transaction_row":45}],44:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6414,7 +6492,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":29}],43:[function(require,module,exports){
+},{"STATE":1,"receipt_row":31}],45:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6554,7 +6632,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],44:[function(require,module,exports){
+},{"STATE":1}],46:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -7597,7 +7675,156 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const general_button = require('general_button')
+const switch_account = require('switch_account')
+
+module.exports = wallet_button
+
+async function wallet_button(opts = {}, protocol) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const _ = { wallet_general: null }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="wallet-buttons wallet-button-container" id="wallet-button-container">
+        <div class="dropdown-container hidden"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const wallet_container = shadow.querySelector('#wallet-button-container')
+  const wallet_dropdown = wallet_container.querySelector('.dropdown-container')
+
+  // -------------------- on object --------------------
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const subs = await sdb.watch(onbatch)
+
+  // sendUp function from parent
+  const sendUp = protocol ? protocol((msg) => {
+    console.log('[wallet_button] message from parent ->', msg)
+  }) : null
+
+  // -------------------- Create Wallet Button --------------------
+  const wallet_btn = await general_button(subs[0], button_protocol('wallet_general'))
+  wallet_container.insertBefore(wallet_btn, wallet_dropdown)
+  wallet_btn._action = 'wallet_action'
+
+  let switch_el = null
+
+  function close_dropdown() {
+    wallet_dropdown.classList.add('hidden')
+  }
+
+  wallet_btn.onclick = async (event) => {
+    event.stopPropagation()
+    if (wallet_btn._action !== 'wallet_action') return
+
+    if (!wallet_dropdown.classList.contains('hidden')) {
+      close_dropdown()
+      return
+    }
+
+    if (!switch_el) {
+      const switchProtocol = (sendToSwitch) => (msgFromSwitch) => {
+        const forwarded = { from: 'switch_account', ...msgFromSwitch }
+        if (sendUp) sendUp(forwarded)
+      }
+
+      switch_el = await switch_account(subs[1], switchProtocol)
+      wallet_dropdown.appendChild(switch_el)
+    }
+
+    wallet_dropdown.classList.remove('hidden')
+  }
+
+  // -------------------- Initial Config --------------------
+  _.wallet_general?.({
+    type: 'button_name',
+    data: { name: 'Wallet', action: 'wallet_action' }
+  })
+
+  // -------------------- Return element --------------------
+  return el
+
+  // ------------------------- Helpers -------------------------
+  function fail(data, type) {
+    throw new Error('Invalid message type', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const handler = on[type] || fail
+      handler(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata(data) {
+    const buttonData = data[0]?.value || {}
+    // can handle button-specific updates here if needed
+  }
+
+  function button_protocol(key) {
+    return send => {
+      _[key] = send
+      return send
+    }
+  }
+}
+
+// ============ Fallback Setup ============
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'general_button': { $: '' },
+      'switch_account': { $: '' }
+    }
+  }
+
+  function api(opts) {
+    const general_button = {
+      mapping: { style: 'style', data: 'data' },
+      0: {} // wallet button
+    }
+
+    const switch_account = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      1: { btc: 0.789, lightning: 0.9 }
+    }
+
+    return {
+      drive: {
+        'style/': { 'wallet_button.css': { '$ref': 'wallet_button.css' } },
+        'data/': { 'opts.json': { raw: opts } }
+      },
+      _: { general_button, switch_account }
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/wallet_button/wallet_button.js")
+},{"STATE":1,"general_button":15,"switch_account":39}],48:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -8149,4 +8376,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_tx_receipt":20,"../src/node_modules/lightning_page":23,"../src/node_modules/more_menu":25,"../src/node_modules/pay_invoice_confirmation":27,"../src/node_modules/receive_btc":30,"../src/node_modules/send_btc":32,"../src/node_modules/send_invoice_modal":33,"../src/node_modules/switch_account":37,"../src/node_modules/transaction_history":40,"../src/node_modules/transaction_receipt":42}]},{},[45]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_tx_receipt":22,"../src/node_modules/lightning_page":25,"../src/node_modules/more_menu":27,"../src/node_modules/pay_invoice_confirmation":29,"../src/node_modules/receive_btc":32,"../src/node_modules/send_btc":34,"../src/node_modules/send_invoice_modal":35,"../src/node_modules/switch_account":39,"../src/node_modules/transaction_history":42,"../src/node_modules/transaction_receipt":44}]},{},[48]);
