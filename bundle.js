@@ -2222,7 +2222,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":44}],16:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":46}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2955,7 +2955,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":22,"light_page_header":24,"light_tx_list":25,"lightning_buttons":27,"total_wealth":45,"transaction_list":47,"wallet_button":51}],21:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":22,"light_page_header":24,"light_tx_list":25,"lightning_buttons":27,"total_wealth":47,"transaction_list":49,"wallet_button":53}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3725,7 +3725,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_list/light_tx_list.js")
-},{"STATE":1,"transaction_history":46,"transaction_row":49}],26:[function(require,module,exports){
+},{"STATE":1,"transaction_history":48,"transaction_row":51}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4306,7 +4306,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":22,"lightning_buttons":27,"lightning_menu":28,"total_wealth":45,"transaction_list":47}],30:[function(require,module,exports){
+},{"STATE":1,"home_page_header":22,"lightning_buttons":27,"lightning_menu":28,"total_wealth":47,"transaction_list":49}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5024,7 +5024,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":50}],35:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":52}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6298,6 +6298,278 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+// require pages early
+
+module.exports = switch_request
+
+async function switch_request (opts = {}, protocol) {
+
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="switch-account-container">
+      <div class="account-content"></div>
+    </div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const content = shadow.querySelector('.account-content')
+
+  const subs = await sdb.watch(onbatch)
+
+  // protocol pattern:
+  // protocol expects a function (sendToSwitch) and returns a function (sendFromSwitch).
+  // child calls protocol(sendToSwitch) and receives send() to send messages up.
+  const send = protocol ? protocol(function (messageToSwitch) {
+    // parent -> switch_account messages (not used currently)
+    console.log('[switch_account] message from parent ->', messageToSwitch)
+  }) : null
+
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+
+    content.innerHTML = `
+
+      <div class="account-container btc-container">
+        <div class="btc-icon">${dricons[1] || '₿'} BTC</div>
+      </div>
+      <div class="account-container lightning-container">
+        <div class="lightning-icon">${dricons[2] || '⚡'} Lightning</div>
+      </div>
+    `
+
+    // Close button
+    const close_btn = content.querySelector('.close-icon')
+    if (close_btn) {
+      close_btn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) dropdown.classList.add('hidden')
+      }
+    }
+
+    // BTC Click: send protocol message up
+    const btc_container = content.querySelector('.btc-container')
+    if (btc_container) {
+      btc_container.onclick = () => {
+        console.log('BTC clicked')
+        if (send) send({ type: 'switch', data: 'btc' })
+      }
+    }
+
+    // Lightning Click: send protocol message up
+    const lightning_container = content.querySelector('.lightning-container')
+    if (lightning_container) {
+      lightning_container.onclick = () => {
+        console.log('Lightning clicked')
+        if (send) send({ type: 'switch', data: 'lightning' })
+      }
+    }
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+}
+
+// ================== fallback ==================
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'x.svg': { '$ref': 'x.svg' },
+          'btc.svg': { '$ref': 'btc.svg' },
+          'lightning.svg': { '$ref': 'lightning.svg' }
+        },
+        'style/': {
+          'style.css': { '$ref': 'switch_request.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/switch_request/switch_request.js")
+},{"STATE":1}],45:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+// require pages early
+
+module.exports = switch_send
+
+async function switch_send (opts = {}, protocol) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="switch-account-container">
+      <div class="account-content"></div>
+    </div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const content = shadow.querySelector('.account-content')
+
+  const subs = await sdb.watch(onbatch)
+
+  // protocol pattern:
+  // protocol expects a function (sendToSwitch) and returns a function (sendFromSwitch).
+  // child calls protocol(sendToSwitch) and receives send() to send messages up.
+  const send = protocol ? protocol(function (messageToSwitch) {
+    // parent -> switch_account messages (not used currently)
+    console.log('[switch_account] message from parent ->', messageToSwitch)
+  }) : null
+
+  return el
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    const { btc, lightning } = data[0] || {}
+
+    content.innerHTML = `
+      <div class="account-container btc-container">
+        <div class="btc-icon">${dricons[1] || '₿'} BTC</div>
+        <div class="btc-amount">${typeof btc !== 'undefined' ? parseFloat(btc).toFixed(4) : '0.0000'}</div>       
+      </div>
+      <div class="account-container lightning-container">
+        <div class="lightning-icon">${dricons[2] || '⚡'} Lightning</div>
+        <div class="lightning-amount">${typeof lightning !== 'undefined' ? parseFloat(lightning).toFixed(4) : '0.0000'}</div>       
+      </div>
+    `
+
+    // Close button
+    const close_btn = content.querySelector('.close-icon')
+    if (close_btn) {
+      close_btn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) dropdown.classList.add('hidden')
+      }
+    }
+
+    // BTC Click: send protocol message up
+    const btc_container = content.querySelector('.btc-container')
+    if (btc_container) {
+      btc_container.onclick = () => {
+        console.log('BTC clicked')
+        if (send) send({ type: 'switch', data: 'btc' })
+      }
+    }
+
+    // Lightning Click: send protocol message up
+    const lightning_container = content.querySelector('.lightning-container')
+    if (lightning_container) {
+      lightning_container.onclick = () => {
+        console.log('Lightning clicked')
+        if (send) send({ type: 'switch', data: 'lightning' })
+      }
+    }
+  }
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
+}
+
+// ================== fallback ==================
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'x.svg': { '$ref': 'x.svg' },
+          'btc.svg': { '$ref': 'btc.svg' },
+          'lightning.svg': { '$ref': 'lightning.svg' }
+        },
+        'style/': {
+          'style.css': { '$ref': 'switch_send.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/switch_send/switch_send.js")
+},{"STATE":1}],46:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 const btc_usd_rate = require('btc_usd_rate')
 
 module.exports = templates
@@ -6440,7 +6712,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":8}],45:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],47:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6563,7 +6835,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":8}],46:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],48:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6700,7 +6972,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":49}],47:[function(require,module,exports){
+},{"STATE":1,"transaction_row":51}],49:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6909,7 +7181,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":46,"transaction_row":49}],48:[function(require,module,exports){
+},{"STATE":1,"transaction_history":48,"transaction_row":51}],50:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7034,7 +7306,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":35}],49:[function(require,module,exports){
+},{"STATE":1,"receipt_row":35}],51:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7174,7 +7446,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],50:[function(require,module,exports){
+},{"STATE":1}],52:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -8217,7 +8489,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],51:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -8366,7 +8638,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/wallet_button/wallet_button.js")
-},{"STATE":1,"general_button":19,"switch_account":43}],52:[function(require,module,exports){
+},{"STATE":1,"general_button":19,"switch_account":43}],54:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -8394,6 +8666,8 @@ const add_contact_popup = require('../src/node_modules/add_contact_popup')
 const gen_invite_code = require('../src/node_modules/gen_invite_code')
 const add_new_contact = require('../src/node_modules/add_new_contact')
 const chat_filter = require('../src/node_modules/chat_filter')
+const switch_send = require('../src/node_modules/switch_send')
+const switch_request = require('../src/node_modules/switch_request')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -8464,7 +8738,9 @@ async function main () {
   const gen_invite_code_component = await gen_invite_code(subs[36], protocol)
   const add_new_contact_component = await add_new_contact(subs[38], protocol)
   const chat_filter_component = await chat_filter(subs[40], protocol)
-  
+  const switch_request_component = await switch_request(subs[42], protocol)
+  const switch_send_component = await switch_send(subs[44], protocol)
+
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
@@ -8496,6 +8772,14 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
         <div id="contacts-list-container" ></div>  
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Switch Request</div>  
+        <div id="switch-request-container"></div>
+      </div>
+          <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Switch Send</div>  
+        <div id="switch-send-container"></div>
       </div>
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
@@ -8566,6 +8850,8 @@ async function main () {
   page.querySelector('#gen-invite-code-container').appendChild(gen_invite_code_component)
   page.querySelector('#add-new-contact-container').appendChild(add_new_contact_component)
   page.querySelector('#chat-filter-container').appendChild(chat_filter_component)
+  page.querySelector('#switch-request-container').appendChild(switch_request_component)
+  page.querySelector('#switch-send-container').appendChild(switch_send_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -8978,8 +9264,33 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+      '../src/node_modules/switch_request': {
+        $: '',
+        0: {
+          btc: 0.9862,
+          lightning: 0.9000
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+          '../src/node_modules/switch_send': {
+        $: '',
+        0: {
+          btc: 0.9862,
+          lightning: 0.9000
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/details_menu":17,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/lightning_page":29,"../src/node_modules/more_menu":31,"../src/node_modules/pay_invoice_confirmation":33,"../src/node_modules/receive_btc":36,"../src/node_modules/send_btc":38,"../src/node_modules/send_invoice_modal":39,"../src/node_modules/switch_account":43,"../src/node_modules/transaction_history":46,"../src/node_modules/transaction_receipt":48}]},{},[52]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/details_menu":17,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/lightning_page":29,"../src/node_modules/more_menu":31,"../src/node_modules/pay_invoice_confirmation":33,"../src/node_modules/receive_btc":36,"../src/node_modules/send_btc":38,"../src/node_modules/send_invoice_modal":39,"../src/node_modules/switch_account":43,"../src/node_modules/switch_request":44,"../src/node_modules/switch_send":45,"../src/node_modules/transaction_history":48,"../src/node_modules/transaction_receipt":50}]},{},[54]);

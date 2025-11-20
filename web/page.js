@@ -24,6 +24,8 @@ const add_contact_popup = require('../src/node_modules/add_contact_popup')
 const gen_invite_code = require('../src/node_modules/gen_invite_code')
 const add_new_contact = require('../src/node_modules/add_new_contact')
 const chat_filter = require('../src/node_modules/chat_filter')
+const switch_send = require('../src/node_modules/switch_send')
+const switch_request = require('../src/node_modules/switch_request')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -94,7 +96,9 @@ async function main () {
   const gen_invite_code_component = await gen_invite_code(subs[36], protocol)
   const add_new_contact_component = await add_new_contact(subs[38], protocol)
   const chat_filter_component = await chat_filter(subs[40], protocol)
-  
+  const switch_request_component = await switch_request(subs[42], protocol)
+  const switch_send_component = await switch_send(subs[44], protocol)
+
   const page = document.createElement('div')
   page.innerHTML = `
     <div style="display:flex; flex-direction:row; gap: 20px; margin: 20px;">
@@ -126,6 +130,14 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
         <div id="contacts-list-container" ></div>  
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Switch Request</div>  
+        <div id="switch-request-container"></div>
+      </div>
+          <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Switch Send</div>  
+        <div id="switch-send-container"></div>
       </div>
       <div id="chat-view-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
@@ -196,6 +208,8 @@ async function main () {
   page.querySelector('#gen-invite-code-container').appendChild(gen_invite_code_component)
   page.querySelector('#add-new-contact-container').appendChild(add_new_contact_component)
   page.querySelector('#chat-filter-container').appendChild(chat_filter_component)
+  page.querySelector('#switch-request-container').appendChild(switch_request_component)
+  page.querySelector('#switch-send-container').appendChild(switch_send_component)
 
   document.body.append(page)
   console.log("Page mounted")
@@ -608,6 +622,31 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+      '../src/node_modules/switch_request': {
+        $: '',
+        0: {
+          btc: 0.9862,
+          lightning: 0.9000
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+          '../src/node_modules/switch_send': {
+        $: '',
+        0: {
+          btc: 0.9862,
+          lightning: 0.9000
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+
     }
   }
 }
