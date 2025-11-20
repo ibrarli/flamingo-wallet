@@ -213,7 +213,285 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":15,"receive_btc":32,"send_btc":34}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":19,"receive_btc":36,"send_btc":38}],3:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = add_contact_popup
+
+async function add_contact_popup (opts = {}) {
+const { sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let icons = []
+
+  shadow.innerHTML = `
+    <div class="more-menu-container"></div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.more-menu-container')
+
+  await sdb.watch(onbatch)
+  return el
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata() {
+    row.innerHTML = `
+      <div class="container-title">
+        <div class="title">Add Contact</div>
+        <div class="close-icon">${icons[0]}</div>
+      </div>
+      <div class="option-container">
+        <div class="dot-icon">${icons[1]}</div>
+        <div class="option-label">Generate Invite Code</div>
+      </div>
+      <div class="option-container">
+        <div class="dot-icon">${icons[2]}</div>
+        <div class="option-label">Add new contact</div>
+      </div>
+    `
+
+    const closeBtn = row.querySelector('.close-icon')
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        const dropdown = el.parentNode
+        if (dropdown) {
+          dropdown.classList.add('hidden')
+        }
+      }
+    }
+  }
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  function iconject(data) {
+    icons = data
+  }
+}
+
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'icons/': {
+          'x.svg': { '$ref': 'x.svg' },
+          'link.svg': { '$ref': 'link.svg' },
+          'user_add.svg': { '$ref': 'user_add.svg' },
+
+        },
+        'style/': {
+          'style.css': { '$ref': 'add_contact_popup.css' },
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          },
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/add_contact_popup/add_contact_popup.js")
+},{"STATE":1}],4:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const create_button = require('button')
+const input_field = require('input_field')
+
+module.exports = add_new_contact
+
+async function add_new_contact(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="create-invoice-container">
+      <div class="create-invoice-header">  
+        <div class="title-container"> 
+          <div class="create-invoice-header">Add new contact</div>
+        </div>  
+        <div class="x-icon"></div>
+      </div>
+  
+      <div class="extra-input1"></div>
+      <div class="extra-input2"></div>
+      <div class="connect_button"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+
+  const create_button_component = shadow.querySelector('.connect_button')
+  const input1_component = shadow.querySelector('.extra-input1')
+  const input2_component = shadow.querySelector('.extra-input2')
+
+
+  const subs = await sdb.watch(onbatch)
+
+  const button_component = await create_button(subs[0])
+  const input1 = await input_field(subs[1])
+  const input2 = await input_field(subs[2])
+
+  create_button_component.append(button_component)
+  input1_component.append(input1)
+  input2_component.append(input2)
+
+  const closeBtn = shadow.querySelector('.x-icon')
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      const dropdown = el.parentNode
+      if (dropdown) {
+        dropdown.classList.add('hidden')   
+      }
+    }
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject (data) {
+    dricons = data
+
+    const x_icon = shadow.querySelector('.x-icon')
+    x_icon.innerHTML = dricons[1]
+  }
+
+  async function ondata(data) {
+    
+  }
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'button': { $: '' },
+      'input_field': { $: '' },
+    }
+  }
+
+  function api(opts) {
+    
+    const button = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+      },
+      0: {
+        label: 'Connect'
+      }    
+    } 
+
+    const input_field = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      1: {
+        header: 'Nickname',
+        placeholder: 'Luis Fedrick',
+      },
+      2:{
+        header: 'Paste the invite code',
+        placeholder: '221341'
+      }
+    }
+
+    return {
+      drive: {
+        'icons/': {
+          'lightning.svg': {
+            '$ref': 'lightning.svg'
+          },
+          'x.svg': {
+            '$ref': 'x.svg'
+          },
+        },
+        'style/': {
+          'add_new_contact.css': {
+            '$ref': 'add_new_contact.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        button,
+        input_field,
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/add_new_contact/add_new_contact.js")
+},{"STATE":1,"button":9,"input_field":23}],5:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -564,7 +842,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/btc_input_card/btc_input_card.js")
-},{"STATE":1,"btc_usd_rate":6}],4:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],6:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -682,7 +960,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/btc_nodes/btc_nodes.js")
-},{"STATE":1}],5:[function(require,module,exports){
+},{"STATE":1}],7:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const state_db = STATE(__filename)
@@ -797,7 +1075,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/btc_req_msg/btc_req_msg.js")
-},{"STATE":1}],6:[function(require,module,exports){
+},{"STATE":1}],8:[function(require,module,exports){
 let cached_rate = null
 
 async function btc_usd_rate(from = 'btc', to = 'usd') {
@@ -816,7 +1094,7 @@ async function btc_usd_rate(from = 'btc', to = 'usd') {
 }
 
 module.exports = btc_usd_rate
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -920,7 +1198,175 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/button/button.js")
-},{"STATE":1}],8:[function(require,module,exports){
+},{"STATE":1}],10:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+module.exports = chat_filter
+
+async function chat_filter(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = [] // arrow, orange, green, red icons
+
+  shadow.innerHTML = `
+    <div class="cf-wrap">
+      <div class="cf-item main-head" data-key="me">
+        <span class="arrow-slot"></span>
+        <span>Request by me</span>
+      </div>
+
+      <div class="section-me hidden">
+        <div class="cf-item sub-head" data-key="me-btc">
+          <span class="arrow-slot"></span>
+          <span>Bitcoin</span>
+        </div>
+        <div class="sub-me-btc hidden cf-status"></div>
+
+        <div class="cf-item sub-head" data-key="me-ln">
+          <span class="arrow-slot"></span>
+          <span>Lightning</span>
+        </div>
+        <div class="sub-me-ln hidden cf-status"></div>
+      </div>
+
+      <div class="cf-item main-head" data-key="luis">
+        <span class="arrow-slot"></span>
+        <span>Request by luis</span>
+      </div>
+
+      <div class="section-luis hidden">
+        <div class="cf-item sub-head" data-key="luis-btc">
+          <span class="arrow-slot"></span>
+          <span>Bitcoin</span>
+        </div>
+        <div class="sub-luis-btc hidden cf-status"></div>
+
+        <div class="cf-item sub-head" data-key="luis-ln">
+          <span class="arrow-slot"></span>
+          <span>Lightning</span>
+        </div>
+        <div class="sub-luis-ln hidden cf-status"></div>
+      </div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+
+  const sections = {
+    me: shadow.querySelector('.section-me'),
+    'me-btc': shadow.querySelector('.sub-me-btc'),
+    'me-ln': shadow.querySelector('.sub-me-ln'),
+    luis: shadow.querySelector('.section-luis'),
+    'luis-btc': shadow.querySelector('.sub-luis-btc'),
+    'luis-ln': shadow.querySelector('.sub-luis-ln')
+  }
+
+  const subs = await sdb.watch(onbatch)
+
+  // click listeners
+  shadow.querySelectorAll('.cf-item').forEach(item => {
+    item.onclick = () => toggleSection(item.dataset.key)
+  })
+
+  function toggleSection(key) {
+    const box = sections[key]
+    if (!box) return
+
+    box.classList.toggle('hidden')
+
+    const arrowSlot = shadow.querySelector(`.cf-item[data-key="${key}"] .arrow-slot`)
+    if (arrowSlot && dricons.length > 0) {
+      arrowSlot.innerHTML = box.classList.contains('hidden') ? dricons[0] : dricons[0].replace('rotate(0)', 'rotate(90deg)')
+    }
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject(data) {
+    dricons = data
+
+    // insert icons into arrow slots
+    shadow.querySelectorAll('.arrow-slot').forEach(slot => {
+      slot.innerHTML = dricons[0] // arrow icon
+    })
+
+    // fill status sections
+    fillStatuses('sub-me-btc', false)
+    fillStatuses('sub-me-ln', true)
+    fillStatuses('sub-luis-btc', false)
+    fillStatuses('sub-luis-ln', true)
+  }
+
+  function fillStatuses(key, includeExpired) {
+    const box = shadow.querySelector(`.${key}`)
+    if (!box) return
+
+    box.innerHTML = `
+      <div><span class="dot">${dricons[1]}</span><span>Pending</span></div>
+      <div><span class="dot">${dricons[2]}</span><span>Paid</span></div>
+      ${includeExpired ? `<div><span class="dot">${dricons[3]}</span><span>Expired</span></div>` : ''}
+    `
+  }
+
+  async function ondata(data) {}
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+
+  function fallback_instance (opts) {
+    return {
+      drive: {
+       'icons/': {
+          'arrow_down.svg': { '$ref': 'arrow_down.svg' },
+          'orange_dot.svg': { '$ref': 'orange_dot.svg' },
+          'green_dot.svg': { '$ref': 'green_dot.svg' },
+          'red_dot.svg': { '$ref': 'red_dot.svg' },
+        },
+        'style/': {
+          'chat_filter.css': { '$ref': 'chat_filter.css' }
+        },
+        'data/': {
+          'opts.json': { raw: opts }
+        }
+      },
+    }
+  }
+}
+}).call(this)}).call(this,"/src/node_modules/chat_filter/chat_filter.js")
+},{"STATE":1}],11:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1039,7 +1485,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"button":7,"chat_view_header":9}],9:[function(require,module,exports){
+},{"STATE":1,"button":9,"chat_view_header":12}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1214,7 +1660,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
-},{"STATE":1}],10:[function(require,module,exports){
+},{"STATE":1}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1222,16 +1668,11 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = contact_row
 
-async function contact_row (opts = {}) {
+async function contact_row(opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
-  
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
 
-  }
+  const on = { style: inject, data: ondata, icons: iconject }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
@@ -1242,9 +1683,11 @@ async function contact_row (opts = {}) {
   `
   const style = shadow.querySelector('style')
   const row = shadow.querySelector('.contact-row')
-  
-  
   let dricons = []
+
+  // 🔥 PROTOCOL sender to parent
+  const sendToParent = msg => protocol?.(msg)
+
   await sdb.watch(onbatch)
 
   return el
@@ -1253,198 +1696,198 @@ async function contact_row (opts = {}) {
     throw new Error('invalid message', { cause: { data, type } })
   }
 
-  async function onbatch (batch) {
+  async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
+      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
       const func = on[type] || fail
       await func(data, type)
     }
   }
 
-  function inject (data) {
-    style.textContent = data[0]
-  }
+  function inject(data) { style.textContent = data[0] }
 
-  async function ondata (data) {
-    const { avatar, name, message, time, unread, online, lightining } = data[0]
+  async function ondata(data) {
+    const { avatar, name, message, time, unread, online, lightining } = data[0] || {}
+
     row.innerHTML = `
-    <div class="contact-left">
-        <div class="contact-avatar">
-          <img src="${avatar}" alt="avatar" />
-          ${online ? '<div class="online-dot"></div>' : ''}
+      <div class="contact-left">
+          <div class="contact-avatar">
+            <img src="${avatar || ''}" alt="avatar" />
+            ${online ? '<div class="online-dot"></div>' : ''}
+          </div>
+          <div class="contact-info">
+            <div class="contact-name">${name || ''}</div>
+            <div class="contact-message ${unread > 0 ? 'unread-message' : ''}">${message || ''}</div>       
         </div>
-        <div class="contact-info">
-          <div class="contact-name">${name}</div>
-          <div class="contact-message ${unread > 0 ? 'unread-message' : ''}">${message}</div>       
-      </div>
       </div>
       <div class="contact-right">
-        <div class="contact-time">${time}</div>
+        <div class="contact-time">${time || ''}</div>
         <div class="icon-wrapper  ${!lightining ? 'no-lightning' : ''}">
-          ${lightining ? dricons[0]: ' '}
+          ${lightining && dricons[0] ? dricons[0] : ''}
           ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
         </div>
       </div>` 
+
+    // 🔥 Notify parent with contact name
+    sendToParent({ type: 'contact-name', name: name || '' })
   }
 
-   function iconject (data) {
-    dricons = data
-  }
+  function iconject(data) { dricons = data }
 }
 
+// Fallback module omitted for brevity (keep your current)
 
-function fallback_module () {
-  return {
-    api: fallback_instance,
-  }
-  function fallback_instance (opts) {
+
+  function fallback_module () {
     return {
-        drive: {
-          'icons/': {
-            'lightning.svg': {
-              '$ref': 'lightning.svg'
+      api: fallback_instance,
+    }
+    function fallback_instance (opts) {
+      return {
+          drive: {
+            'icons/': {
+              'lightning.svg': {
+                '$ref': 'lightning.svg'
+              },
             },
-          },
-          'style/':{
-            'style.css':{
-              raw:  `
-                .contact-row {
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  padding: 12px 0px;
-                  font-family: Arial, sans-serif;
-                  color: black;
-                  width: 95%;
-                  box-sizing: border-box;
-                  cursor: pointer;
-                }
+            'style/':{
+              'style.css':{
+                raw:  `
+                  .contact-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 0px;
+                    font-family: Arial, sans-serif;
+                    color: black;
+                    width: 95%;
+                    box-sizing: border-box;
+                    cursor: pointer;
+                  }
 
-                .contact-left {
-                  display: flex;
-                  align-items: center;
-                  gap: 12px;
-                }
+                  .contact-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                  }
 
-                .contact-avatar {
-                  position: relative;
-                  width: 50px;
-                  height: 50px;
-                  flex-shrink: 0;
-                }
+                  .contact-avatar {
+                    position: relative;
+                    width: 50px;
+                    height: 50px;
+                    flex-shrink: 0;
+                  }
 
-                .contact-avatar img {
-                  width: 100%;
-                  height: 100%;
-                  border-radius: 50%;
-                  object-fit: cover;
-                  border: 1px solid #ccc;
+                  .contact-avatar img {
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    object-fit: cover;
+                    border: 1px solid #ccc;
 
-                }
+                  }
 
-                .online-dot {
-                  position: absolute;
-                  bottom: 2px;
-                  right: 2px;
-                  width: 12px;
-                  height: 12px;
-                  background-color: #00c853; /* green */
-                  border: 2px solid white;
-                  border-radius: 50%;
-                }
+                  .online-dot {
+                    position: absolute;
+                    bottom: 2px;
+                    right: 2px;
+                    width: 12px;
+                    height: 12px;
+                    background-color: #00c853; /* green */
+                    border: 2px solid white;
+                    border-radius: 50%;
+                  }
 
-                .contact-info {
-                  display: flex;
-                  flex-direction: column;
-                  justify-content: center;
-                }
+                  .contact-info {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                  }
 
-                .contact-name {
-                  font-size: 20px;
-                  color: #222;
-                  line-height: 1.4;
-                  
-                }
+                  .contact-name {
+                    font-size: 20px;
+                    color: #222;
+                    line-height: 1.4;
+                    
+                  }
 
-                .contact-message {
-                  font-size: 15px;
-                  font-weight: normal; /* Default if no unread */
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  max-width: 180px;
-                  display: inline-block;
-                }
+                  .contact-message {
+                    font-size: 15px;
+                    font-weight: normal; /* Default if no unread */
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 180px;
+                    display: inline-block;
+                  }
 
-                .contact-message.unread-message {
-                  font-weight: 550;
-                }
+                  .contact-message.unread-message {
+                    font-weight: 550;
+                  }
 
-                .contact-right {
-                  display: flex;
-                  flex-direction: column;
-                  align-items: flex-end;
-                  justify-content: center;
-                  gap: 6px;
-                }
+                  .contact-right {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    justify-content: center;
+                    gap: 6px;
+                  }
 
-                .contact-time {
-                  font-size: 16px;
-                  color: #888;
-                }
+                  .contact-time {
+                    font-size: 16px;
+                    color: #888;
+                  }
 
-                .icon-wrapper {
-                  position: relative;
-                  width: 20px;
-                  height: 20px;
-                  padding-right: 8px;
+                  .icon-wrapper {
+                    position: relative;
+                    width: 20px;
+                    height: 20px;
+                    padding-right: 8px;
 
-                }
-                  
-                .bolt-icon {
-                  width: 100%;
-                  height: 100%;
-                  display: block;
-                }
+                  }
+                    
+                  .bolt-icon {
+                    width: 100%;
+                    height: 100%;
+                    display: block;
+                  }
 
-                .unread-badge {
-                  position: absolute;
-                  top: -6px;
-                  right: -10px;
-                  width: 10px;
-                  height: 10px;
-                  background-color: #FF4343;
-                  color: white;
-                  font-size: 12px;
-                  font-weight: bold;
-                  border-radius: 50%;
-                  padding: 5px 5px;
-                  text-align: center;
-                  line-height: 1;
-                  border: 2px solid white;
-                  border-radius: 50%;
-                }
+                  .unread-badge {
+                    position: absolute;
+                    top: -6px;
+                    right: -10px;
+                    width: 10px;
+                    height: 10px;
+                    background-color: #FF4343;
+                    color: white;
+                    font-size: 12px;
+                    font-weight: bold;
+                    border-radius: 50%;
+                    padding: 5px 5px;
+                    text-align: center;
+                    line-height: 1;
+                    border: 2px solid white;
+                    border-radius: 50%;
+                  }
 
-                .icon-wrapper.no-lightning .unread-badge {
-                  position: static;
-                }
-            `
-            }
-          },
-          'data/': {
-            'opts.json': {
-              raw: opts
+                  .icon-wrapper.no-lightning .unread-badge {
+                    position: static;
+                  }
+              `
+              }
+            },
+            'data/': {
+              'opts.json': {
+                raw: opts
+              }
             }
           }
-        }
+      }
     }
   }
-}
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],11:[function(require,module,exports){
+},{"STATE":1}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1454,17 +1897,11 @@ const search_bar = require('search_bar')
 const square_button = require('square_button') 
 const contact_row = require('contact_row')
 
-
 module.exports = contacts_list
 
 async function contacts_list(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
-
-  const on = {
-    style: inject,
-    data: ondata
-  }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
@@ -1476,48 +1913,60 @@ async function contacts_list(opts = {}) {
     </div>
     <style></style>
   `
-
   const style = shadow.querySelector('style')
-  const contact_list_container = shadow.querySelector('.contact-list-container')
   const top_bar = shadow.querySelector('.top-bar')
+  const contact_list_container = shadow.querySelector('.contact-list-container')
 
   const subs = await sdb.watch(onbatch)
-  
-  if (subs.length > 0) {
-    const search = await search_bar(subs[0])
-    const button = await square_button(subs[1])
-    top_bar.append(search)
-    top_bar.append(button)  
-  }
 
-  for (let i = 2; i < subs.length; i++) {
-    console.log('contact row subs', subs[i])
-    const contact = await contact_row(subs[i]) 
-    contact_list_container.append(contact)
-  }
+  const contactElements = []
 
-  return el
+if (subs.length > 0) {
+  const search = await search_bar(subs[0], msg => {
+    if (msg.type === 'search') {
+      const value = msg.value.toLowerCase()
+      console.log('[SearchBar] search value typed:', value) // <-- added log
 
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
+      contactElements.forEach(({ el, name }) => {
+        const isVisible = name.toLowerCase().includes(value)
+        console.log(`[SearchBar] checking contact: "${name}", visible: ${isVisible}`) // <-- added log
+        el.style.display = isVisible ? '' : 'none'
+      })
+    }
+  })
 
-  async function onbatch(batch) {
-    for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
-      const func = on[type] || fail
-      await func(data, type)
+  const button = await square_button(subs[1])
+  top_bar.append(search)
+  top_bar.append(button)
+}
+for (let i = 2; i < subs.length; i++) {
+  const contactData = subs[i]
+  let contactEl // declare first
+  const protocol = msg => {
+    if (msg.type === 'contact-name') {
+      console.log('[ContactList] contact name received:', msg.name)
+      
+      // update contactElements safely
+      let elObj = contactElements.find(c => c.el === contactEl)
+      if (!elObj) contactElements.push({ el: contactEl, name: msg.name })
+      else elObj.name = msg.name
     }
   }
 
-  function inject(data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata(data) {
-  }
+  contactEl = await contact_row(contactData, protocol)
+  contact_list_container.append(contactEl)
 }
 
+  return el
+
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
+  async function onbatch(batch) { 
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
+      // ondata or style injection handled in individual modules
+    }
+  }
+}
 function fallback_module() {
   return {
     api,
@@ -1529,34 +1978,9 @@ function fallback_module() {
   }
 
   function api(opts) {
-    const search_bar = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0: {
-      }
-    }
-
-    const square_button = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      1: {
-      }
-    }
-
-    const contact_row = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-
-      }
-    }
+    const search_bar = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 0: {} }
+    const square_button = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 1: {} }
+    const contact_row = { mapping: { style: 'style', data: 'data', icons: 'icons' } }
 
     opts.value.forEach((contact, index) => {
       contact_row[index + 2] = contact
@@ -1564,28 +1988,15 @@ function fallback_module() {
 
     return {
       drive: {
-        'style/': {
-          'contacts_list.css': {
-            '$ref': 'contacts_list.css'
-          }
-        },
-        'data/': {
-          'opts.json': {
-            raw: opts
-          }
-        }
+        'style/': { 'contacts_list.css': { '$ref': 'contacts_list.css' } },
+        'data/': { 'opts.json': { raw: opts } }
       },
-      _: {
-        search_bar,
-        square_button,
-        contact_row
-      }
+      _: { search_bar, square_button, contact_row }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":10,"search_bar":33,"square_button":38}],12:[function(require,module,exports){
+},{"STATE":1,"contact_row":13,"search_bar":37,"square_button":42}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1811,7 +2222,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19,"templates":40}],13:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":44}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1954,7 +2365,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice_confirmation/create_invoice_confirmation.js")
-},{"STATE":1,"button":7,"receipt_row":31}],14:[function(require,module,exports){
+},{"STATE":1,"button":9,"receipt_row":35}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2097,7 +2508,146 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/details_menu/details_menu.js")
-},{"STATE":1,"button":7,"input_field":19}],15:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":23}],18:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const invoice_input = require('input_field')
+
+module.exports = gen_invite_code
+
+async function gen_invite_code(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata,
+    icons: iconject,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  let dricons = []
+
+  shadow.innerHTML = `
+    <div class="pay-invoice-container">
+      <div class="pay-invoice-header">  
+        <div class="title-container"> 
+          <div class="header-title">Generate Invite Code</div>
+        </div>  
+        <div class="x-icon"></div>
+      </div>
+      <div class="invoice-input"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const invoice_input_component = shadow.querySelector('.invoice-input')
+
+  const subs = await sdb.watch(onbatch)
+
+  const invoice_component = await invoice_input(subs[0])
+
+  invoice_input_component.append(invoice_component)
+
+  const closeBtn = shadow.querySelector('.x-icon')
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      const dropdown = el.parentNode
+      if (dropdown) {
+        dropdown.classList.add('hidden')   
+      }
+    }
+  }
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function iconject (data) {
+    dricons = data
+
+    const x_icon = shadow.querySelector('.x-icon')
+
+    x_icon.innerHTML = dricons[1]
+  }
+
+  async function ondata(data) {}
+}
+
+function fallback_module() {
+  return {
+    api,
+    _: {
+      'input_field': { $: '' },
+    }
+  }
+
+  function api(opts) {
+    
+    const input_field = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      0: {
+        header: 'Your Invite Code',
+        placeholder: 'Paste your code here',
+        address: 'lnbc1u1p0exampleinvoicehere1234567890',
+        icon: 'apple'  // demo value
+      }    
+    }
+
+    return {
+      drive: {
+        'icons/': {
+          'lightning.svg': {
+            '$ref': 'lightning.svg'
+          },
+          'x.svg': {
+            '$ref': 'x.svg'
+          },
+        },
+        'style/': {
+          'gen_invite_code.css': {
+            '$ref': 'gen_invite_code.css'
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
+      },
+      _: {
+        input_field
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/gen_invite_code/gen_invite_code.js")
+},{"STATE":1,"input_field":23}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2231,7 +2781,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1}],16:[function(require,module,exports){
+},{"STATE":1}],20:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2405,7 +2955,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":18,"light_page_header":20,"light_tx_list":21,"lightning_buttons":23,"total_wealth":41,"transaction_list":43,"wallet_button":47}],17:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":22,"light_page_header":24,"light_tx_list":25,"lightning_buttons":27,"total_wealth":45,"transaction_list":47,"wallet_button":51}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2474,7 +3024,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"menu":26}],18:[function(require,module,exports){
+},{"STATE":1,"menu":30}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2625,7 +3175,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],19:[function(require,module,exports){
+},{"STATE":1}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2815,7 +3365,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],20:[function(require,module,exports){
+},{"STATE":1}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2966,7 +3516,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/light_page_header/light_page_header.js")
-},{"STATE":1}],21:[function(require,module,exports){
+},{"STATE":1}],25:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3175,7 +3725,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_list/light_tx_list.js")
-},{"STATE":1,"transaction_history":42,"transaction_row":45}],22:[function(require,module,exports){
+},{"STATE":1,"transaction_history":46,"transaction_row":49}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3299,7 +3849,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_receipt/light_tx_receipt.js")
-},{"STATE":1,"receipt_row":31}],23:[function(require,module,exports){
+},{"STATE":1,"receipt_row":35}],27:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3448,7 +3998,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":12,"general_button":15,"pay_invoice":28}],24:[function(require,module,exports){
+},{"STATE":1,"create_invoice":15,"general_button":19,"pay_invoice":32}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3557,7 +4107,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/lightning_menu/lightning_menu.js")
-},{"STATE":1}],25:[function(require,module,exports){
+},{"STATE":1}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3756,7 +4306,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/lightning_page/lightning_page.js")
-},{"STATE":1,"home_page_header":18,"lightning_buttons":23,"lightning_menu":24,"total_wealth":41,"transaction_list":43}],26:[function(require,module,exports){
+},{"STATE":1,"home_page_header":22,"lightning_buttons":27,"lightning_menu":28,"total_wealth":45,"transaction_list":47}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3959,7 +4509,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1,"contacts_list":11,"details_menu":14,"home_contents":16,"more_menu":27}],27:[function(require,module,exports){
+},{"STATE":1,"contacts_list":14,"details_menu":17,"home_contents":20,"more_menu":31}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4067,7 +4617,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
-},{"STATE":1}],28:[function(require,module,exports){
+},{"STATE":1}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4224,7 +4774,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":7,"input_field":19}],29:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":23}],33:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4378,7 +4928,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice_confirmation/pay_invoice_confirmation.js")
-},{"STATE":1,"button":7,"receipt_row":31}],30:[function(require,module,exports){
+},{"STATE":1,"button":9,"receipt_row":35}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4474,7 +5024,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":46}],31:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":50}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4652,7 +5202,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1,"btc_usd_rate":6}],32:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],36:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4791,7 +5341,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":19,"qr_code":30}],33:[function(require,module,exports){
+},{"STATE":1,"input_field":23,"qr_code":34}],37:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4799,70 +5349,62 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = search_bar
 
-async function search_bar (opts = {}) {
+async function search_bar(opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
-  }
+  const on = { style: inject, data: ondata, icons: iconject }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
-
   let dricons = []
 
   shadow.innerHTML = `
-  <div class="search-bar">
-    <input
-      type="text"
-      class="search-input"
-      placeholder="Search"
-      style="border: none; outline: none; font-size: 14px; background: transparent; flex: 1;"
-    />
-    <div class="search-icon">
-      <div class="icon-slot"></div>
+    <div class="search-bar">
+      <input type="text" class="search-input" placeholder="Search" style="border:none; outline:none; font-size:14px; background:transparent; flex:1;" />
+      <div class="search-icon"><div class="icon-slot"></div></div>
+      <style></style>
     </div>
-    <style></style>
   `
+
   const style = shadow.querySelector('style')
-  const row = shadow.querySelector('.search-bar')
+  const input = shadow.querySelector('.search-input')
+  const icon = shadow.querySelector('.search-icon')
+
+  // 🔥 PROTOCOL
+  const sendToParent = msg => protocol?.(msg)
+
+  input.addEventListener('input', e => {
+    // optional live search
+    // sendToParent({ type: 'typing', value: e.target.value })
+  })
+
+  icon.addEventListener('click', () => {
+    sendToParent({ type: 'search', value: input.value })
+  })
 
   await sdb.watch(onbatch)
-
   return el
 
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  async function onbatch (batch) {
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
+  async function onbatch(batch) { 
     for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
+      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
       const func = on[type] || fail
       await func(data, type)
     }
   }
 
-  function inject (data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata (data) {
-  }
-
-  function iconject (data) {
+  function inject(data) { style.textContent = data[0] }
+  async function ondata(data) {}
+  function iconject(data) { 
     dricons = data
     const icon_slot = shadow.querySelector('.icon-slot')
-    if (icon_slot && dricons[0]) {
-      icon_slot.innerHTML = dricons[0]
-    }
+    if (icon_slot && dricons[0]) icon_slot.innerHTML = dricons[0]
   }
 }
+
+// Fallback module omitted for brevity (keep your current)
 
 function fallback_module () {
   return {
@@ -4918,7 +5460,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],34:[function(require,module,exports){
+},{"STATE":1}],38:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5096,7 +5638,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":3,"button":7,"input_field":19}],35:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23}],39:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5255,7 +5797,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_invoice_modal/send_invoice_modal.js")
-},{"STATE":1,"search_bar":33,"send_to_contact":36,"share_invoice_via":37,"square_button":38}],36:[function(require,module,exports){
+},{"STATE":1,"search_bar":37,"send_to_contact":40,"share_invoice_via":41,"square_button":42}],40:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5392,7 +5934,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_to_contact/send_to_contact.js")
-},{"STATE":1}],37:[function(require,module,exports){
+},{"STATE":1}],41:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5494,7 +6036,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/share_invoice_via/share_invoice_via.js")
-},{"STATE":1}],38:[function(require,module,exports){
+},{"STATE":1}],42:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5610,7 +6152,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],39:[function(require,module,exports){
+},{"STATE":1}],43:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5750,7 +6292,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],40:[function(require,module,exports){
+},{"STATE":1}],44:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5898,7 +6440,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":6}],41:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],45:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6021,7 +6563,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":6}],42:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],46:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6158,7 +6700,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":45}],43:[function(require,module,exports){
+},{"STATE":1,"transaction_row":49}],47:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6367,7 +6909,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":42,"transaction_row":45}],44:[function(require,module,exports){
+},{"STATE":1,"transaction_history":46,"transaction_row":49}],48:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6492,7 +7034,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":31}],45:[function(require,module,exports){
+},{"STATE":1,"receipt_row":35}],49:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6632,7 +7174,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],46:[function(require,module,exports){
+},{"STATE":1}],50:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -7675,7 +8217,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],47:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7824,7 +8366,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/wallet_button/wallet_button.js")
-},{"STATE":1,"general_button":15,"switch_account":39}],48:[function(require,module,exports){
+},{"STATE":1,"general_button":19,"switch_account":43}],52:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('../src/node_modules/STATE')
 const statedb = STATE(__filename)
@@ -7848,6 +8390,10 @@ const btc_req_msg = require('../src/node_modules/btc_req_msg')
 const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
 const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
 const light_transaction_receipt = require('../src/node_modules/light_tx_receipt')
+const add_contact_popup = require('../src/node_modules/add_contact_popup')
+const gen_invite_code = require('../src/node_modules/gen_invite_code')
+const add_new_contact = require('../src/node_modules/add_new_contact')
+const chat_filter = require('../src/node_modules/chat_filter')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -7914,6 +8460,10 @@ async function main () {
   const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
   const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
   const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
+  const add_contact_popup_component = await add_contact_popup(subs[34], protocol)
+  const gen_invite_code_component = await gen_invite_code(subs[36], protocol)
+  const add_new_contact_component = await add_new_contact(subs[38], protocol)
+  const chat_filter_component = await chat_filter(subs[40], protocol)
   
   const page = document.createElement('div')
   page.innerHTML = `
@@ -7951,6 +8501,22 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
         <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Add Contact Popup</div>  
+        <div id="add-contact-popup-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Generate invite code</div>  
+        <div id="gen-invite-code-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Add new contact</div>  
+        <div id="add-new-contact-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Chat Filter</div>  
+        <div id="chat-filter-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
@@ -7996,7 +8562,11 @@ async function main () {
   page.querySelector('#create-invoice-confirmation-container').appendChild(create_invoice_confirmation_component)
   page.querySelector('#pay-invoice-confirmation-container').appendChild(pay_invoice_confirmation_component)
   page.querySelector('#light-transaction-receipt-container').appendChild(light_transaction_receipt_component)
- 
+  page.querySelector('#add-contact-popup-container').appendChild(add_contact_popup_component)
+  page.querySelector('#gen-invite-code-container').appendChild(gen_invite_code_component)
+  page.querySelector('#add-new-contact-container').appendChild(add_new_contact_component)
+  page.querySelector('#chat-filter-container').appendChild(chat_filter_component)
+
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -8372,8 +8942,44 @@ function fallback_module () {
           icons: 'icons'
         }
       },
+      '../src/node_modules/add_contact_popup': {
+             $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+        '../src/node_modules/gen_invite_code': {
+             $: '',
+        0: {},
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/add_new_contact': {
+        $: '',
+        0: {},
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/chat_filter': {
+        $: '',
+        0: {},
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/btc_nodes":4,"../src/node_modules/btc_req_msg":5,"../src/node_modules/chat_view":8,"../src/node_modules/contacts_list":11,"../src/node_modules/create_invoice_confirmation":13,"../src/node_modules/details_menu":14,"../src/node_modules/home_page":17,"../src/node_modules/light_tx_receipt":22,"../src/node_modules/lightning_page":25,"../src/node_modules/more_menu":27,"../src/node_modules/pay_invoice_confirmation":29,"../src/node_modules/receive_btc":32,"../src/node_modules/send_btc":34,"../src/node_modules/send_invoice_modal":35,"../src/node_modules/switch_account":39,"../src/node_modules/transaction_history":42,"../src/node_modules/transaction_receipt":44}]},{},[48]);
+},{"../src/node_modules/STATE":1,"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/details_menu":17,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/lightning_page":29,"../src/node_modules/more_menu":31,"../src/node_modules/pay_invoice_confirmation":33,"../src/node_modules/receive_btc":36,"../src/node_modules/send_btc":38,"../src/node_modules/send_invoice_modal":39,"../src/node_modules/switch_account":43,"../src/node_modules/transaction_history":46,"../src/node_modules/transaction_receipt":48}]},{},[52]);

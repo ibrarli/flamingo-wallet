@@ -20,6 +20,10 @@ const btc_req_msg = require('../src/node_modules/btc_req_msg')
 const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
 const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
 const light_transaction_receipt = require('../src/node_modules/light_tx_receipt')
+const add_contact_popup = require('../src/node_modules/add_contact_popup')
+const gen_invite_code = require('../src/node_modules/gen_invite_code')
+const add_new_contact = require('../src/node_modules/add_new_contact')
+const chat_filter = require('../src/node_modules/chat_filter')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -86,6 +90,10 @@ async function main () {
   const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
   const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
   const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
+  const add_contact_popup_component = await add_contact_popup(subs[34], protocol)
+  const gen_invite_code_component = await gen_invite_code(subs[36], protocol)
+  const add_new_contact_component = await add_new_contact(subs[38], protocol)
+  const chat_filter_component = await chat_filter(subs[40], protocol)
   
   const page = document.createElement('div')
   page.innerHTML = `
@@ -123,6 +131,22 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
         <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Add Contact Popup</div>  
+        <div id="add-contact-popup-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Generate invite code</div>  
+        <div id="gen-invite-code-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Add new contact</div>  
+        <div id="add-new-contact-container"></div>
+      </div>
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Chat Filter</div>  
+        <div id="chat-filter-container"></div>
       </div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
@@ -168,7 +192,11 @@ async function main () {
   page.querySelector('#create-invoice-confirmation-container').appendChild(create_invoice_confirmation_component)
   page.querySelector('#pay-invoice-confirmation-container').appendChild(pay_invoice_confirmation_component)
   page.querySelector('#light-transaction-receipt-container').appendChild(light_transaction_receipt_component)
- 
+  page.querySelector('#add-contact-popup-container').appendChild(add_contact_popup_component)
+  page.querySelector('#gen-invite-code-container').appendChild(gen_invite_code_component)
+  page.querySelector('#add-new-contact-container').appendChild(add_new_contact_component)
+  page.querySelector('#chat-filter-container').appendChild(chat_filter_component)
+
   document.body.append(page)
   console.log("Page mounted")
 }
@@ -538,6 +566,42 @@ function fallback_module () {
               { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
             ]
           },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/add_contact_popup': {
+             $: '',
+        0: '',
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+        '../src/node_modules/gen_invite_code': {
+             $: '',
+        0: {},
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/add_new_contact': {
+        $: '',
+        0: {},
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/chat_filter': {
+        $: '',
+        0: {},
         mapping: {
           style: 'style',
           data: 'data',
