@@ -1685,7 +1685,7 @@ async function contact_row(opts = {}, protocol) {
   const row = shadow.querySelector('.contact-row')
   let dricons = []
 
-  // 🔥 PROTOCOL sender to parent
+  // PROTOCOL sender to parent
   const sendToParent = msg => protocol?.(msg)
 
   await sdb.watch(onbatch)
@@ -1728,163 +1728,160 @@ async function contact_row(opts = {}, protocol) {
         </div>
       </div>` 
 
-    // 🔥 Notify parent with contact name
+    // Notify parent with contact name
     sendToParent({ type: 'contact-name', name: name || '' })
   }
 
   function iconject(data) { dricons = data }
 }
 
-// Fallback module omitted for brevity (keep your current)
-
-
-  function fallback_module () {
-    return {
-      api: fallback_instance,
-    }
-    function fallback_instance (opts) {
-      return {
-          drive: {
-            'icons/': {
-              'lightning.svg': {
-                '$ref': 'lightning.svg'
-              },
-            },
-            'style/':{
-              'style.css':{
-                raw:  `
-                  .contact-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 12px 0px;
-                    font-family: Arial, sans-serif;
-                    color: black;
-                    width: 95%;
-                    box-sizing: border-box;
-                    cursor: pointer;
-                  }
-
-                  .contact-left {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                  }
-
-                  .contact-avatar {
-                    position: relative;
-                    width: 50px;
-                    height: 50px;
-                    flex-shrink: 0;
-                  }
-
-                  .contact-avatar img {
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 50%;
-                    object-fit: cover;
-                    border: 1px solid #ccc;
-
-                  }
-
-                  .online-dot {
-                    position: absolute;
-                    bottom: 2px;
-                    right: 2px;
-                    width: 12px;
-                    height: 12px;
-                    background-color: #00c853; /* green */
-                    border: 2px solid white;
-                    border-radius: 50%;
-                  }
-
-                  .contact-info {
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                  }
-
-                  .contact-name {
-                    font-size: 20px;
-                    color: #222;
-                    line-height: 1.4;
-                    
-                  }
-
-                  .contact-message {
-                    font-size: 15px;
-                    font-weight: normal; /* Default if no unread */
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 180px;
-                    display: inline-block;
-                  }
-
-                  .contact-message.unread-message {
-                    font-weight: 550;
-                  }
-
-                  .contact-right {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: flex-end;
-                    justify-content: center;
-                    gap: 6px;
-                  }
-
-                  .contact-time {
-                    font-size: 16px;
-                    color: #888;
-                  }
-
-                  .icon-wrapper {
-                    position: relative;
-                    width: 20px;
-                    height: 20px;
-                    padding-right: 8px;
-
-                  }
-                    
-                  .bolt-icon {
-                    width: 100%;
-                    height: 100%;
-                    display: block;
-                  }
-
-                  .unread-badge {
-                    position: absolute;
-                    top: -6px;
-                    right: -10px;
-                    width: 10px;
-                    height: 10px;
-                    background-color: #FF4343;
-                    color: white;
-                    font-size: 12px;
-                    font-weight: bold;
-                    border-radius: 50%;
-                    padding: 5px 5px;
-                    text-align: center;
-                    line-height: 1;
-                    border: 2px solid white;
-                    border-radius: 50%;
-                  }
-
-                  .icon-wrapper.no-lightning .unread-badge {
-                    position: static;
-                  }
-              `
+function fallback_module () {
+return {
+  api: fallback_instance,
+}
+function fallback_instance (opts) {
+  return {
+      drive: {
+        'icons/': {
+          'lightning.svg': {
+            '$ref': 'lightning.svg'
+          },
+        },
+        'style/':{
+          'style.css':{
+            raw:  `
+              .contact-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0px;
+                font-family: Arial, sans-serif;
+                color: black;
+                width: 95%;
+                box-sizing: border-box;
+                cursor: pointer;
               }
-            },
-            'data/': {
-              'opts.json': {
-                raw: opts
+
+              .contact-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
               }
-            }
+
+              .contact-avatar {
+                position: relative;
+                width: 50px;
+                height: 50px;
+                flex-shrink: 0;
+              }
+
+              .contact-avatar img {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 1px solid #ccc;
+
+              }
+
+              .online-dot {
+                position: absolute;
+                bottom: 2px;
+                right: 2px;
+                width: 12px;
+                height: 12px;
+                background-color: #00c853; /* green */
+                border: 2px solid white;
+                border-radius: 50%;
+              }
+
+              .contact-info {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+              }
+
+              .contact-name {
+                font-size: 20px;
+                color: #222;
+                line-height: 1.4;
+                
+              }
+
+              .contact-message {
+                font-size: 15px;
+                font-weight: normal; /* Default if no unread */
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 180px;
+                display: inline-block;
+              }
+
+              .contact-message.unread-message {
+                font-weight: 550;
+              }
+
+              .contact-right {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                justify-content: center;
+                gap: 6px;
+              }
+
+              .contact-time {
+                font-size: 16px;
+                color: #888;
+              }
+
+              .icon-wrapper {
+                position: relative;
+                width: 20px;
+                height: 20px;
+                padding-right: 8px;
+
+              }
+                
+              .bolt-icon {
+                width: 100%;
+                height: 100%;
+                display: block;
+              }
+
+              .unread-badge {
+                position: absolute;
+                top: -6px;
+                right: -10px;
+                width: 10px;
+                height: 10px;
+                background-color: #FF4343;
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 50%;
+                padding: 5px 5px;
+                text-align: center;
+                line-height: 1;
+                border: 2px solid white;
+                border-radius: 50%;
+              }
+
+              .icon-wrapper.no-lightning .unread-badge {
+                position: static;
+              }
+          `
           }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          }
+        }
       }
-    }
   }
+}
+}
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
 },{"STATE":1}],14:[function(require,module,exports){
@@ -1913,7 +1910,6 @@ async function contacts_list(opts = {}) {
     </div>
     <style></style>
   `
-  const style = shadow.querySelector('style')
   const top_bar = shadow.querySelector('.top-bar')
   const contact_list_container = shadow.querySelector('.contact-list-container')
 
@@ -1921,41 +1917,52 @@ async function contacts_list(opts = {}) {
 
   const contactElements = []
 
-if (subs.length > 0) {
-  const search = await search_bar(subs[0], msg => {
-    if (msg.type === 'search') {
-      const value = msg.value.toLowerCase()
-      console.log('[SearchBar] search value typed:', value) // <-- added log
+  if (subs.length > 0) {
+    const search = await search_bar(subs[0], msg => {
+      if (msg.type === 'search') {
+        const value = msg.value.toLowerCase()
+        console.log('[SearchBar] search value typed:', value) 
 
-      contactElements.forEach(({ el, name }) => {
-        const isVisible = name.toLowerCase().includes(value)
-        console.log(`[SearchBar] checking contact: "${name}", visible: ${isVisible}`) // <-- added log
-        el.style.display = isVisible ? '' : 'none'
-      })
-    }
-  })
+        contactElements.forEach(({ el, name }) => {
+          const isVisible = name.toLowerCase().includes(value)
+          console.log('[SearchBar] checking contact: ',name,' visible: ',isVisible) 
+          el.style.display = isVisible ? '' : 'none'
+        })
+      }
+    })
 
-  const button = await square_button(subs[1])
-  top_bar.append(search)
-  top_bar.append(button)
-}
-for (let i = 2; i < subs.length; i++) {
-  const contactData = subs[i]
-  let contactEl // declare first
-  const protocol = msg => {
-    if (msg.type === 'contact-name') {
-      console.log('[ContactList] contact name received:', msg.name)
-      
-      // update contactElements safely
-      let elObj = contactElements.find(c => c.el === contactEl)
-      if (!elObj) contactElements.push({ el: contactEl, name: msg.name })
-      else elObj.name = msg.name
-    }
+    const button = await square_button(subs[1])
+    top_bar.append(search)
+    top_bar.append(button)
+  }
+    
+  for (let i = 2; i < subs.length; i++) {
+    const contactData = subs[i]
+    
+    // Create contact element first
+    const contactEl = await contact_row(contactData, msg => {
+      if (msg.type === 'contact-name') {
+        console.log('[ContactList] contact name received:', msg.name)
+
+        // Add or update element properly
+        // let elObj = contactElements.find(c => c.el === contactEl)
+        // if (!elObj) {
+        //   contactElements.push({ el: contactEl, name: msg.name })
+        //   console.log('[ContactElements] added:', contactElements)
+        // } else {
+        //   elObj.name = msg.name
+        //   console.log('[ContactElements] updated:', contactElements)
+        // }
+      }
+    })
+
+    // Append to container
+    contact_list_container.append(contactEl)
+    console.log('[ContactRow appended] contactEl:', contactEl)
   }
 
-  contactEl = await contact_row(contactData, protocol)
-  contact_list_container.append(contactEl)
-}
+  // After loop, log full array
+  console.log('[Final ContactElements]', contactElements)
 
   return el
 
@@ -1963,7 +1970,6 @@ for (let i = 2; i < subs.length; i++) {
   async function onbatch(batch) { 
     for (const { type, paths } of batch) {
       const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
-      // ondata or style injection handled in individual modules
     }
   }
 }
@@ -8993,15 +8999,6 @@ function fallback_module () {
                 lightining: false
               },
               {
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: 'David Clark',
-                message: 'Received funds',
-                time: '1 hr',
-                unread: 0,
-                online: true,
-                lightining: true
-              },
-              {
                 avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
                 name: 'Sara Ahmed',
                 message: 'Invoice sent',
@@ -9009,6 +9006,15 @@ function fallback_module () {
                 unread: 0,
                 online: false,
                 lightining: false
+              },
+              {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'David Clark',
+                message: 'Received funds',
+                time: '1 hr',
+                unread: 0,
+                online: true,
+                lightining: true
               }
             ]
           },
