@@ -8640,7 +8640,7 @@ function fallback_module() {
 }).call(this)}).call(this,"/src/node_modules/wallet_button/wallet_button.js")
 },{"STATE":1,"general_button":19,"switch_account":43}],54:[function(require,module,exports){
 (function (__filename){(function (){
-const STATE = require('../src/node_modules/STATE')
+const STATE = require('STATE')
 const statedb = STATE(__filename)
 statedb.admin()
 const { sdb, get } = statedb(fallback_module)
@@ -9293,4 +9293,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/STATE":1,"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/details_menu":17,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/lightning_page":29,"../src/node_modules/more_menu":31,"../src/node_modules/pay_invoice_confirmation":33,"../src/node_modules/receive_btc":36,"../src/node_modules/send_btc":38,"../src/node_modules/send_invoice_modal":39,"../src/node_modules/switch_account":43,"../src/node_modules/switch_request":44,"../src/node_modules/switch_send":45,"../src/node_modules/transaction_history":48,"../src/node_modules/transaction_receipt":50}]},{},[54]);
+},{"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/details_menu":17,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/lightning_page":29,"../src/node_modules/more_menu":31,"../src/node_modules/pay_invoice_confirmation":33,"../src/node_modules/receive_btc":36,"../src/node_modules/send_btc":38,"../src/node_modules/send_invoice_modal":39,"../src/node_modules/switch_account":43,"../src/node_modules/switch_request":44,"../src/node_modules/switch_send":45,"../src/node_modules/transaction_history":48,"../src/node_modules/transaction_receipt":50,"STATE":1}]},{},[54]);

@@ -4,8 +4,8 @@
   "description": "transaction history component",
   "main": "src/index.js",
   "scripts": {
-    "start": "budo web/page.js:bundle.js --dir ./ --live --open",
-    "build": "browserify web/page.js > bundle.js",
+    "start": "budo web/page.js:bundle.js --dir ./ --live --open -- -i STATE",
+    "build": "browserify web/page.js -i STATE -o bundle.js" ,
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -15,11 +15,10 @@
   "author": "Ibrar",
   "license": "MIT",
   "dependencies": {
-    "budo": "^11.8.4",
-    "standardx": "^7.0.0",
-    "vanillaqr": "^1.0.0"
   },
   "devDependencies": {
+    "budo": "^11.8.4",
+    "standardx": "^7.0.0",
     "browserify": "^17.0.1"
   }
 }
