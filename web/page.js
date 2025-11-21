@@ -351,15 +351,6 @@ function fallback_module () {
                 lightining: false
               },
               {
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: 'David Clark',
-                message: 'Received funds',
-                time: '1 hr',
-                unread: 0,
-                online: true,
-                lightining: true
-              },
-              {
                 avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
                 name: 'Sara Ahmed',
                 message: 'Invoice sent',
@@ -367,6 +358,15 @@ function fallback_module () {
                 unread: 0,
                 online: false,
                 lightining: false
+              },
+              {
+                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+                name: 'David Clark',
+                message: 'Received funds',
+                time: '1 hr',
+                unread: 0,
+                online: true,
+                lightining: true
               }
             ]
           },
