@@ -26,6 +26,7 @@ const add_new_contact = require('../src/node_modules/add_new_contact')
 const chat_filter = require('../src/node_modules/chat_filter')
 const switch_send = require('../src/node_modules/switch_send')
 const switch_request = require('../src/node_modules/switch_request')
+const pending_request = require('../src/node_modules/pending_request')
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -98,6 +99,7 @@ async function main () {
   const chat_filter_component = await chat_filter(subs[40], protocol)
   const switch_request_component = await switch_request(subs[42], protocol)
   const switch_send_component = await switch_send(subs[44], protocol)
+  const pending_request_component = await pending_request(subs[46], protocol)
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -126,6 +128,10 @@ async function main () {
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">lightning transaction Receipt</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="light-transaction-receipt-container"></div> 
+      </div> 
+      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
+        <div class="component-label" style="padding-bottom:10px;">Pending Request</div>  
+        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pending-request-container"></div> 
       </div> 
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
@@ -210,6 +216,8 @@ async function main () {
   page.querySelector('#chat-filter-container').appendChild(chat_filter_component)
   page.querySelector('#switch-request-container').appendChild(switch_request_component)
   page.querySelector('#switch-send-container').appendChild(switch_send_component)
+  page.querySelector('#pending-request-container').appendChild(pending_request_component)
+
 
   document.body.append(page)
   console.log("Page mounted")
@@ -639,6 +647,22 @@ function fallback_module () {
         0: {
           btc: 0.9862,
           lightning: 0.9000
+        },
+        mapping: {
+          style: 'style',
+          data: 'data',
+          icons: 'icons'
+        }
+      },
+      '../src/node_modules/pending_request': {
+        $: '',
+        0: {
+          "avatar": "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+          "name": "Mark Kevin",
+          "amount": 0.0019,
+          "date": "25 June 2025",
+          "status": "expired", // or "paid", "expired"
+          "is_me": false
         },
         mapping: {
           style: 'style',
