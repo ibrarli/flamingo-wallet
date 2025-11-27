@@ -228,7 +228,11 @@ main()
 // ============ Fallback Setup ============
 function fallback_module () {
   return {
-    drive: {},
+    drive: {
+      style: {},
+      data: {},
+      icons: {}
+    },
     _: {
       '../src/node_modules/home_page': {
         $: '',
