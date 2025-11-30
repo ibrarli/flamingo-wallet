@@ -213,7 +213,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":19,"receive_btc":35,"send_btc":39}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":19,"receive_btc":35,"send_btc":40}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1572,7 +1572,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"btc_req_msg":7,"button":9,"chat_view_header":12,"switch_request":45,"switch_send":46}],12:[function(require,module,exports){
+},{"STATE":1,"btc_req_msg":7,"button":9,"chat_view_header":12,"switch_request":46,"switch_send":47}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2054,7 +2054,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":13,"search_bar":38,"square_button":43}],15:[function(require,module,exports){
+},{"STATE":1,"contact_row":13,"search_bar":39,"square_button":44}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2280,7 +2280,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":47}],16:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":48}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3013,7 +3013,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":22,"light_page_header":24,"light_tx_list":25,"lightning_buttons":27,"total_wealth":48,"transaction_list":50,"wallet_button":54}],21:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":22,"light_page_header":24,"light_tx_list":25,"lightning_buttons":27,"total_wealth":49,"transaction_list":51,"wallet_button":55}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3783,7 +3783,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_list/light_tx_list.js")
-},{"STATE":1,"transaction_history":49,"transaction_row":52}],26:[function(require,module,exports){
+},{"STATE":1,"transaction_history":50,"transaction_row":53}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4912,7 +4912,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":53}],34:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":54}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5235,8 +5235,319 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const btc_usd_rate = require('btc_usd_rate')
+
+module.exports = req_card
+
+async function req_card (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+  
+  const on = {
+    style: inject,
+    data: ondata,
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="btc-card"></div>
+    <style></style>
+  `
+  const style = shadow.querySelector('style')
+  const container = shadow.querySelector('.btc-card')
+  
+  await sdb.watch(onbatch)
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  async function ondata (data) {
+    let {
+      currency = "BTC",
+      amount = 0.0000,
+      usdValue: usd_value = 0,
+      balance = 0, 
+      show_balance = true
+    } = data[0]
+
+    const EXCHANGE_RATE = await btc_usd_rate('btc', 'usd')
+
+    container.innerHTML = `
+      <div class="header">
+        <span class="toggle ${currency === 'BTC' ? 'active' : ''}" data-currency="BTC">BTC</span>
+        <span class="toggle ${currency === 'USD' ? 'active' : ''}" data-currency="USD">USD</span>
+      </div>
+
+      <div class="main-area"> 
+        <div class="amount-row">
+          <input type="number" min="0" step="0.0001" value="${currency === 'BTC' ? amount : usd_value}" class="amount-input" />
+          <div class="actions">
+            <button class="close-btn">✕</button>
+          </div>
+        </div>
+        <div class="usd-text">
+          You are requesting 
+          <strong>
+            ${currency === 'BTC' ? `USD ${(amount * EXCHANGE_RATE).toFixed(2)}` : `${(usd_value / EXCHANGE_RATE).toFixed(4)} BTC`}
+          </strong>
+        </div>
+      </div>
+    `
+
+    const amount_input = container.querySelector('.amount-input')
+    const btc_toggle = container.querySelector('[data-currency="BTC"]')
+    const usd_toggle = container.querySelector('[data-currency="USD"]')
+    const usd_text = container.querySelector('.usd-text strong')
+    const close_btn = container.querySelector('.close-btn')
+    const toggles = container.querySelectorAll('.toggle')
+    
+
+    function update_display(value, curr) {
+      amount_input.value = value
+      usd_text.textContent = curr === 'BTC'
+        ? `USD ${usd_value}`
+        : `${amount} BTC`
+
+      toggles.forEach(t => t.classList.remove('active'))
+      if (curr === 'BTC') {
+        btc_toggle.classList.add('active')
+      } else {
+        usd_toggle.classList.add('active')
+      }
+    }
+
+    function on_toggle_btc() {
+      currency = 'BTC'
+      update_display(amount, currency)
+    }
+
+    function on_toggle_usd() {
+      currency = 'USD'
+      update_display(usd_value, currency)
+    }
+
+    function on_close_click() {
+      amount = 0
+      usd_value = 0
+      update_display(currency === 'BTC' ? amount : usd_value, currency)
+      showError("")
+    }
+
+    function on_amount_input() {
+      let val = amount_input.value;
+
+      if (val < 0) val = '';
+
+      if (val === "" || isNaN(val)) {
+        val = "0";
+      }
+
+      if (val.includes('.')) {
+        let [int_part, dec_part] = val.split('.');
+        if (currency === 'BTC') {
+          int_part = int_part.slice(0, 5); // Limited to 99,999 BTC
+          dec_part = dec_part.slice(0, 8);  // Lowest denomination is 0.00000001 BTC
+        } else {
+          int_part = int_part.slice(0, 10); // Limited to 1 billion USD
+          dec_part = dec_part.slice(0, 1); // Lowest denomination is 0.1 USD
+        }
+        val = int_part + (dec_part ? '.' + dec_part : '');
+      }else {
+        if (currency === 'BTC') {
+          val = val.slice(0, 5);
+        } else {
+          val = val.slice(0, 10);
+        }
+      }
+
+      if (currency === 'BTC') {
+        amount = parseFloat(val) || 0;
+        usd_value = (amount * EXCHANGE_RATE).toFixed(2);
+      } else {
+        usd_value = parseFloat(val) || 0;
+        amount = +(usd_value / EXCHANGE_RATE).toFixed(8); 
+      }
+
+      if (amount > balance) {
+        showError("Insufficient balance, please add funds to your account");
+      } else {
+        showError("");
+      }
+
+      usd_text.textContent = currency === 'BTC'
+        ? `USD ${usd_value}`
+        : `${amount.toFixed(8)} BTC`;
+    }
+
+    btc_toggle.onclick = on_toggle_btc
+    usd_toggle.onclick = on_toggle_usd
+    close_btn.onclick = on_close_click
+    amount_input.oninput = on_amount_input 
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+  }
+  function fallback_instance (opts) {
+    return {
+      drive: {
+        'style/': {
+          'style.css': {
+            raw: `
+              .btc-card {
+                background: #f9f9f9;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 16px;
+                width: 100%;
+                box-sizing: border-box;
+                margin-top: 15px;
+                margin-bottom: 10px;
+              }
+
+              .header {
+                display: flex;
+                gap: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 10px;
+              }
+
+              .toggle {
+                cursor: pointer;
+                color: #888;
+                padding-bottom: 2px;
+              }
+
+              .toggle.active {
+                color: #000;
+                border-bottom: 2px solid #000;
+              }
+
+              .main-area{
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 110px;              
+              }
+              
+              .amount-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 6px;
+                gap: 6px;
+              }
+
+              .amount-input {
+                font-size: 30px;
+                font-weight: 500;
+                flex: 1;
+                text-align: left;
+                border: none;
+                outline: none;
+                background: transparent;
+                min-width: 0; 
+              }
+
+              .actions {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                flex-shrink: 0;
+              }
+
+              .btn {
+                border: none;
+                background: #000;
+                color: #fff;
+                padding: 3px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                border-radius: 3px;
+              }
+
+              .close-btn {
+                background: #000;
+                border: none;
+                color: #fff;
+                font-size: 12px;
+                cursor: pointer;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+              }
+
+              .divider {
+                width: 100%;
+                height: 1px;
+                background-color: #000; 
+                margin: 2px 0; 
+              }
+
+              .error {
+                color: #666; /* same as balance text */
+                font-size: 13px;
+                padding-block: 6px;
+              }
+
+              .balance {
+                font-size: 12px;
+                color: #666;
+                padding-bottom:10px;
+              }
+          
+              .usd-text {
+                font-size: 14px;
+                margin-top: auto;
+              }
+            `
+          }
+        },
+        'data/': {
+          'opts.json': {
+            raw: opts
+          },
+        }
+      }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/req_card/req_card.js")
+},{"STATE":1,"btc_usd_rate":8}],37:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
 const create_button = require('button')
-const btc_input_card = require('btc_input_card')
+const req_card = require('req_card')
 const templates = require('templates')
 
 module.exports = request_btc
@@ -5286,7 +5597,7 @@ async function request_btc(opts = {}) {
   const subs = await sdb.watch(onbatch)
 
   const button_component = await create_button(subs[0])
-  const btc_component = await btc_input_card(subs[1])
+  const btc_component = await req_card(subs[1])
   const templates_component1 = await templates(subs[2])
   const templates_component2 = await templates(subs[3])
   const templates_component3 = await templates(subs[4])
@@ -5346,7 +5657,7 @@ function fallback_module() {
     api,
     _: {
       'button': { $: '' },
-      'btc_input_card': { $: '' },
+      'req_card': { $: '' },
       'templates': { $: '' },
     }
   }
@@ -5363,13 +5674,12 @@ function fallback_module() {
       }    
     }
     
-    const btc_input_card = {
+    const req_card = {
       mapping: {
         style: 'style',
         data: 'data',
       },
       1: {
-        balance: 0.0024, 
       }  
     } 
 
@@ -5419,7 +5729,7 @@ function fallback_module() {
       },
       _: {
         button,
-        btc_input_card,
+        req_card,
         templates      
       }
     }
@@ -5427,14 +5737,14 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/request_btc/request_btc.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"templates":47}],37:[function(require,module,exports){
+},{"STATE":1,"button":9,"req_card":36,"templates":48}],38:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const create_button = require('button')
-const btc_input_card = require('btc_input_card')
+const req_card = require('req_card')
 const input_field = require('input_field')
 const templates = require('templates')
 
@@ -5459,7 +5769,7 @@ async function request_light(opts = {}) {
     <div class="create-invoice-container">
       <div class="create-invoice-header">  
         <div class="title-container"> 
-          <div class="create-invoice-header">Create Lightning Invoice</div>
+          <div class="create-invoice-header">Request Lightning</div>
           <div class="btc-icon"></div>
         </div>  
         <div class="x-icon"></div>
@@ -5489,7 +5799,7 @@ async function request_light(opts = {}) {
   const subs = await sdb.watch(onbatch)
 
   const button_component = await create_button(subs[0])
-  const btc_component = await btc_input_card(subs[1])
+  const btc_component = await req_card(subs[1])
   const input1 = await input_field(subs[2])
   const input2 = await input_field(subs[3])
   const templates_component1 = await templates(subs[4])
@@ -5553,7 +5863,7 @@ function fallback_module() {
     api,
     _: {
       'button': { $: '' },
-      'btc_input_card': { $: '' },
+      'req_card': { $: '' },
       'input_field': { $: '' },
       'templates': { $: '' },
     }
@@ -5571,7 +5881,7 @@ function fallback_module() {
       }    
     }
     
-    const btc_input_card = {
+    const req_card = {
       mapping: {
         style: 'style',
         data: 'data',
@@ -5642,7 +5952,7 @@ function fallback_module() {
       },
       _: {
         button,
-        btc_input_card,
+        req_card,
         input_field,
         templates      
       }
@@ -5651,7 +5961,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/request_light/request_light.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":47}],38:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":23,"req_card":36,"templates":48}],39:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5770,15 +6080,15 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],39:[function(require,module,exports){
+},{"STATE":1}],40:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-const send_button = require('button')
-const address_input = require('input_field')
+const create_button = require('button')
 const btc_input_card = require('btc_input_card')
+const templates = require('templates')
 
 module.exports = send_btc
 
@@ -5798,35 +6108,46 @@ async function send_btc(opts = {}) {
   let dricons = []
 
   shadow.innerHTML = `
-    <div class="send-btc-container">
-      <div class="send-btc-header">  
+    <div class="create-invoice-container">
+      <div class="create-invoice-header">  
         <div class="title-container"> 
-          <div class="send-btc-header">Send BTC</div>
+          <div class="create-invoice-header">Send BTC</div>
           <div class="btc-icon"></div>
         </div>  
         <div class="x-icon"></div>
       </div>
-      <div class="address-input"></div>
       <div class="btc-input-card"></div>
-      <div class="send_button"></div>
+      <div class="divider"></div>
+      <div class="templates-heading">Use Templates</div>
+      <div class="template1"></div>
+      <div class="template2"></div>
+      <div class="template3"></div>
+      <div class="create_button"></div>
     </div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const send_button_component = shadow.querySelector('.send_button')
-  const address_input_component = shadow.querySelector('.address-input')
+  const create_button_component = shadow.querySelector('.create_button')
   const btc_input_card_component = shadow.querySelector('.btc-input-card')
+  const template1_container = shadow.querySelector('.template1')
+  const template2_container = shadow.querySelector('.template2')
+  const template3_container = shadow.querySelector('.template3')
 
   const subs = await sdb.watch(onbatch)
 
-  const button_component = await send_button(subs[0])
-  const address_component = await address_input(subs[1])
-  const btc_component = await btc_input_card(subs[2])
+  const button_component = await create_button(subs[0])
+  const btc_component = await btc_input_card(subs[1])
+  const templates_component1 = await templates(subs[2])
+  const templates_component2 = await templates(subs[3])
+  const templates_component3 = await templates(subs[4])
 
-  send_button_component.append(button_component)
-  address_input_component.append(address_component)
+
+  create_button_component.append(button_component)
   btc_input_card_component.append(btc_component)
+  template1_container.append(templates_component1)
+  template2_container.append(templates_component2)
+  template3_container.append(templates_component3)
 
   const closeBtn = shadow.querySelector('.x-icon')
   if (closeBtn) {
@@ -5876,8 +6197,8 @@ function fallback_module() {
     api,
     _: {
       'button': { $: '' },
-      'input_field': { $: '' },
       'btc_input_card': { $: '' },
+      'templates': { $: '' },
     }
   }
 
@@ -5893,28 +6214,37 @@ function fallback_module() {
       }    
     }
     
-      
-    const input_field = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      1: {
-        header: 'Address',
-        placeholder: 'Tap to past your address',
-        address: 'oiyqwr02816r0175915ijr0912740921u409re2109ru20194',
-      }    
-    }
-
     const btc_input_card = {
       mapping: {
         style: 'style',
         data: 'data',
       },
-      2: {
+      1: {
         balance: 0.0024, 
       }  
+    } 
+
+    const templates = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      2: {
+        date:"2025-05-10",
+        btc: 0.012,
+        usd: 200
+      },
+      3: {
+        date:"2024-12-25",
+        btc: 0.005,
+        usd: 80
+      },
+      4: {
+        date:"2024-01-01",
+        btc: 0.01,
+        usd: 150
+      }
     }
 
     return {
@@ -5940,15 +6270,15 @@ function fallback_module() {
       },
       _: {
         button,
-        input_field,
-        btc_input_card
+        btc_input_card,
+        templates      
       }
     }
   }
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23}],40:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"templates":48}],41:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6107,7 +6437,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_invoice_modal/send_invoice_modal.js")
-},{"STATE":1,"search_bar":38,"send_to_contact":41,"share_invoice_via":42,"square_button":43}],41:[function(require,module,exports){
+},{"STATE":1,"search_bar":39,"send_to_contact":42,"share_invoice_via":43,"square_button":44}],42:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6244,7 +6574,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_to_contact/send_to_contact.js")
-},{"STATE":1}],42:[function(require,module,exports){
+},{"STATE":1}],43:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6346,7 +6676,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/share_invoice_via/share_invoice_via.js")
-},{"STATE":1}],43:[function(require,module,exports){
+},{"STATE":1}],44:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6462,7 +6792,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],44:[function(require,module,exports){
+},{"STATE":1}],45:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6602,7 +6932,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],45:[function(require,module,exports){
+},{"STATE":1}],46:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6783,7 +7113,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_request/switch_request.js")
-},{"STATE":1,"request_btc":36,"request_light":37}],46:[function(require,module,exports){
+},{"STATE":1,"request_btc":37,"request_light":38}],47:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6963,7 +7293,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_send/switch_send.js")
-},{"STATE":1,"pending_request":32,"send_btc":39}],47:[function(require,module,exports){
+},{"STATE":1,"pending_request":32,"send_btc":40}],48:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7111,7 +7441,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":8}],48:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],49:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7234,7 +7564,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":8}],49:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],50:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7371,7 +7701,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":52}],50:[function(require,module,exports){
+},{"STATE":1,"transaction_row":53}],51:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7580,7 +7910,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":49,"transaction_row":52}],51:[function(require,module,exports){
+},{"STATE":1,"transaction_history":50,"transaction_row":53}],52:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7705,7 +8035,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":34}],52:[function(require,module,exports){
+},{"STATE":1,"receipt_row":34}],53:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7845,7 +8175,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],53:[function(require,module,exports){
+},{"STATE":1}],54:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -8888,7 +9218,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -9037,7 +9367,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/wallet_button/wallet_button.js")
-},{"STATE":1,"general_button":19,"switch_account":44}],55:[function(require,module,exports){
+},{"STATE":1,"general_button":19,"switch_account":45}],56:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -9648,4 +9978,4 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/pay_invoice_confirmation":31,"../src/node_modules/pending_request":32,"../src/node_modules/send_invoice_modal":40,"../src/node_modules/switch_account":44,"../src/node_modules/switch_request":45,"../src/node_modules/switch_send":46,"../src/node_modules/transaction_history":49,"../src/node_modules/transaction_receipt":51,"STATE":1}]},{},[55]);
+},{"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/pay_invoice_confirmation":31,"../src/node_modules/pending_request":32,"../src/node_modules/send_invoice_modal":41,"../src/node_modules/switch_account":45,"../src/node_modules/switch_request":46,"../src/node_modules/switch_send":47,"../src/node_modules/transaction_history":50,"../src/node_modules/transaction_receipt":52,"STATE":1}]},{},[56]);
