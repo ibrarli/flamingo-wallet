@@ -218,7 +218,6 @@ function fallback_module () {
           "name": "Mark Kevin",
           "amount": 0.0019,
           "date": "25 June 2025",
-          "status": "expired", // or "paid", "expired"
           "is_me": false
         },
         mapping: {
