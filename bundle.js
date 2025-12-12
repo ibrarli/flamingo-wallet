@@ -54,7 +54,7 @@ async function action_buttons(opts = {}, protocol) {
   }) : null
 
   // Create buttons
-  const send_button = await general_button(subs[0], button_protocol('send_general'))
+  const send_button = await general_button(subs[0])
   const receive_button = await general_button(subs[1], button_protocol('receive_general'))
 
   shadow.querySelector('#send-button-container').prepend(send_button)
@@ -180,11 +180,9 @@ async function action_buttons(opts = {}, protocol) {
 
   // Action handlers
   function send_message(data, type) {
-    console.log('Send button clicked - handling send action')
   }
 
   function receive_message(data, type) {
-    console.log('Receive button clicked - handling receive action')
   }
 }
 
@@ -219,10 +217,14 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const gen_invite_code = require('gen_invite_code')
+const add_new_contact = require('add_new_contact')
+
 module.exports = add_contact_popup
 
 async function add_contact_popup (opts = {}) {
-const { sdb } = await get(opts.sid)
+
+  const { sdb } = await get(opts.sid)
   const { drive } = sdb
 
   const on = {
@@ -235,22 +237,32 @@ const { sdb } = await get(opts.sid)
   const shadow = el.attachShadow({ mode: 'closed' })
 
   let icons = []
+  let invitePopup = null
+  let addContactPopup = null
 
   shadow.innerHTML = `
     <div class="more-menu-container"></div>
+    <div class="popup"></div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
   const row = shadow.querySelector('.more-menu-container')
+  const popup = shadow.querySelector('.popup')
 
-  await sdb.watch(onbatch)
+  const subs = await sdb.watch(onbatch)
+
+  const gen_invite_code_comp = await gen_invite_code(subs[0])
+  const add_new_contact_comp = await add_new_contact(subs[1])
+
   return el
 
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
       const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
+        paths.map(path => {
+          return drive.get(path).then(file => file.raw)
+        })
       )
       const func = on[type] || fail
       await func(data, type)
@@ -267,28 +279,79 @@ const { sdb } = await get(opts.sid)
         <div class="title">Add Contact</div>
         <div class="close-icon">${icons[0]}</div>
       </div>
-      <div class="option-container">
+
+      <div class="option-container" id="invite-option">
         <div class="dot-icon">${icons[1]}</div>
         <div class="option-label">Generate Invite Code</div>
       </div>
-      <div class="option-container">
+      <div class="option-container" id="add-contact-option">
         <div class="dot-icon">${icons[2]}</div>
         <div class="option-label">Add new contact</div>
       </div>
     `
 
     const closeBtn = row.querySelector('.close-icon')
+    const inviteBtn = row.querySelector('#invite-option')
+    const addContactBtn = row.querySelector('#add-contact-option')
+
     if (closeBtn) {
       closeBtn.onclick = () => {
         const dropdown = el.parentNode
-        if (dropdown) {
-          dropdown.classList.add('hidden')
-        }
+        if (dropdown) dropdown.classList.add('hidden')
       }
+    }
+
+    // ✅ OPTION 1 — TOGGLE GEN INVITE
+    inviteBtn.onclick = async () => {
+      console.log('[INVITE CLICKED]')
+
+      // ✅ If already open → CLOSE IT
+      if (invitePopup) {
+        console.log('[INVITE] Closing')
+        invitePopup.remove()
+        invitePopup = null
+        return
+      }
+
+      // ✅ If other popup open → CLOSE IT
+      if (addContactPopup) {
+        console.log('[INVITE] Closing add contact first')
+        addContactPopup.remove()
+        addContactPopup = null
+      }
+
+      console.log('[INVITE] Opening')
+      invitePopup = gen_invite_code_comp
+      popup.appendChild(invitePopup)
+    }
+
+    // ✅ OPTION 2 — TOGGLE ADD CONTACT
+    addContactBtn.onclick = async () => {
+      console.log('[ADD CONTACT CLICKED]')
+
+      // ✅ If already open → CLOSE IT
+      if (addContactPopup) {
+        console.log('[ADD CONTACT] Closing')
+        addContactPopup.remove()
+        addContactPopup = null
+        return
+      }
+
+      // ✅ If other popup open → CLOSE IT
+      if (invitePopup) {
+        console.log('[ADD CONTACT] Closing invite first')
+        invitePopup.remove()
+        invitePopup = null
+      }
+
+      console.log('[ADD CONTACT] Opening')
+      addContactPopup = add_new_contact_comp
+      popup.appendChild(addContactPopup)
     }
   }
 
   function fail(data, type) {
+    console.error('[FAIL]', data, type)
     throw new Error('invalid message', { cause: { data, type } })
   }
 
@@ -301,15 +364,30 @@ const { sdb } = await get(opts.sid)
 function fallback_module () {
   return {
     api: fallback_instance,
+    _: {
+      'gen_invite_code': { $: '' },
+      'add_new_contact': { $: '' },
+    }
   }
+
   function fallback_instance (opts) {
+
+    const gen_invite_code = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: {}
+    }
+
+    const add_new_contact = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+      1: {}
+    }
+
     return {
       drive: {
         'icons/': {
           'x.svg': { '$ref': 'x.svg' },
           'link.svg': { '$ref': 'link.svg' },
           'user_add.svg': { '$ref': 'user_add.svg' },
-
         },
         'style/': {
           'style.css': { '$ref': 'add_contact_popup.css' },
@@ -319,13 +397,13 @@ function fallback_module () {
             raw: opts
           },
         }
-      }
+      },
+      _: { gen_invite_code, add_new_contact }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/add_contact_popup/add_contact_popup.js")
-},{"STATE":1}],4:[function(require,module,exports){
+},{"STATE":1,"add_new_contact":4,"gen_invite_code":18}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -545,7 +623,7 @@ async function btc_input_card (opts = {}) {
   async function ondata (data) {
     let {
       currency = "BTC",
-      amount = 0.0000,
+      amount = 0,
       usdValue: usd_value = 0,
       balance = 0, 
       show_balance = true
@@ -561,7 +639,7 @@ async function btc_input_card (opts = {}) {
 
       <div class="main-area"> 
         <div class="amount-row">
-          <input type="number" min="0" step="0.0001" value="${currency === 'BTC' ? amount : usd_value}" class="amount-input" />
+          <input type="number" min="0" step="0.0001" value="0" class="amount-input" data-cleared="0" />
           <div class="actions">
             <button class="close-btn">✕</button>
             <button class="btn half-btn">Half</button>
@@ -572,9 +650,7 @@ async function btc_input_card (opts = {}) {
         ${show_balance ? `<div class="balance">Balance ${balance} BTC</div>` : ""}
         <div class="usd-text">
           You are sending 
-          <strong>
-            ${currency === 'BTC' ? `USD ${(amount * EXCHANGE_RATE).toFixed(2)}` : `${(usd_value / EXCHANGE_RATE).toFixed(4)} BTC`}
-          </strong>
+          <strong>USD ${(amount * EXCHANGE_RATE).toFixed(2)}</strong>
         </div>
       </div>
     `
@@ -588,6 +664,14 @@ async function btc_input_card (opts = {}) {
     const close_btn = container.querySelector('.close-btn')
     const error_div = container.querySelector('.error')
     const toggles = container.querySelectorAll('.toggle')
+
+    // Wipe input on first click
+    amount_input.onclick = () => {
+      if (amount_input.dataset.cleared === "0") {
+        amount_input.value = ""
+        amount_input.dataset.cleared = "1"
+      }
+    }
     
     function showError(msg) {
       if (msg) {
@@ -609,6 +693,8 @@ async function btc_input_card (opts = {}) {
 
     function update_display(value, curr) {
       amount_input.value = value
+      amount_input.dataset.cleared = "0" // reset wipe flag
+
       usd_text.textContent = curr === 'BTC'
         ? `USD ${usd_value}`
         : `${amount} BTC`
@@ -840,7 +926,6 @@ function fallback_module () {
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/btc_input_card/btc_input_card.js")
 },{"STATE":1,"btc_usd_rate":8}],6:[function(require,module,exports){
 (function (__filename){(function (){
@@ -1014,27 +1099,35 @@ async function btc_req_msg(opts = {}) {
     dricons = data
   }
 
- function render_data(data) {
+  function render_data(data) {
     const { avatar, name, amount, date, status, is_me } = data[0]
 
-    // default colors
+    const now = new Date()
+    const expire_date = new Date(date)    
+    let final_status = status
+
+    // auto-change to expired if time has passed
+    if (expire_date < now) {
+      final_status = 'expired'
+    }
+
     let border_color = '#DDB473'
     let btn_color = '#F7931A'
     let bg_color = '#FFFCE7'
     let status_element = ''
 
-    if (status === 'send') {
-      status_element = `<button class="status_btn" style="background:${btn_color};">${'Send'}</button>`
-    } else if (status === 'paid') {
+    if (final_status === 'send') {
+      status_element = `<button class="status_btn" style="background:${btn_color};">Send</button>`
+    } else if (final_status === 'paid') {
       border_color = '#87DD73'
       bg_color = '#ECFFE7'
       btn_color = '#4CAF50'
-      status_element = `<button class="status_btn" style="background:${btn_color};">${'Paid √'}</button>`
-    } else if (status === 'expired') {
+      status_element = `<button class="status_btn" style="background:${btn_color};">Paid √</button>`
+    } else if (final_status === 'expired') {
       border_color = '#C83535'
       bg_color = '#FFE7E7'
       btn_color = '#C83535'
-      status_element = `<button class="status_btn" style="background:${btn_color};">${'Expired'}</button>`
+      status_element = `<button class="status_btn" style="background:${btn_color};">Expired</button>`
     }
 
     wrapper.innerHTML = `
@@ -1045,7 +1138,7 @@ async function btc_req_msg(opts = {}) {
             <span>
               <span class="name_text">${name}</span>
               <span class="req_text"> requests </span>
-              <span class="amount_text">BTC ${amount} </span>
+              <span class="amount_text">BTC ${amount}</span>
               <span class="btc_icon">${dricons[0] || '₿'}</span>
             </span>
           </div>
@@ -1069,7 +1162,7 @@ function fallback_module() {
       drive: {
         'icons/': {
           'btc.svg': {
-            '$ref': 'btc.svg'
+            '$ref': 'btc.svg' 
           }
         },
         'style/': {
@@ -1095,9 +1188,8 @@ async function btc_usd_rate(from = 'btc', to = 'usd') {
 
   if (!isNaN(rate) && rate > 0) {
     cached_rate = rate
-    console.log("api is working")
   } else {
-    console.log("api is returning null value")
+    console.log("BTC USD RATE api is returning null value")
   }
 
   return cached_rate
@@ -1546,9 +1638,9 @@ function fallback_module() {
     // BTC messages with separate statuses
     const btc_req_msg = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
-      5: { ...opts.value, status: 'expired' },
-      6: { ...opts.value, status: 'paid' },
-      7: { ...opts.value, status: 'send' }
+      5: { ...opts.value },
+      6: { ...opts.value, date: "25 Dec 2025", status: 'paid' },
+      7: { ...opts.value, date: "10 Mar 2026", status: 'send' }
     }
 
     return {
@@ -1718,6 +1810,8 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
+const chat_view = require('chat_view')
+
 module.exports = contact_row
 
 async function contact_row(opts = {}, protocol) {
@@ -1731,16 +1825,25 @@ async function contact_row(opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="contact-row"></div>
+    <div class="chat-view"></div>
+
     <style></style>
   `
   const style = shadow.querySelector('style')
   const row = shadow.querySelector('.contact-row')
+  const chat_view_container = shadow.querySelector('.chat-view')
+
   let dricons = []
 
-  // PROTOCOL sender to parent
   const sendToParent = msg => protocol?.(msg)
 
-  await sdb.watch(onbatch)
+  const subs =  await sdb.watch(onbatch)
+
+  const chat_view_comp = await chat_view(subs[0])
+  
+  chat_view_container.append(chat_view_comp)
+
+  
 
   return el
 
@@ -1790,8 +1893,15 @@ async function contact_row(opts = {}, protocol) {
 function fallback_module () {
 return {
   api: fallback_instance,
+  _:{
+    chat_view: { $: ''},
+  }
 }
 function fallback_instance (opts) {
+  const chat_view = {
+    mapping: { style: 'style', data: 'data', icons: 'icons' },
+      0: opts.value,
+  }
   return {
       drive: {
         'icons/': {
@@ -1801,128 +1911,7 @@ function fallback_instance (opts) {
         },
         'style/':{
           'style.css':{
-            raw:  `
-              .contact-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 0px;
-                font-family: Arial, sans-serif;
-                color: black;
-                width: 95%;
-                box-sizing: border-box;
-                cursor: pointer;
-              }
-
-              .contact-left {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-              }
-
-              .contact-avatar {
-                position: relative;
-                width: 50px;
-                height: 50px;
-                flex-shrink: 0;
-              }
-
-              .contact-avatar img {
-                width: 100%;
-                height: 100%;
-                border-radius: 50%;
-                object-fit: cover;
-                border: 1px solid #ccc;
-
-              }
-
-              .online-dot {
-                position: absolute;
-                bottom: 2px;
-                right: 2px;
-                width: 12px;
-                height: 12px;
-                background-color: #00c853; /* green */
-                border: 2px solid white;
-                border-radius: 50%;
-              }
-
-              .contact-info {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-              }
-
-              .contact-name {
-                font-size: 20px;
-                color: #222;
-                line-height: 1.4;
-                
-              }
-
-              .contact-message {
-                font-size: 15px;
-                font-weight: normal; /* Default if no unread */
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 180px;
-                display: inline-block;
-              }
-
-              .contact-message.unread-message {
-                font-weight: 550;
-              }
-
-              .contact-right {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                justify-content: center;
-                gap: 6px;
-              }
-
-              .contact-time {
-                font-size: 16px;
-                color: #888;
-              }
-
-              .icon-wrapper {
-                position: relative;
-                width: 20px;
-                height: 20px;
-                padding-right: 8px;
-
-              }
-                
-              .bolt-icon {
-                width: 100%;
-                height: 100%;
-                display: block;
-              }
-
-              .unread-badge {
-                position: absolute;
-                top: -6px;
-                right: -10px;
-                width: 10px;
-                height: 10px;
-                background-color: #FF4343;
-                color: white;
-                font-size: 12px;
-                font-weight: bold;
-                border-radius: 50%;
-                padding: 5px 5px;
-                text-align: center;
-                line-height: 1;
-                border: 2px solid white;
-                border-radius: 50%;
-              }
-
-              .icon-wrapper.no-lightning .unread-badge {
-                position: static;
-              }
-          `
+            '$ref': 'contact_row.css'
           }
         },
         'data/': {
@@ -1930,13 +1919,16 @@ function fallback_instance (opts) {
             raw: opts
           }
         }
+      },
+      _: {
+        chat_view
       }
   }
 }
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1}],14:[function(require,module,exports){
+},{"STATE":1,"chat_view":11}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1944,6 +1936,7 @@ const { sdb, get } = statedb(fallback_module)
 
 const search_bar = require('search_bar') 
 const square_button = require('square_button') 
+const add_contact_popup = require('add_contact_popup')
 const contact_row = require('contact_row')
 
 module.exports = contacts_list
@@ -1952,6 +1945,11 @@ async function contacts_list(opts = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
+  const on = {
+    style: inject,
+    data: ondata,
+  }
+
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
@@ -1959,11 +1957,13 @@ async function contacts_list(opts = {}) {
     <div class="contact-list-container">
       <div class="contact-list-header">Contacts</div>
       <div class="top-bar"></div>
+      <div class="contacts-wrapper"></div>
     </div>
     <style></style>
   `
   const top_bar = shadow.querySelector('.top-bar')
   const contact_list_container = shadow.querySelector('.contact-list-container')
+  const style = shadow.querySelector('style')
 
   const subs = await sdb.watch(onbatch)
 
@@ -1973,22 +1973,32 @@ async function contacts_list(opts = {}) {
     const search = await search_bar(subs[0], msg => {
       if (msg.type === 'search') {
         const value = msg.value.toLowerCase()
-        console.log('[SearchBar] search value typed:', value) 
 
         contactElements.forEach(({ el, name }) => {
           const isVisible = name.toLowerCase().includes(value)
-          console.log('[SearchBar] checking contact: ',name,' visible: ',isVisible) 
           el.style.display = isVisible ? '' : 'none'
         })
       }
     })
 
     const button = await square_button(subs[1])
+    const add_contact_popup_comp = await add_contact_popup(subs[2])
+    add_contact_popup_comp.classList.add('add-contact-popup')
+    // HIDE BY DEFAULT
+    add_contact_popup_comp.style.display = 'none'
+
+    // TOGGLE ON CLICK
+    button.addEventListener('click', () => {
+      const isOpen = add_contact_popup_comp.style.display === 'block'
+      add_contact_popup_comp.style.display = isOpen ? 'none' : 'block'
+    })
+
     top_bar.append(search)
     top_bar.append(button)
+    top_bar.append(add_contact_popup_comp)
   }
     
-  for (let i = 2; i < subs.length; i++) {
+  for (let i = 3; i < subs.length; i++) {
     const contactData = subs[i]
     
     // Create contact element first
@@ -2018,43 +2028,57 @@ async function contacts_list(opts = {}) {
 
   return el
 
-  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
-  async function onbatch(batch) { 
+  async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
+      const fn = on[type] || fail
+      await fn(data, type)
     }
   }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function fail(data, type) { throw new Error('invalid message', { cause: { data, type } }) }
+
+  async function ondata(data) {
+
+  }
+
 }
 function fallback_module() {
   return {
     api,
     _: {
       'search_bar': { $: '' },
+      'square_button': { $: '' },
+      'add_contact_popup': { $: '' },
       'contact_row': { $: '' },
-      'square_button': { $: '' }
     }
   }
 
   function api(opts) {
     const search_bar = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 0: {} }
     const square_button = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 1: {} }
+    const add_contact_popup = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: {} }
     const contact_row = { mapping: { style: 'style', data: 'data', icons: 'icons' } }
 
     opts.value.forEach((contact, index) => {
-      contact_row[index + 2] = contact
+      contact_row[index + 3] = contact
     })
 
     return {
       drive: {
-        'style/': { 'contacts_list.css': { '$ref': 'contacts_list.css' } },
+        'style/': { 'style.css': { '$ref': 'contacts_list.css' } },
         'data/': { 'opts.json': { raw: opts } }
       },
-      _: { search_bar, square_button, contact_row }
+      _: { search_bar, square_button, add_contact_popup, contact_row }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"contact_row":13,"search_bar":39,"square_button":44}],15:[function(require,module,exports){
+},{"STATE":1,"add_contact_popup":3,"contact_row":13,"search_bar":39,"square_button":44}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2769,13 +2793,11 @@ async function general_button (opts = {}, protocol) {
   function ondata(data) {
     const buttonData = data[0]?.value || {}
     const { name, action } = buttonData
-    console.log(`name "${name}"`)
     updateButton(buttonData)
   }
 
   function on_message({type, data}) {
     if (type === 'button_name') {
-      console.log(`Button "${data.name}", action "${data.action}"`)
       
       updateButton({
         name: data.name,
@@ -2902,8 +2924,6 @@ async function home_contents(opts = {}) {
   // -------------------- Protocol to handle child messages --------------------
   function home_protocol(sendToChild) {
     return async function (messageFromChild) {
-      console.log('[child -> home_contents]:', messageFromChild)
-
       if (messageFromChild?.from === 'switch_account' && messageFromChild.type === 'switch') {
         const wallet = messageFromChild.data
 
@@ -2921,7 +2941,6 @@ async function home_contents(opts = {}) {
             total_wealth_component
           )
 
-          console.log('Switched to BTC wallet view')
         } else if (wallet === 'lightning') {
           // Update header dynamically
           home_page_header_component._update?.({ wallet: 'lightning', amount: '0.0246' })
@@ -2936,7 +2955,6 @@ async function home_contents(opts = {}) {
             total_wealth_component
           )
 
-          console.log('Switched to Lightning wallet view')
         }
       }
     }
@@ -3758,7 +3776,6 @@ function fallback_module () {
     }
     opts.value.forEach((transaction, index) => {
       transaction_row[index] = transaction
-      console.log("Transaction Row:", transaction)
     })
     return {
       drive: {
@@ -4098,7 +4115,7 @@ async function menu(opts = {}) {
   const details_component = await details_menu(subs[2])
   const more_component = await more_menu(subs[3])
 
-  // ✅ Append all, hide except Home
+  // ✅ Append all, hide except Home`
   content.appendChild(home_component)
   content.appendChild(contacts_component)
   content.appendChild(details_component)
@@ -4200,7 +4217,12 @@ function fallback_module() {
             time: '3 hr',
             unread: 5,
             online: true,
-            lightining: true
+            lightining: true,
+            code: "1FfmbHfn...455p",
+            amount: 0.0054,
+            date: "25 June 2025",
+            status: "expired", 
+            is_me: false
           },
           {
             avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
@@ -4209,7 +4231,12 @@ function fallback_module() {
             time: '1 hr',
             unread: 5,
             online: false,
-            lightining: false
+            lightining: false,
+            code: "1FfmbHfn...455p",
+            amount: 0.0054,
+            date: "25 June 2025",
+            status: "expired", 
+            is_me: false
           },
           {
             avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
@@ -4218,7 +4245,12 @@ function fallback_module() {
             time: '1 hr',
             unread: 0,
             online: true,
-            lightining: true
+            lightining: true,
+            code: "1FfmbHfn...455p",
+            amount: 0.0054,
+            date: "25 June 2025",
+            status: "expired", 
+            is_me: false
           },
           {
             avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
@@ -4227,7 +4259,12 @@ function fallback_module() {
             time: '2 hr',
             unread: 0,
             online: false,
-            lightining: false
+            lightining: false,
+            code: "1FfmbHfn...455p",
+            amount: 0.0054,
+            date: "25 June 2025",
+            status: "expired", 
+            is_me: false
           }
         ]
       }
@@ -4869,7 +4906,6 @@ async function qr_code(opts = {}) {
 
   async function ondata(data) {
     const {address} = data[0]
-    console.log('QR-Code address:', address)
     await render_qr_code(address)
   }
 
@@ -5283,7 +5319,7 @@ async function req_card (opts = {}) {
   async function ondata (data) {
     let {
       currency = "BTC",
-      amount = 0.0000,
+      amount = 0,
       usdValue: usd_value = 0,
       balance = 0, 
       show_balance = true
@@ -5299,16 +5335,14 @@ async function req_card (opts = {}) {
 
       <div class="main-area"> 
         <div class="amount-row">
-          <input type="number" min="0" step="0.0001" value="${currency === 'BTC' ? amount : usd_value}" class="amount-input" />
+          <input type="number" min="0" step="0.0001" value="0" class="amount-input" data-cleared="0" />
           <div class="actions">
             <button class="close-btn">✕</button>
           </div>
         </div>
         <div class="usd-text">
           You are requesting 
-          <strong>
-            ${currency === 'BTC' ? `USD ${(amount * EXCHANGE_RATE).toFixed(2)}` : `${(usd_value / EXCHANGE_RATE).toFixed(4)} BTC`}
-          </strong>
+          <strong>USD ${(amount * EXCHANGE_RATE).toFixed(2)}</strong>
         </div>
       </div>
     `
@@ -5319,10 +5353,11 @@ async function req_card (opts = {}) {
     const usd_text = container.querySelector('.usd-text strong')
     const close_btn = container.querySelector('.close-btn')
     const toggles = container.querySelectorAll('.toggle')
-    
 
     function update_display(value, curr) {
       amount_input.value = value
+      amount_input.dataset.cleared = "0" // reset wipe flag
+
       usd_text.textContent = curr === 'BTC'
         ? `USD ${usd_value}`
         : `${amount} BTC`
@@ -5348,56 +5383,42 @@ async function req_card (opts = {}) {
     function on_close_click() {
       amount = 0
       usd_value = 0
-      update_display(currency === 'BTC' ? amount : usd_value, currency)
-      showError("")
+      update_display("0", currency)
     }
 
+    // --------- UPDATED INPUT HANDLER ---------
     function on_amount_input() {
-      let val = amount_input.value;
+      let val = amount_input.value
 
-      if (val < 0) val = '';
-
-      if (val === "" || isNaN(val)) {
-        val = "0";
+      // wipe field on FIRST keypress
+      if (amount_input.dataset.cleared === "0" && val !== "0") {
+        val = val.slice(-1) // keep only the newest typed digit
+        amount_input.value = val
+        amount_input.dataset.cleared = "1"
       }
 
-      if (val.includes('.')) {
-        let [int_part, dec_part] = val.split('.');
-        if (currency === 'BTC') {
-          int_part = int_part.slice(0, 5); // Limited to 99,999 BTC
-          dec_part = dec_part.slice(0, 8);  // Lowest denomination is 0.00000001 BTC
-        } else {
-          int_part = int_part.slice(0, 10); // Limited to 1 billion USD
-          dec_part = dec_part.slice(0, 1); // Lowest denomination is 0.1 USD
-        }
-        val = int_part + (dec_part ? '.' + dec_part : '');
-      }else {
-        if (currency === 'BTC') {
-          val = val.slice(0, 5);
-        } else {
-          val = val.slice(0, 10);
-        }
+      // remove leading zeros like 07 → 7
+      if (val.length > 1 && val.startsWith("0") && !val.startsWith("0.")) {
+        val = val.replace(/^0+/, "")
+        amount_input.value = val
       }
+
+      if (val === "" || isNaN(val)) val = "0"
 
       if (currency === 'BTC') {
-        amount = parseFloat(val) || 0;
-        usd_value = (amount * EXCHANGE_RATE).toFixed(2);
+        amount = parseFloat(val) || 0
+        usd_value = (amount * EXCHANGE_RATE).toFixed(2)
       } else {
-        usd_value = parseFloat(val) || 0;
-        amount = +(usd_value / EXCHANGE_RATE).toFixed(8); 
-      }
-
-      if (amount > balance) {
-        showError("Insufficient balance, please add funds to your account");
-      } else {
-        showError("");
+        usd_value = parseFloat(val) || 0
+        amount = +(usd_value / EXCHANGE_RATE).toFixed(8)
       }
 
       usd_text.textContent = currency === 'BTC'
         ? `USD ${usd_value}`
-        : `${amount.toFixed(8)} BTC`;
+        : `${amount.toFixed(8)} BTC`
     }
 
+    // --------- EVENT BINDING ---------
     btc_toggle.onclick = on_toggle_btc
     usd_toggle.onclick = on_toggle_usd
     close_btn.onclick = on_close_click
@@ -5478,16 +5499,6 @@ function fallback_module () {
                 flex-shrink: 0;
               }
 
-              .btn {
-                border: none;
-                background: #000;
-                color: #fff;
-                padding: 3px 8px;
-                font-size: 12px;
-                cursor: pointer;
-                border-radius: 3px;
-              }
-
               .close-btn {
                 background: #000;
                 border: none;
@@ -5503,25 +5514,6 @@ function fallback_module () {
                 padding: 0;
               }
 
-              .divider {
-                width: 100%;
-                height: 1px;
-                background-color: #000; 
-                margin: 2px 0; 
-              }
-
-              .error {
-                color: #666; /* same as balance text */
-                font-size: 13px;
-                padding-block: 6px;
-              }
-
-              .balance {
-                font-size: 12px;
-                color: #666;
-                padding-bottom:10px;
-              }
-          
               .usd-text {
                 font-size: 14px;
                 margin-top: auto;
@@ -5530,15 +5522,12 @@ function fallback_module () {
           }
         },
         'data/': {
-          'opts.json': {
-            raw: opts
-          },
+          'opts.json': { raw: opts },
         }
       }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/req_card/req_card.js")
 },{"STATE":1,"btc_usd_rate":8}],37:[function(require,module,exports){
 (function (__filename){(function (){
@@ -5577,7 +5566,11 @@ async function request_btc(opts = {}) {
         <div class="x-icon"></div>
       </div>
       <div class="btc-input-card"></div>
-      <div class="divider"></div>
+      <div class="divider">
+        <div class="sub-divider"></div>
+        <div>Or</div>
+        <div class="sub-divider"></div>
+      </div>
       <div class="templates-heading">Use Templates</div>
       <div class="template1"></div>
       <div class="template2"></div>
@@ -5777,7 +5770,11 @@ async function request_light(opts = {}) {
       <div class="btc-input-card"></div>
       <div class="extra-input1"></div>
       <div class="extra-input2"></div>
-      <div class="divider"></div>
+      <div class="divider">
+        <div class="sub-divider"></div>
+        <div>Or</div>
+        <div class="sub-divider"></div>
+      </div>
       <div class="templates-heading">Use Templates</div>
       <div class="template1"></div>
       <div class="template2"></div>
@@ -6117,7 +6114,11 @@ async function send_btc(opts = {}) {
         <div class="x-icon"></div>
       </div>
       <div class="btc-input-card"></div>
-      <div class="divider"></div>
+      <div class="divider">
+        <div class="sub-divider"></div>
+        <div>Or</div>
+        <div class="sub-divider"></div>
+      </div>      
       <div class="templates-heading">Use Templates</div>
       <div class="template1"></div>
       <div class="template2"></div>
@@ -6883,7 +6884,6 @@ async function switch_account (opts = {}, protocol) {
     const btc_container = content.querySelector('.btc-container')
     if (btc_container) {
       btc_container.onclick = () => {
-        console.log('BTC clicked')
         if (send) send({ type: 'switch', data: 'btc' })
       }
     }
@@ -6892,7 +6892,6 @@ async function switch_account (opts = {}, protocol) {
     const lightning_container = content.querySelector('.lightning-container')
     if (lightning_container) {
       lightning_container.onclick = () => {
-        console.log('Lightning clicked')
         if (send) send({ type: 'switch', data: 'lightning' })
       }
     }
@@ -6958,13 +6957,11 @@ async function switch_request(opts = {}, protocol) {
 
   let dricons = []
   let showSendBtc = false
-  let request_btc_comp = null
-  let req_light_comp = null
 
   shadow.innerHTML = `
     <div class="parent-wrapper">
-      <div class="pop-up"></div>
-
+      <div class="pop-up-btc hidden"></div>
+      <div class="pop-up-light hidden"></div>
       <div class="switch-account-container">
         <div class="account-content"></div>
       </div>
@@ -6974,21 +6971,16 @@ async function switch_request(opts = {}, protocol) {
   `
 
   const popup = shadow.querySelector('.pop-up')
-  const container = shadow.querySelector('.switch-account-container')
   const content = shadow.querySelector('.account-content')
   const style = shadow.querySelector('style')
 
-  popup.style.display = "none"
-
-  // ONLY ONE SUBS EVER
   const subs = await sdb.watch(onbatch)
 
-  // Build send_btc ONE time
-  request_btc_comp = await request_btc(subs[0])
-  request_btc_comp.classList.add("request-btc")
+  const req_btc_comp = await request_btc(subs[0])
+  const req_light_comp = await request_light(subs[1])
 
-  req_light_comp = await request_light(subs[1])
-  req_light_comp.classList.add("create-invoice")
+  shadow.querySelector('.pop-up-btc').prepend(req_btc_comp)
+  shadow.querySelector('.pop-up-light').prepend(req_light_comp)
 
   return el
 
@@ -7007,7 +6999,6 @@ async function switch_request(opts = {}, protocol) {
   async function ondata(data) {
     const { btc, lightning } = data[0] || {}
 
-    // If popup is open (send_btc visible), do NOT overwrite BTC/Lightning UI
     if (showSendBtc) return
 
     content.innerHTML = `
@@ -7020,46 +7011,36 @@ async function switch_request(opts = {}, protocol) {
       </div>
     `
 
-    // BTC CLICK → toggle popup visibility
-    content.querySelector('.btc-container').onclick = () => {
-      toggle_btc_request()
-    }
-
-    content.querySelector('.lightning-container').onclick = () => {
-      toggle_light_request()
-    }
+    content.querySelector('.btc-container').onclick = toggle_btc_request
+    content.querySelector('.lightning-container').onclick = toggle_light_request
   }
 
-  // Toggle open/close of send_btc
+
+  function openPopup(component) {
+    showSendBtc = true
+    popup.classList.remove("hidden")
+    popup.style.display = "flex"
+
+    popup.innerHTML = ""
+    popup.appendChild(component)
+  }
+
+  function closePopup() {
+    showSendBtc = false
+    popup.classList.add("hidden")
+    popup.style.display = "none"
+    popup.innerHTML = ""
+  }
+
+  // Called by your BTC/Lightning icons
   function toggle_btc_request() {
-    showSendBtc = !showSendBtc
-    popup.classList.remove('hidden')
-
-    if (showSendBtc) {
-      popup.innerHTML = ""
-      popup.appendChild(request_btc_comp)
-      popup.style.display = "flex"
-
-    } else {
-      popup.style.display = "none"
-      popup.innerHTML = ""
-    }
+    if (showSendBtc) return closePopup()
+    openPopup(req_btc_comp)
   }
 
-   // Toggle open/close of send_btc
   function toggle_light_request() {
-    showSendBtc = !showSendBtc
-    popup.classList.remove('hidden')
-
-    if (showSendBtc) {
-      popup.innerHTML = ""
-      popup.appendChild(req_light_comp)
-      popup.style.display = "flex"
-
-    } else {
-      popup.style.display = "none"
-      popup.innerHTML = ""
-    }
+    if (showSendBtc) return closePopup()
+    openPopup(req_light_comp)
   }
 
   function iconject(data) {
@@ -7167,7 +7148,7 @@ async function switch_send(opts = {}, protocol) {
   send_btc_comp = await send_btc(subs[0])
   send_btc_comp.classList.add("send-btc")
 
-  pending_req_comp = await pending_request(subs[1])
+  const pending_req_comp = await pending_request(subs[1])
   pending_req_comp.classList.add("pending-requests")
 
   return el
@@ -7600,7 +7581,6 @@ async function transaction_history (opts = {}) {
   
 
   const grouped = {}
-  console.log("test",sdb)
 
   // const sub_drive = sdb.get(subs[0].sid)
   // console.log('sub_drive', sub_drive.list('style/'))
@@ -7885,7 +7865,6 @@ function fallback_module () {
     }
     opts.value.forEach((transaction, index) => {
       transaction_row[index] = transaction
-      console.log("Transaction Row:", transaction)
     })
     return {
       drive: {
@@ -9374,10 +9353,8 @@ const statedb = STATE(__filename)
 statedb.admin()
 const { sdb, get } = statedb(fallback_module)
 
-const contacts_list = require('../src/node_modules/contacts_list')
 const transaction_history = require('../src/node_modules/transaction_history')
 const chat_view = require('../src/node_modules/chat_view')
-const switch_account = require('../src/node_modules/switch_account')
 const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
 const send_invoice_modal = require('../src/node_modules/send_invoice_modal')
@@ -9385,14 +9362,7 @@ const btc_nodes = require('../src/node_modules/btc_nodes')
 const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
 const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
 const light_transaction_receipt = require('../src/node_modules/light_tx_receipt')
-const add_contact_popup = require('../src/node_modules/add_contact_popup')
-const gen_invite_code = require('../src/node_modules/gen_invite_code')
-const add_new_contact = require('../src/node_modules/add_new_contact')
-const chat_filter = require('../src/node_modules/chat_filter')
-const switch_send = require('../src/node_modules/switch_send')
-const switch_request = require('../src/node_modules/switch_request')
-const pending_request = require('../src/node_modules/pending_request')
-const btc_req_msg = require('../src/node_modules/btc_req_msg')
+
 
 document.title = 'flamingo wallet'
 document.head.querySelector('link').setAttribute('href', 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🦩</text></svg>')
@@ -9434,33 +9404,22 @@ function onbatch (batch) {
   }
 }
 
-console.log(" Before main()")
 
 async function main () {
   console.log(" main() started")
 
   const subs = await sdb.watch(onbatch)
-  console.log("Subscriptions received:", subs)
 
   const home_page_component = await home_page(subs[0], protocol)
-  const pending_request_component = await pending_request(subs[2], protocol)
+  const btc_nodes_component = await btc_nodes(subs[2], protocol)
   const transaction_history_component = await transaction_history(subs[4], protocol)
-  const contacts_list_component = await contacts_list(subs[6], protocol)
+  const light_transaction_receipt_component = await light_transaction_receipt(subs[6], protocol)
   const chat_view_compoent = await chat_view(subs[8],protocol)
-  const switch_account_component = await switch_account(subs[10], protocol)
-  const add_new_contact_component = await add_new_contact(subs[12], protocol)
-  const chat_filter_component = await chat_filter(subs[14], protocol)
+  const create_invoice_confirmation_component = await create_invoice_confirmation(subs[10], protocol)
+  const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[12], protocol)
+  const send_invoice_modal_component = await send_invoice_modal(subs[14], protocol)
   const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
-  const btc_nodes_component = await btc_nodes(subs[18], protocol)
-  const switch_request_component = await switch_request(subs[20], protocol)
-  const switch_send_component = await switch_send(subs[22], protocol)
-  const btc_req_msg_component = await btc_req_msg(subs[24], protocol)
-  const send_invoice_modal_component = await send_invoice_modal(subs[26], protocol)
-  const create_invoice_confirmation_component = await create_invoice_confirmation(subs[28], protocol)
-  const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[30], protocol)
-  const light_transaction_receipt_component = await light_transaction_receipt(subs[32], protocol)
-  const add_contact_popup_component = await add_contact_popup(subs[34], protocol)
-  const gen_invite_code_component = await gen_invite_code(subs[36], protocol)
+
  
 
   const page = document.createElement('div')
@@ -9491,46 +9450,6 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">lightning transaction Receipt</div>  
         <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="light-transaction-receipt-container"></div> 
       </div> 
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Pending Request</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pending-request-container"></div> 
-      </div> 
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Contact list</div>  
-        <div id="contacts-list-container" ></div>  
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Switch Request</div>  
-        <div id="switch-request-container"></div>
-      </div>
-          <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Switch Send</div>  
-        <div id="switch-send-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">BTC Req Msg</div>  
-        <div id="btc-req-msg-container" style="background: white; padding:20px; border-radius:10px;"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Add Contact Popup</div>  
-        <div id="add-contact-popup-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Generate invite code</div>  
-        <div id="gen-invite-code-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Add new contact</div>  
-        <div id="add-new-contact-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Chat Filter</div>  
-        <div id="chat-filter-container"></div>
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Switch Account</div>  
-        <div id="switch-account-container"></div>
-      </div>
       <div id="transaction-receipt-container"></div>
       <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
         <div class="component-label" style="padding-bottom:10px;">btc nodes</div>  
@@ -9541,22 +9460,12 @@ async function main () {
   page.querySelector('#home-page-container').appendChild(home_page_component)
   page.querySelector('#send-to-container').appendChild(send_invoice_modal_component)
   page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
-  page.querySelector('#contacts-list-container').appendChild(contacts_list_component)
   page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
-  page.querySelector('#switch-account-container').appendChild(switch_account_component)
   page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
   page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
-  page.querySelector('#btc-req-msg-container').appendChild(btc_req_msg_component)
   page.querySelector('#create-invoice-confirmation-container').appendChild(create_invoice_confirmation_component)
   page.querySelector('#pay-invoice-confirmation-container').appendChild(pay_invoice_confirmation_component)
   page.querySelector('#light-transaction-receipt-container').appendChild(light_transaction_receipt_component)
-  page.querySelector('#add-contact-popup-container').appendChild(add_contact_popup_component)
-  page.querySelector('#gen-invite-code-container').appendChild(gen_invite_code_component)
-  page.querySelector('#add-new-contact-container').appendChild(add_new_contact_component)
-  page.querySelector('#chat-filter-container').appendChild(chat_filter_component)
-  page.querySelector('#switch-request-container').appendChild(switch_request_component)
-  page.querySelector('#switch-send-container').appendChild(switch_send_component)
-  page.querySelector('#pending-request-container').appendChild(pending_request_component)
 
 
   document.body.append(page)
@@ -9574,6 +9483,7 @@ function fallback_module () {
       icons: {}
     },
     _: {
+      
       '../src/node_modules/home_page': {
         $: '',
         0: '',
@@ -9582,16 +9492,9 @@ function fallback_module () {
             data: 'data'
           }
         },
-          '../src/node_modules/pending_request': {
+     '../src/node_modules/btc_nodes': {
         $: '',
-        0: {
-          "avatar": "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-          "name": "Mark Kevin",
-          "amount": 0.0019,
-          "date": "25 June 2025",
-          "status": "expired", // or "paid", "expired"
-          "is_me": false
-        },
+        0: '',
         mapping: {
           style: 'style',
           data: 'data',
@@ -9686,56 +9589,27 @@ function fallback_module () {
             data: 'data'
           }
         },
-  
-        '../src/node_modules/contacts_list': {
+        '../src/node_modules/light_tx_receipt': {
           $: '',
           0: {
-            value: [
-              
-              {
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: 'Mark Kevin',
-                message: 'Payment Received successfully',
-                time: '3 hr',
-                unread: 5,
-                online: true,
-                lightining: true
-              },
-              {
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: 'David Clark',
-                message: 'You have a new message from Mark',
-                time: '1 hr',
-                unread: 5,
-                online: false,
-                lightining: false
-              },
-              {
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: 'Sara Ahmed',
-                message: 'Invoice sent',
-                time: '2 hr',
-                unread: 0,
-                online: false,
-                lightining: false
-              },
-              {
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-                name: 'David Clark',
-                message: 'Received funds',
-                time: '1 hr',
-                unread: 0,
-                online: true,
-                lightining: true
-              }
-            ]
-          },
+          value: [
+                { label: "Paid By", value: "Cypher" },
+                { label: "Recipient", value: "Luis fedrick - 1FfmbHfn...455p" },
+                { label: "Label", value: "Work Payment" },
+                { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+                { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+                { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
+                { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
+                { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
+                { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
+              ]
+            },
           mapping: {
             style: 'style',
-            data: 'data'
+            data: 'data',
+            icons: 'icons'
           }
         },
-
         '../src/node_modules/chat_view': {
           $: '',
           0: {
@@ -9754,50 +9628,13 @@ function fallback_module () {
             data: 'data'
           }
         },
-        
-        '../src/node_modules/switch_account': {
-          $: '',
-          0: {
-            btc: 0.9862,
-            lightning: 0.9000
-          },
-          mapping: {
-            style: 'style',
-            data: 'data',
-            icons: 'icons'
-          }
-        },
-
-       '../src/node_modules/add_new_contact': {
-        $: '',
-        0: {},
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      '../src/node_modules/chat_filter': {
-        $: '',
-        0: {},
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-   
-      '../src/node_modules/transaction_receipt': {
+          '../src/node_modules/create_invoice_confirmation': {
         $: '',
         0: {
         value: [
-              { label: "Sent By", value: "Cypher" },
-              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
-              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
-              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
-              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
+              { label: "Label", value: "Work Payment" },
+              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+              { label: "Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
             ]
           },
         mapping: {
@@ -9806,56 +9643,23 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-      '../src/node_modules/btc_nodes': {
-        $: '',
-        0: '',
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      '../src/node_modules/switch_request': {
+      '../src/node_modules/pay_invoice_confirmation': {
         $: '',
         0: {
-          btc: 0.9862,
-          lightning: 0.9000
-        },
+        value: [
+              { label: "Amount", value: "0.0030 BTC", convert: true },
+              { label: "Fee", value: "0.0001 BTC", convert: true },
+              { label: "Recipient Address", value: "7RwmbHfn...455p" },
+              { label: "Processing time", value: "< 5 minutes" },
+              { label: "Total (inc. fee)", value: "0.0031 BTC ",  icon: "lightning.svg", convert: true }
+            ]
+          },
         mapping: {
           style: 'style',
           data: 'data',
           icons: 'icons'
         }
-      },
-      '../src/node_modules/switch_send': {
-        $: '',
-        0: {
-          btc: 0.9862,
-          lightning: 0.9000
-        },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      '../src/node_modules/btc_req_msg': {
-        $: '',
-        0: {
-          "avatar": "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-          "name": "Mark Kevin",
-          "amount": 0.0019,
-          "date": "25 June 2025",
-          "status": "expired", // or "paid", "expired"
-          "is_me": false
-        },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-
+      },   
       '../src/node_modules/send_invoice_modal': {
         $: '',
         0: {
@@ -9903,51 +9707,20 @@ function fallback_module () {
           data: 'data'
         }
       },
-      '../src/node_modules/create_invoice_confirmation': {
+    
+    
+   
+      '../src/node_modules/transaction_receipt': {
         $: '',
         0: {
         value: [
-              { label: "Label", value: "Work Payment" },
-              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
-              { label: "Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
-            ]
-          },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      '../src/node_modules/pay_invoice_confirmation': {
-        $: '',
-        0: {
-        value: [
-              { label: "Amount", value: "0.0030 BTC", convert: true },
-              { label: "Fee", value: "0.0001 BTC", convert: true },
-              { label: "Recipient Address", value: "7RwmbHfn...455p" },
-              { label: "Processing time", value: "< 5 minutes" },
-              { label: "Total (inc. fee)", value: "0.0031 BTC ",  icon: "lightning.svg", convert: true }
-            ]
-          },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      '../src/node_modules/light_tx_receipt': {
-        $: '',
-        0: {
-        value: [
-              { label: "Paid By", value: "Cypher" },
-              { label: "Recipient", value: "Luis fedrick - 1FfmbHfn...455p" },
-              { label: "Label", value: "Work Payment" },
-              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+              { label: "Sent By", value: "Cypher" },
+              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
               { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
+              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
               { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
-              { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
-              { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
+              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
             ]
           },
         mapping: {
@@ -9956,26 +9729,10 @@ function fallback_module () {
           icons: 'icons'
         }
       },
-      '../src/node_modules/add_contact_popup': {
-             $: '',
-        0: '',
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-        '../src/node_modules/gen_invite_code': {
-             $: '',
-        0: {},
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
+      
+      
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/add_contact_popup":3,"../src/node_modules/add_new_contact":4,"../src/node_modules/btc_nodes":6,"../src/node_modules/btc_req_msg":7,"../src/node_modules/chat_filter":10,"../src/node_modules/chat_view":11,"../src/node_modules/contacts_list":14,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/gen_invite_code":18,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/pay_invoice_confirmation":31,"../src/node_modules/pending_request":32,"../src/node_modules/send_invoice_modal":41,"../src/node_modules/switch_account":45,"../src/node_modules/switch_request":46,"../src/node_modules/switch_send":47,"../src/node_modules/transaction_history":50,"../src/node_modules/transaction_receipt":52,"STATE":1}]},{},[56]);
+},{"../src/node_modules/btc_nodes":6,"../src/node_modules/chat_view":11,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/pay_invoice_confirmation":31,"../src/node_modules/send_invoice_modal":41,"../src/node_modules/transaction_history":50,"../src/node_modules/transaction_receipt":52,"STATE":1}]},{},[56]);
