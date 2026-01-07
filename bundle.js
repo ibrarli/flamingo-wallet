@@ -893,7 +893,6 @@ async function btc_nodes (opts = {}, { onClose } = {}) {
   const style = shadow.querySelector('style')
   const container = shadow.querySelector('.nodes-card')
 
-  
   await sdb.watch(onbatch)
 
   return el
