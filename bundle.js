@@ -16,202 +16,136 @@ async function action_buttons(opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata
-  }
-
-  const _ = {
-    send_general: null,
-    receive_general: null
-  }
+  const on = { style: inject, data: ondata }
+  const _ = { send_general: null, receive_general: null }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
     <div class="action-buttons-container">
-        <div class="send-receive-buttons">
-            <div id="send-button-container">
-              <div class="send-dropdown hidden"></div>
-            </div> 
-            <div id="receive-button-container">
-              <div class="receive-dropdown hidden"></div>
-            </div> 
-        </div>
+      <div class="send-receive-buttons">
+        <div id="send-button-container"></div>
+        <div id="receive-button-container"></div>
+      </div>
+      <div class="overlay send-overlay hidden"></div>
+      <div class="overlay receive-overlay hidden"></div>
     </div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const send_dropdown = shadow.querySelector('.send-dropdown')
-  const receive_dropdown = shadow.querySelector('.receive-dropdown')
+  const send_container = shadow.querySelector('#send-button-container')
+  const receive_container = shadow.querySelector('#receive-button-container')
+  const send_overlay = shadow.querySelector('.send-overlay')
+  const receive_overlay = shadow.querySelector('.receive-overlay')
 
   const subs = await sdb.watch(onbatch)
 
-  const sendUp = protocol ? protocol((msgToActionButtons) => {
-    console.log('[action_buttons] message from parent ->', msgToActionButtons)
-  }) : null
+  const sendUp = protocol ? protocol(msg => console.log('[action_buttons]:', msg)) : null
 
-  // Create buttons
-  const send_button = await general_button(subs[0])
+  // -------------------- Buttons --------------------
+  const send_button = await general_button(subs[0], button_protocol('send_general'))
   const receive_button = await general_button(subs[1], button_protocol('receive_general'))
 
-  shadow.querySelector('#send-button-container').prepend(send_button)
-  shadow.querySelector('#receive-button-container').prepend(receive_button)
+  send_container.appendChild(send_button)
+  receive_container.appendChild(receive_button)
 
   send_button._action = 'send_message'
   receive_button._action = 'receive_message'
 
-  let send_el = null
-  let receive_el = null
+  let send_el = null, receive_el = null
 
-  function close_all_dropdowns(except) {
-    if (except !== 'send') send_dropdown.classList.add('hidden')
-    if (except !== 'receive') receive_dropdown.classList.add('hidden')
+  // -------------------- Overlay helpers --------------------
+  function close_all_overlays(except) {
+    if (except !== 'send') send_overlay.classList.add('hidden')
+    if (except !== 'receive') receive_overlay.classList.add('hidden')
   }
 
   function handle_outside_click(event) {
     const target = event.target
-    const clicked_inside_dropdown =
-      send_dropdown.contains(target) ||
-      receive_dropdown.contains(target)
+    const clicked_inside =
+      send_overlay.contains(target) || receive_overlay.contains(target)
     const clicked_button =
-      send_button.contains(target) ||
-      receive_button.contains(target)
+      send_button.contains(target) || receive_button.contains(target)
 
-    if (!clicked_inside_dropdown && !clicked_button) {
-      close_all_dropdowns(null)
-    }
+    if (!clicked_inside && !clicked_button) close_all_overlays(null)
   }
 
   shadow.addEventListener('click', handle_outside_click)
 
-  // -------------------- Dropdown Toggles --------------------
-
-  // Send button
-  send_button.onclick = async (event) => {
-    event.stopPropagation()
+  // -------------------- Button Clicks --------------------
+  send_button.onclick = async (e) => {
+    e.stopPropagation()
     if (send_button._action !== 'send_message') return
-
-    if (!send_dropdown.classList.contains('hidden')) {
-      send_dropdown.classList.add('hidden')
-      return
-    }
-
-    close_all_dropdowns('send')
+    close_all_overlays('send')
 
     if (!send_el) {
-      send_el = await send_btc(subs[2], {
-        onClose: () => send_dropdown.classList.add('hidden')
-      })
-      send_dropdown.appendChild(send_el)
+      send_el = await send_btc(subs[2], { onClose: () => send_overlay.classList.add('hidden') })
+      send_overlay.appendChild(send_el)
     }
 
-    send_dropdown.classList.remove('hidden')
+    send_overlay.classList.remove('hidden')
+    sendUp?.({ from: 'action_buttons', type: 'send', data: null })
   }
 
-  // Receive button
-  receive_button.onclick = async (event) => {
-    event.stopPropagation()
+  receive_button.onclick = async (e) => {
+    e.stopPropagation()
     if (receive_button._action !== 'receive_message') return
-
-    if (!receive_dropdown.classList.contains('hidden')) {
-      receive_dropdown.classList.add('hidden')
-      return
-    }
-
-    close_all_dropdowns('receive')
+    close_all_overlays('receive')
 
     if (!receive_el) {
-      receive_el = await receive_btc(subs[3], {
-        onClose: () => receive_dropdown.classList.add('hidden')
-      })
-      receive_dropdown.appendChild(receive_el)
+      receive_el = await receive_btc(subs[3], { onClose: () => receive_overlay.classList.add('hidden') })
+      receive_overlay.appendChild(receive_el)
     }
 
-    receive_dropdown.classList.remove('hidden')
+    receive_overlay.classList.remove('hidden')
+    sendUp?.({ from: 'action_buttons', type: 'receive', data: null })
   }
 
   // -------------------- Initial Config --------------------
-
-  _.send_general?.({
-    type: 'button_name',
-    data: { name: 'Send', action: 'send_message' }
-  })
-
-  _.receive_general?.({
-    type: 'button_name',
-    data: { name: 'Receive', action: 'receive_message' }
-  })
+  _.send_general?.({ type: 'button_name', data: { name: 'Send', action: 'send_message' } })
+  _.receive_general?.({ type: 'button_name', data: { name: 'Receive', action: 'receive_message' } })
 
   return el
 
-  // ------------------------- Helpers -------------------------
-
-  function fail(data, type) {
-    throw new Error('Invalid message type', { cause: { data, type } })
-  }
-
+  // -------------------- Helpers --------------------
+  function fail(data, type) { throw new Error('Invalid message type', { cause: { data, type } }) }
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
       const handler = on[type] || fail
       handler(data, type)
     }
   }
-
-  function inject(data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata(data) {
-    const buttonData = data[0]?.value || {}
-  }
-
-  function button_protocol(key) {
-    return send => {
-      _[key] = send
-      return send
-    }
-  }
-
-  // Action handlers
-  function send_message(data, type) {
-  }
-
-  function receive_message(data, type) {
-  }
+  function inject(data) { style.textContent = data[0] }
+  async function ondata(data) { const buttonData = data[0]?.value || {} }
+  function button_protocol(key) { return send => { _[key] = send; return send } }
 }
 
-// ============ Fallback Setup for STATE ============
+// -------------------- Fallback for STATE --------------------
 function fallback_module() {
   return {
     api,
-    _: {
-      'general_button': { $: '' },
-      'send_btc': { $: '' },
-      'receive_btc': { $: '' }
-    }
+    _: { 'general_button': { $: '' }, 'send_btc': { $: '' }, 'receive_btc': { $: '' } }
   }
 
-  function api(opts) {
-    const general_button = {
-      mapping: { style: 'style', data: 'data' },
-      0: {}, // send button
-      1: {}  // receive button
-    }
-
+  function api(opts = {}) {
+    const general_button = { mapping: { style: 'style', data: 'data' }, 0: {}, 1: {} }
     const send_btc = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: '' }
     const receive_btc = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 3: '' }
 
-    return { drive: { 'style/': { 'action_buttons.css': { '$ref': 'action_buttons.css' } } }, _: { general_button, send_btc, receive_btc } }
+    return {
+      drive: {
+        'style/': { 'action_buttons.css': { '$ref': 'action_buttons.css' } },
+        'data/': { 'opts.json': { raw: opts } }
+      },
+      _: { general_button, send_btc, receive_btc }
+    }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/action_buttons/action_buttons.js")
-},{"STATE":1,"general_button":19,"receive_btc":35,"send_btc":40}],3:[function(require,module,exports){
+},{"STATE":1,"general_button":18,"receive_btc":36,"send_btc":41}],3:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -403,7 +337,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/add_contact_popup/add_contact_popup.js")
-},{"STATE":1,"add_new_contact":4,"gen_invite_code":18}],4:[function(require,module,exports){
+},{"STATE":1,"add_new_contact":4,"gen_invite_code":17}],4:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -569,7 +503,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/add_new_contact/add_new_contact.js")
-},{"STATE":1,"button":9,"input_field":23}],5:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":22}],5:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -798,6 +732,8 @@ function fallback_module () {
     api: fallback_instance,
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
         'style/': {
@@ -919,7 +855,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           },
         }
       }
@@ -935,7 +871,7 @@ const { sdb, get } = statedb(fallback_module)
 
 module.exports = btc_nodes
 
-async function btc_nodes (opts = {}) {
+async function btc_nodes (opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -957,6 +893,7 @@ async function btc_nodes (opts = {}) {
   const style = shadow.querySelector('style')
   const container = shadow.querySelector('.nodes-card')
 
+  
   await sdb.watch(onbatch)
 
   return el
@@ -1016,9 +953,9 @@ async function ondata (data) {
   }
 
   const closeBtn = container.querySelector('.close-btn')
-  closeBtn.onclick = () => { container.innerHTML = "" }
-}
-
+  closeBtn.addEventListener('click', () => {
+      if (onClose) onClose()
+    })}
 }
 
 function fallback_module () {
@@ -1158,6 +1095,8 @@ function fallback_module() {
   }
 
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
         'icons/': {
@@ -1171,7 +1110,7 @@ function fallback_module() {
           }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {}}
         }
       }
     }
@@ -1262,6 +1201,8 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
       
@@ -1291,7 +1232,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -1449,6 +1390,8 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
        'icons/': {
@@ -1461,7 +1404,7 @@ function fallback_module () {
           'chat_filter.css': { '$ref': 'chat_filter.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       },
     }
@@ -1474,36 +1417,45 @@ const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
-const chat_view_header = require('chat_view_header')
 const button = require('button')
 const btc_req_msg = require('btc_req_msg')
 const switch_request = require('switch_request')
 const switch_send = require('switch_send')
+const chat_filter = require('chat_filter')
 
 module.exports = chat_view
 
-async function chat_view(opts = {}) {
+async function chat_view(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
   const on = {
     style: inject,
-    data: ondata
+    data: ondata,
+    icons: iconject,
   }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
+  let dricons = []
+
   shadow.innerHTML = `
-    <div class="component-label">Chat View</div>
     <div class="chat-view-container">
       <div class="chat-view">
         <div class="chat-view-header"></div>
+        <div class="chat_filter_panel"></div>
         <div class="chat-messages"></div>
       </div>
       <div class="buttons">
-        <div class="request-button"></div>
-        <div class="send-button"></div>
+        <div class="request">       
+          <div class="popup-box-request"></div>
+          <div class="request-button"></div>
+        </div>
+        <div class="send">       
+          <div class="popup-box-send"></div>
+          <div class="send-button"></div>
+        </div>
       </div>
     </div>
     <style></style>
@@ -1511,16 +1463,19 @@ async function chat_view(opts = {}) {
 
   const style = shadow.querySelector('style')
 
+  const chat_view_container = shadow.querySelector('.chat-view-container')
   const header_component = shadow.querySelector('.chat-view-header')
   const send_button_component = shadow.querySelector('.send-button')
   const request_button_component = shadow.querySelector('.request-button')
   const messages_component = shadow.querySelector('.chat-messages')
   const buttons_container = shadow.querySelector('.buttons')
-
+  const filter_panel = shadow.querySelector('.chat_filter_panel')
+  const popup_box_request = shadow.querySelector('.popup-box-request')
+  const popup_box_send = shadow.querySelector('.popup-box-send')
   
   const subs = await sdb.watch(onbatch)
 
-  const header = await chat_view_header(subs[0])
+  const chat_filter_component = await chat_filter(subs[0])
   const send_button = await button(subs[1])
   const request_button = await button(subs[2])
   const switch_request_component = await switch_request(subs[3])
@@ -1531,22 +1486,16 @@ async function chat_view(opts = {}) {
 
   send_button_component.replaceWith(send_button)
   request_button_component.replaceWith(request_button)
-  header_component.append(header)
   messages_component.appendChild(btc_req_msg1_component)
   messages_component.appendChild(btc_req_msg2_component)
   messages_component.appendChild(btc_req_msg3_component)
+  filter_panel.appendChild(chat_filter_component)
+  filter_panel.style.display = "none"
 
-  // POPUPS ABOVE BUTTONS
-  const send_popup = document.createElement('div')
-  send_popup.className = 'popup-box-send'
-  send_popup.append(switch_send_component)
 
-  const request_popup = document.createElement('div')
-  request_popup.className = 'popup-box-request'
-  request_popup.appendChild(switch_request_component)
+  popup_box_send.appendChild(switch_send_component)
+  popup_box_request.appendChild(switch_request_component)
 
-  buttons_container.parentNode.insertBefore(send_popup, buttons_container)
-  buttons_container.parentNode.insertBefore(request_popup, buttons_container) 
 
   let openPopup = null
 
@@ -1563,12 +1512,12 @@ async function chat_view(opts = {}) {
     openPopup = target
   }
 
-  send_button.addEventListener('click', () => togglePopup(send_popup))
-  request_button.addEventListener('click', () => togglePopup(request_popup))
+  send_button.addEventListener('click', () => togglePopup(popup_box_send))
+  request_button.addEventListener('click', () => togglePopup(popup_box_request))
 
   shadow.addEventListener('click', (e) => {
-    if (!send_popup.contains(e.target) &&
-        !request_popup.contains(e.target) &&
+    if (!popup_box_send.contains(e.target) &&
+        !popup_box_request.contains(e.target) &&
         e.target !== send_button &&
         e.target !== request_button) 
     {
@@ -1586,7 +1535,7 @@ async function chat_view(opts = {}) {
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
       const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
+        paths.map(path => drive.get(path).then(f => f.raw))
       )
       const func = on[type] || fail
       await func(data, type)
@@ -1597,14 +1546,56 @@ async function chat_view(opts = {}) {
     style.textContent = data[0]
   }
 
-  async function ondata(data) {}
+  async function ondata(data) {
+    const { avatar, name, code } = data[0] || {}
+    
+    header_component.innerHTML = `
+      <div class="container-view-header">
+        <div class="container-left">
+          <div class="left-icon">
+            ${dricons[0] || ''}
+          </div>
+
+          <div class="contact-heading">
+            <div class="contact-avatar">
+              <img src="${avatar}" alt="avatar" />
+            </div>
+            <div class="contact-info">
+              <div class="contact-name">${name}</div>
+              <div class="contact-code">${code}</div>
+            </div>
+          </div>
+        </div>
+        <div class="right-icon">
+          ${dricons[1] || ''}
+        </div>
+      </div>
+    `
+
+    const right_icon = header_component.querySelector('.right-icon')
+    right_icon.addEventListener('click', () => {
+      const visible = filter_panel.style.display === "block"
+      filter_panel.style.display = visible ? "none" : "block"
+    })
+
+    const left_icon = header_component.querySelector('.left-icon')
+    
+    // hide overlay on close
+    left_icon.addEventListener('click', () => {
+      if (onClose) onClose()
+    })
+  }
+
+  function iconject (data) {
+    dricons = data
+  }
 }
 
 function fallback_module() {
   return {
     api,
     _: {
-      'chat_view_header': { $: '' },
+      'chat_filter': { $: '' },
       'button': { $: '' },
       'btc_req_msg': { $: '' },
       'switch_request': { $: '' },
@@ -1613,10 +1604,12 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
 
-    const chat_view_header = {
+    const chat_filter = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
-      0: opts.value
+      0: {}
     }
 
     const button = {
@@ -1638,22 +1631,50 @@ function fallback_module() {
     // BTC messages with separate statuses
     const btc_req_msg = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
-      5: { ...opts.value },
-      6: { ...opts.value, date: "25 Dec 2025", status: 'paid' },
-      7: { ...opts.value, date: "10 Mar 2026", status: 'send' }
+      5: { ...opts.value, 
+        date: "25 Dec 2026",
+        avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+        name: 'David Clark',
+        amount: 0.0054,
+        status: "send", 
+        is_me: false
+      },
+      6: { ...opts.value,    
+        date: "25 Sep 2025",
+        avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+        name: 'David Clark',
+        amount: 0.0052,
+        status: "paid", 
+        is_me: false},
+      7: { ...opts.value, 
+        date: "25 Dec 2027",
+        avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+        name: 'David Clark',
+        amount: 0.0054,
+        status: "paid", 
+        is_me: false
+       }
     }
 
     return {
       drive: {
+        'icons/': {
+          'left-arrow.svg': {
+            '$ref': 'left-arrow.svg'
+          },
+          'three-dot.svg':{
+            '$ref': 'three-dot.svg'
+          }
+        },
         'style/': {
           'chat_view.css': { '$ref': 'chat_view.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts.value || {} }
         }
       },
       _: {
-        chat_view_header,
+        chat_filter,
         button,
         switch_request,
         switch_send,
@@ -1664,147 +1685,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/chat_view/chat_view.js")
-},{"STATE":1,"btc_req_msg":7,"button":9,"chat_view_header":12,"switch_request":46,"switch_send":47}],12:[function(require,module,exports){
-(function (__filename){(function (){
-const STATE = require('STATE')
-const statedb = STATE(__filename)
-const { sdb, get } = statedb(fallback_module)
-
-const chat_filter = require('chat_filter')
-
-module.exports = chat_view_header
-
-async function chat_view_header (opts = {}) {
-  const { id, sdb } = await get(opts.sid)
-  const { drive } = sdb
-  
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
-
-  }
-
-  const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
-
-  shadow.innerHTML = `
-    <div class="chat_view_header"></div>
-    <div class="chat_filter_panel"></div>
-    <style></style>
-  `
-  const style = shadow.querySelector('style')
-  const row = shadow.querySelector('.chat_view_header')
-  const filter_panel = shadow.querySelector('.chat_filter_panel')
-  
-  
-  let dricons = []
-  const subs = await sdb.watch(onbatch)
-  
-  const chat_filter_component = await chat_filter(subs[0])
-  filter_panel.appendChild(chat_filter_component)
-  filter_panel.style.display = "none"
-
-  return el
-
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  async function onbatch (batch) {
-    for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
-      const func = on[type] || fail
-      await func(data, type)
-    }
-  }
-
-  function inject (data) {
-    style.textContent = data[0]
-  }
-
-  async function ondata(data) {
-  const { avatar, name, code } = data[0]
-  row.innerHTML = `
-    <div class="container-view-header">
-      <div class="container-left">
-        <div class="left-icon">
-          ${dricons[0] || ''}
-        </div>
-
-        <div class="contact-heading">
-          <div class="contact-avatar">
-            <img src="${avatar}" alt="avatar" />
-          </div>
-          <div class="contact-info">
-            <div class="contact-name">${name}</div>
-            <div class="contact-code">${code}</div>
-          </div>
-        </div>
-      </div>
-      <div class="right-icon">
-        ${dricons[1] || ''}
-      </div>
-    </div>
-  `
-
-  const right_icon = row.querySelector('.right-icon')
-  right_icon.addEventListener('click', () => {
-    const visible = filter_panel.style.display === "block"
-    filter_panel.style.display = visible ? "none" : "block"
-  })
-}
-
-   function iconject (data) {
-    dricons = data
-  }
-}
-
-
-function fallback_module () {
-  return {
-    api: fallback_instance,
-    _: {
-      'chat_filter': { $: '' },
-    } 
-  }
-  function fallback_instance (opts) {
-    const chat_filter = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0: {      }
-    }
-    return {
-        drive: {
-          'icons/': {
-            'left-arrow.svg': {
-              '$ref': 'left-arrow.svg'
-            },
-            'three-dot.svg':{
-              '$ref': 'three-dot.svg'
-            }
-          },
-          'style/': {
-          'chat_view_header.css': { '$ref': 'chat_view_header.css' }
-          },
-          'data/': {
-            'opts.json': {
-              raw: opts
-            }
-          }
-        },
-        _: { chat_filter }
-    }
-  }
-}
-
-}).call(this)}).call(this,"/src/node_modules/chat_view_header/chat_view_header.js")
-},{"STATE":1,"chat_filter":10}],13:[function(require,module,exports){
+},{"STATE":1,"btc_req_msg":7,"button":9,"chat_filter":10,"switch_request":47,"switch_send":48}],12:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1825,25 +1706,38 @@ async function contact_row(opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="contact-row"></div>
-    <div class="chat-view"></div>
+
+    <div class="chat-overlay hidden">
+      <div class="chat-body"></div>
+    </div>
 
     <style></style>
   `
+
   const style = shadow.querySelector('style')
   const row = shadow.querySelector('.contact-row')
-  const chat_view_container = shadow.querySelector('.chat-view')
+  const overlay = shadow.querySelector('.chat-overlay')
+  const chat_body = shadow.querySelector('.chat-body')
 
   let dricons = []
+  let chatMounted = false
 
   const sendToParent = msg => protocol?.(msg)
 
-  const subs =  await sdb.watch(onbatch)
+  const subs = await sdb.watch(onbatch)
 
-  const chat_view_comp = await chat_view(subs[0])
-  
-  chat_view_container.append(chat_view_comp)
+  // click → open chat
+  row.addEventListener('click', async () => {
+    overlay.classList.remove('hidden')
 
-  
+    if (!chatMounted) {
+      const chat_view_comp = await chat_view(subs[0], {
+        onClose: () => overlay.classList.add('hidden')
+      })
+      chat_body.append(chat_view_comp)
+      chatMounted = true
+    }
+  })
 
   return el
 
@@ -1853,41 +1747,50 @@ async function contact_row(opts = {}, protocol) {
 
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(f => f.raw))
+      )
       const func = on[type] || fail
       await func(data, type)
     }
   }
 
-  function inject(data) { style.textContent = data[0] }
+  function inject(data) {
+    style.textContent = data[0]
+  }
 
   async function ondata(data) {
     const { avatar, name, message, time, unread, online, lightining } = data[0] || {}
-
+    console.log('contact row data', data[0])
     row.innerHTML = `
       <div class="contact-left">
-          <div class="contact-avatar">
-            <img src="${avatar || ''}" alt="avatar" />
-            ${online ? '<div class="online-dot"></div>' : ''}
+        <div class="contact-avatar">
+          <img src="${avatar || ''}" />
+          ${online ? '<div class="online-dot"></div>' : ''}
+        </div>
+        <div class="contact-info">
+          <div class="contact-name">${name || ''}</div>
+          <div class="contact-message ${unread > 0 ? 'unread-message' : ''}">
+            ${message || ''}
           </div>
-          <div class="contact-info">
-            <div class="contact-name">${name || ''}</div>
-            <div class="contact-message ${unread > 0 ? 'unread-message' : ''}">${message || ''}</div>       
         </div>
       </div>
+
       <div class="contact-right">
         <div class="contact-time">${time || ''}</div>
-        <div class="icon-wrapper  ${!lightining ? 'no-lightning' : ''}">
+        <div class="icon-wrapper ${!lightining ? 'no-lightning' : ''}">
           ${lightining && dricons[0] ? dricons[0] : ''}
           ${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}
         </div>
-      </div>` 
+      </div>
+    `
 
-    // Notify parent with contact name
     sendToParent({ type: 'contact-name', name: name || '' })
   }
 
-  function iconject(data) { dricons = data }
+  function iconject(data) {
+    dricons = data
+  }
 }
 
 function fallback_module () {
@@ -1898,6 +1801,9 @@ return {
   }
 }
 function fallback_instance (opts) {
+  if (!opts) opts = {}
+  if (!opts.value) opts.value = {}
+
   const chat_view = {
     mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: opts.value,
@@ -1916,7 +1822,7 @@ function fallback_instance (opts) {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -1928,7 +1834,7 @@ function fallback_instance (opts) {
 }
 
 }).call(this)}).call(this,"/src/node_modules/contact_row/contact_row.js")
-},{"STATE":1,"chat_view":11}],14:[function(require,module,exports){
+},{"STATE":1,"chat_view":11}],13:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -1964,6 +1870,10 @@ async function contacts_list(opts = {}) {
   const top_bar = shadow.querySelector('.top-bar')
   const contact_list_container = shadow.querySelector('.contact-list-container')
   const style = shadow.querySelector('style')
+
+  el.style.position = 'relative'
+  el.style.width = '100%'
+  el.style.height = '100%'
 
   const subs = await sdb.watch(onbatch)
 
@@ -2071,14 +1981,14 @@ function fallback_module() {
     return {
       drive: {
         'style/': { 'style.css': { '$ref': 'contacts_list.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { search_bar, square_button, add_contact_popup, contact_row }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/contacts_list/contacts_list.js")
-},{"STATE":1,"add_contact_popup":3,"contact_row":13,"search_bar":39,"square_button":44}],15:[function(require,module,exports){
+},{"STATE":1,"add_contact_popup":3,"contact_row":12,"search_bar":40,"square_button":45}],14:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2088,6 +1998,7 @@ const create_button = require('button')
 const btc_input_card = require('btc_input_card')
 const input_field = require('input_field')
 const templates = require('templates')
+const create_invoice_confirmation = require('create_invoice_confirmation')  
 
 module.exports = create_invoice
 
@@ -2127,6 +2038,7 @@ async function create_invoice(opts = {}) {
       </div>
       <div class="create_button"></div>
     </div>
+    <div class="confirmation-container hidden"></div>
     <style></style>
   `
 
@@ -2138,6 +2050,7 @@ async function create_invoice(opts = {}) {
   const template1_container = shadow.querySelector('.template1')
   const template2_container = shadow.querySelector('.template2')
   const template3_container = shadow.querySelector('.template3')
+  const confirmation_container = shadow.querySelector('.confirmation-container')
 
   const subs = await sdb.watch(onbatch)
 
@@ -2158,6 +2071,8 @@ async function create_invoice(opts = {}) {
   template2_container.append(templates_component2)
   template3_container.append(templates_component3)
 
+  let invoice_mounted = false 
+
   const closeBtn = shadow.querySelector('.x-icon')
   if (closeBtn) {
     closeBtn.onclick = () => {
@@ -2167,6 +2082,18 @@ async function create_invoice(opts = {}) {
       }
     }
   }
+
+  button_component.addEventListener('click', async () => {
+    confirmation_container.classList.remove('hidden')
+
+      if (!invoice_mounted) {
+      const invoice = await create_invoice_confirmation(subs[7], {
+        onClose: () => confirmation_container.classList.add('hidden')
+      })
+      confirmation_container.append(invoice)
+      invoice_mounted = true
+    }
+  })
 
   return el
 
@@ -2209,6 +2136,7 @@ function fallback_module() {
       'btc_input_card': { $: '' },
       'input_field': { $: '' },
       'templates': { $: '' },
+      'create_invoice_confirmation': { $: '' },
     }
   }
 
@@ -2272,6 +2200,21 @@ function fallback_module() {
       }
     }
 
+    const create_invoice_confirmation = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+       7: {
+        value: [
+            { label: "Label", value: "Work Payment" },
+            { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+            { label: "Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
+          ]
+      },
+    }
+
     return {
       drive: {
         'icons/': {
@@ -2297,14 +2240,15 @@ function fallback_module() {
         button,
         btc_input_card,
         input_field,
-        templates      
+        templates,
+        create_invoice_confirmation    
       }
     }
   }
 }
 
 }).call(this)}).call(this,"/src/node_modules/create_invoice/create_invoice.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"input_field":23,"templates":48}],16:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"create_invoice_confirmation":15,"input_field":22,"templates":49}],15:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2312,20 +2256,18 @@ const { sdb, get } = statedb(fallback_module)
 
 const receipt_row = require('receipt_row')
 const send_button = require('button') 
+const send_invoice_modal = require('send_invoice_modal')
 
 module.exports = create_invoice_confirmation
 
-async function create_invoice_confirmation(opts = {}) {
+async function create_invoice_confirmation(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
-  }
+  const on = { style: inject, data: ondata, icons: iconject }
 
   let dricons = []
+  let modalMounted = false
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
@@ -2334,13 +2276,14 @@ async function create_invoice_confirmation(opts = {}) {
     <div class="invoice-card">
       <div class="invoice-header">
         <div class="title-container">
-          <div class="invoice-title">Create Lighting invoice</div>
+          <div class="invoice-title">Create Lightning Invoice</div>
           <div class="light-icon-small"></div>
         </div>
         <div class="close-icon"></div>
       </div>
       <div class="receipt-rows"></div>
       <div class="send-button"></div>
+      <div class="send-modal-container hidden"></div>
       <style></style>
     </div>
   `
@@ -2348,18 +2291,36 @@ async function create_invoice_confirmation(opts = {}) {
   const style = shadow.querySelector('style')
   const rows_el = shadow.querySelector('.receipt-rows')
   const send_button_container = shadow.querySelector('.send-button')
+  const close_icon = shadow.querySelector('.close-icon')
+  const modal_container = shadow.querySelector('.send-modal-container')
+
+  // Close the invoice card
+  close_icon.addEventListener('click', () => {
+    if (onClose) onClose()
+  })
 
   const subs = await sdb.watch(onbatch)
 
+  // Render send button (subs[0])
+  const button_component = await send_button(subs[0])
+  send_button_container.append(button_component)
 
-  if (subs.length > 0) {
-    const button = await send_button(subs[0])
-    send_button_container.replaceWith(button)
-  }
+  // Render send_invoice_modal only when button is clicked (subs[1])
+  button_component.addEventListener('click', async () => {
+    modal_container.classList.remove('hidden')
+    if (!modalMounted) {
+      const modal_component = await send_invoice_modal(subs[1], {
+        onClose: () => modal_container.classList.add('hidden')
+      })
+      modal_container.append(modal_component)
+      modalMounted = true
+    }
+  })
 
-  for (let i = 1; i < subs.length; i++) {
-    const row = await receipt_row(subs[i]) 
-    rows_el.append(row)
+  // Render receipt rows (subs[2+] if any)
+  for (let i = 2; i < subs.length; i++) {
+    const row_component = await receipt_row(subs[i])
+    rows_el.append(row_component)
   }
 
   return el
@@ -2370,12 +2331,11 @@ async function create_invoice_confirmation(opts = {}) {
 
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
-      const func = on[type] || fail
-      await func(data, type)
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
+      const fn = on[type] || fail
+      await fn(data, type)
     }
   }
-
 
   function inject(data) {
     style.textContent = data[0]
@@ -2385,14 +2345,11 @@ async function create_invoice_confirmation(opts = {}) {
     dricons = data
     const light_icon = shadow.querySelectorAll('.light-icon-small')
     const close_icon = shadow.querySelector('.close-icon')
-
     light_icon.forEach(el => el.innerHTML = dricons[0])
-    close_icon.innerHTML = dricons[1]                  
+    close_icon.innerHTML = dricons[1]
   }
 
-  async function ondata(data) {
-    
-  }
+  async function ondata(data) {}
 }
 
 function fallback_module() {
@@ -2400,54 +2357,73 @@ function fallback_module() {
     api,
     _: {
       'button': { $: '' },
-      'receipt_row': { 
-        $: '' 
-      }
+      'send_invoice_modal': { $: '' },
+      'receipt_row': { $: '' },
     }
   }
 
   function api(opts) {
-    const button = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
-      0: {
-        label: 'Send'
+    const button = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 0: { label: 'Send' } }
+    const send_invoice_modal = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 1: {
+       value: [
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'Mark Kevin',
+              message: 'Payment Received successfully',
+              time: '3 hr',
+              unread: 5,
+              online: true,
+              lightining: true
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'David Clark',
+              message: 'You have a new message from Mark',
+              time: '1 hr',
+              unread: 5,
+              online: false,
+              lightining: false
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'David Clark',
+              message: 'Received funds',
+              time: '1 hr',
+              unread: 0,
+              online: true,
+              lightining: true
+            },
+            {
+              avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+              name: 'Sara Ahmed',
+              message: 'Invoice sent',
+              time: '2 hr',
+              unread: 0,
+              online: false,
+              lightining: false
+            }
+          ] 
+        }
       }
-    }
-    const receipt_row = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      }
-    }
-    opts.value.forEach((row, index) => {
-      receipt_row[index + 1] = row
+
+    const receipt_row = { mapping: { style: 'style', data: 'data', icons: 'icons' } }
+
+    opts.value.slice(1).forEach((row, i) => {
+      receipt_row[i + 2] = row
     })
 
     return {
       drive: {
-        'icons/': {
-          'lightning.svg': { '$ref': 'lightning.svg' },
-          'x.svg': { '$ref': 'x.svg' }
-        },
-        'style/': {
-          'create_invoice_confirmation.css': { '$ref': 'create_invoice_confirmation.css' }
-        },
-        'data/': {
-          'opts.json': { raw: opts }
-        }
+        'icons/': { 'lightning.svg': { '$ref': 'lightning.svg' }, 'x.svg': { '$ref': 'x.svg' } },
+        'style/': { 'create_invoice_confirmation.css': { '$ref': 'create_invoice_confirmation.css' } },
+        'data/': { 'opts.json': { raw: opts } }
       },
-      _: { button, receipt_row }
+      _: { button, send_invoice_modal, receipt_row}
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/create_invoice_confirmation/create_invoice_confirmation.js")
-},{"STATE":1,"button":9,"receipt_row":34}],17:[function(require,module,exports){
+},{"STATE":1,"button":9,"receipt_row":35,"send_invoice_modal":42}],16:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2590,7 +2566,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/details_menu/details_menu.js")
-},{"STATE":1,"button":9,"input_field":23}],18:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":22}],17:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2729,7 +2705,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/gen_invite_code/gen_invite_code.js")
-},{"STATE":1,"input_field":23}],19:[function(require,module,exports){
+},{"STATE":1,"input_field":22}],18:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2861,7 +2837,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/general_button/general_button.js")
-},{"STATE":1}],20:[function(require,module,exports){
+},{"STATE":1}],19:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -2998,7 +2974,7 @@ function fallback_module() {
     const transaction_list = {
       mapping: { style: 'style', data: 'data' },
       0: { value: [
-        { tid: 'Luis fedrick', ttime: '11:30 AM', tamount: '+0.02456', avatar: 'https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=' },
+        { tid: 'Luis fedrick', ttime: '11:30 AM', tamount: '+0.02456', avatar: 'https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3' },
         { tid: 'skdmf932ksdmf0234lsd', ttime: '02:15 PM', tamount: '+0.03271', avatar: '' },
         { tid: 'Mark Kevin', ttime: '03:45 PM', tamount: '-0.00421', avatar: 'https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3' },
         { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
@@ -3031,7 +3007,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_contents/home_contents.js")
-},{"STATE":1,"action_buttons":2,"home_page_header":22,"light_page_header":24,"light_tx_list":25,"lightning_buttons":27,"total_wealth":49,"transaction_list":51,"wallet_button":55}],21:[function(require,module,exports){
+},{"STATE":1,"action_buttons":2,"home_page_header":21,"light_page_header":23,"light_tx_list":25,"lightning_buttons":28,"total_wealth":50,"transaction_list":52,"wallet_button":56}],20:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3100,7 +3076,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/home_page/home_page.js")
-},{"STATE":1,"menu":28}],22:[function(require,module,exports){
+},{"STATE":1,"menu":29}],21:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3251,7 +3227,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/home_page_header/home_page_header.js")
-},{"STATE":1}],23:[function(require,module,exports){
+},{"STATE":1}],22:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3364,6 +3340,8 @@ function fallback_module () {
     api: fallback_instance,
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
         'icons/': {
@@ -3432,7 +3410,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           },
         }
       }
@@ -3441,7 +3419,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/input_field/input_field.js")
-},{"STATE":1}],24:[function(require,module,exports){
+},{"STATE":1}],23:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3592,64 +3570,65 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/light_page_header/light_page_header.js")
-},{"STATE":1}],25:[function(require,module,exports){
+},{"STATE":1}],24:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
+const light_tx_row = require('light_tx_row')
 
-const transaction_row = require('transaction_row')
-const transaction_history = require('transaction_history') 
+module.exports = light_tx_history
 
-module.exports = light_tx_list
-
-
-async function light_tx_list(opts = {}) {
+async function light_tx_history(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
-
-  const on = {
-    style: inject,
-    data: ondata
-  }
+  const on = { style: inject, data: ondata }
 
   const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'open' })
+  const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <!-- <div class="component-label">Transaction List</div> -->
-    <div class="transaction-list-container">
-      <div class="transaction-list-header">  
-        <div class="transaction-list-title"> Transactions </div>
-        <div class="transaction-list-see-all"> See all</div>
+    <div class="transaction-history">
+      <div class="transaction-history-header">
+        <span>Transaction History</span>
+        <button class="history-close">✕</button>
       </div>
+      <div class="transaction-history-body"></div>
     </div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const container_el = shadow.querySelector('.transaction-list-container')
-  const see_all_btn = shadow.querySelector('.transaction-list-see-all')
+  const container = shadow.querySelector('.transaction-history')
+  const body = shadow.querySelector('.transaction-history-body')
+  const closeBtn = shadow.querySelector('.history-close')
 
   const subs = await sdb.watch(onbatch)
 
-  subs.slice(1, 5).forEach(async sub => {
-      container_el.append(await transaction_row(sub))
+  // hide overlay on close
+  closeBtn.addEventListener('click', () => {
+    if (onClose) onClose()
   })
 
-  see_all_btn.addEventListener('click', async () => {
-    const history_component = await transaction_history(subs[0])
+  // build grouped list
+  const grouped = {}
+  subs.forEach(sub => {
+    const date = (sub.date || 'Unknown').trim()
+    if (!grouped[date]) grouped[date] = []
+    grouped[date].push(sub)
+  })
 
-    // find the home_page root host element
-    let homePageHost = el.getRootNode().host
+  for (const date in grouped) {
+    const dateEl = document.createElement('div')
+    dateEl.className = 'transaction-date'
+    dateEl.textContent = date
+    body.appendChild(dateEl)
 
-    if (homePageHost) {
-      homePageHost.replaceWith(history_component)
+    for (const sub of grouped[date]) {
+      const row = await light_tx_row(sub)
+      body.appendChild(row)
     }
-  })
-
-
-
+  }
 
   return el
 
@@ -3660,122 +3639,186 @@ async function light_tx_list(opts = {}) {
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
       const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
+        paths.map(p => drive.get(p).then(f => f.raw))
       )
-      const func = on[type] || fail
-      await func(data, type)
+      const fn = on[type] || fail
+      await fn(data)
     }
   }
 
   function inject(data) {
-    style.textContent =  data[0]
+    style.textContent = data[0]
   }
 
-  async function ondata(data) {
-  }
+  async function ondata() {}
 }
 
 function fallback_module () {
   return {
     api,
     _: {
-      'transaction_history':{ $: ''},
-      'transaction_row':{ $: '' },
+      'light_tx_row':{
+        $: ''
+      }
     } 
   }
   function api(opts){
-    const transaction_history = {
-      mapping: {
-        style: 'style',
-        data: 'data'
-      },
-      0: {
-        value:[
-          {
-            dateString: "2025-08-01",
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            dateString: "2025-08-01",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
-          },
-          {
-            dateString: "2025-08-01",
-            tid: "Mark Kevin",
-            ttime: "03:45 PM",
-            tamount: "- 0.00421",
-            avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
-          },
-          {
-            dateString: "2025-07-31",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          },
-          {
-            dateString: "2025-07-31",
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            dateString: "2025-07-31",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
-          },
-          {
-            dateString: "2025-07-28",
-            tid: "Mark Kevin",
-            ttime: "03:45 PM",
-            tamount: "- 0.00421",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            dateString: "2025-08-01",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          },
-          {
-            dateString: "2025-07-28",
-            tid: "Luis fedrick",
-            ttime: "11:30 AM",
-            tamount: "+ 0.02456",
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            dateString: "2025-07-29",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
-          },
-          {
-            dateString: "2025-07-30",
-            tid: "Mark Kevin",
-            ttime: "03:45 PM",
-            tamount: "- 0.00421",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            dateString: "2025-05-10",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          }
-        ]
-      }
-    }
-
-
-    const transaction_row = {
+    const light_tx_row = {
       mapping: {
         style: 'style',
         data: 'data'
       }
     }
     opts.value.forEach((transaction, index) => {
-      transaction_row[index] = transaction
+      light_tx_row[index] = transaction
+    })
+    return {
+      drive: {
+        'style/': {
+          'style.css':{
+            '$ref': 'light_tx_history.css'
+          }
+        },
+        'data/': {
+          'opts.json':{
+            raw: opts
+          }
+        }
+      },
+      _:{
+        light_tx_row
+      }
+    }
+  }
+}
+
+
+}).call(this)}).call(this,"/src/node_modules/light_tx_history/light_tx_history.js")
+},{"STATE":1,"light_tx_row":27}],25:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const light_tx_row = require('light_tx_row')
+const light_tx_history = require('light_tx_history') 
+
+module.exports = light_tx_list
+
+
+async function light_tx_list(opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = { style: inject, data: ondata }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'open' })
+
+  shadow.innerHTML = `
+    <div class="transaction-list-container">
+      <div class="transaction-list-header">
+        <div class="transaction-list-title">Transactions</div>
+        <div class="transaction-list-see-all">See all</div>
+      </div>
+      <div class="transaction-list-body"></div>
+    </div>
+
+    <div class="transaction-overlay hidden">
+      <div class="transaction-history-body"></div>
+    </div>
+
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const listBody = shadow.querySelector('.transaction-list-body')
+  const seeAllBtn = shadow.querySelector('.transaction-list-see-all')
+  const overlay = shadow.querySelector('.transaction-overlay')
+  const historyBody = shadow.querySelector('.transaction-history-body')
+
+  let historyMounted = false
+
+  const subs = await sdb.watch(onbatch)
+
+  // render small list
+  subs.slice(1, 5).forEach(async sub => {
+    listBody.append(await light_tx_row(sub))
+  })
+
+  // open overlay
+  seeAllBtn.addEventListener('click', async () => {
+    overlay.classList.remove('hidden')
+
+    if (!historyMounted) {
+      const history = await light_tx_history(subs[0], {
+        onClose: () => overlay.classList.add('hidden')
+      })
+      historyBody.append(history)
+      historyMounted = true
+    }
+  })
+
+  return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(p => drive.get(p).then(f => f.raw))
+      )
+      const fn = on[type] || fail
+      await fn(data)
+    }
+  }
+
+  function inject(data) {
+    style.textContent = data[0]
+  }
+
+  function ondata() {}
+}
+
+function fallback_module () {
+  return {
+    api,
+    _: {
+      'light_tx_history':{ $: ''},
+      'light_tx_row':{ $: '' },
+    } 
+  }
+  function api(opts){
+    const light_tx_history = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      },
+      0: {
+        value:[
+        { tid: 'skdmf932ksdmf0234lsd', ttime: '09:15 AM', tamount: '-0.00123', avatar: '' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+        { tid: 'skdmf932hiuo1h2oihio', ttime: '04:20 PM', tamount: '-0.00234', avatar: '' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+        { tid: 'skdmf932ksdmf0234lsd', ttime: '09:15 AM', tamount: '-0.00123', avatar: '' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+        { tid: 'skdmf932hiuo1h2oihio', ttime: '04:20 PM', tamount: '-0.00234', avatar: '' },
+        { tid: 'yweuyiewe32eqw234lsd', ttime: '12:30 PM', tamount: '+0.00567', avatar: '' },
+        ]
+      }
+    }
+
+
+    const light_tx_row = {
+      mapping: {
+        style: 'style',
+        data: 'data'
+      }
+    }
+    opts.value.forEach((transaction, index) => {
+      light_tx_row[index] = transaction
     })
     return {
       drive: {
@@ -3791,8 +3834,8 @@ function fallback_module () {
         }
       },
       _:{
-        transaction_history,
-        transaction_row
+        light_tx_history,
+        light_tx_row
       }
     }
   }
@@ -3800,7 +3843,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_list/light_tx_list.js")
-},{"STATE":1,"transaction_history":50,"transaction_row":53}],26:[function(require,module,exports){
+},{"STATE":1,"light_tx_history":24,"light_tx_row":27}],26:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3810,7 +3853,7 @@ const receipt_row = require('receipt_row')
 
 module.exports = light_tx_receipt
 
-async function light_tx_receipt(opts = {}) {
+async function light_tx_receipt(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -3841,7 +3884,11 @@ async function light_tx_receipt(opts = {}) {
 
   const style = shadow.querySelector('style')
   const rows_el = shadow.querySelector('.receipt-rows')
+  const close_icon = shadow.querySelector('.close-icon')
 
+  close_icon.addEventListener('click', () => {
+    if (onClose) onClose()
+  })
   const subs = await sdb.watch(onbatch)
 
   for (let i = 0; i < subs.length; i++) {
@@ -3924,7 +3971,198 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/light_tx_receipt/light_tx_receipt.js")
-},{"STATE":1,"receipt_row":34}],27:[function(require,module,exports){
+},{"STATE":1,"receipt_row":35}],27:[function(require,module,exports){
+(function (__filename){(function (){
+const STATE = require('STATE')
+const statedb = STATE(__filename)
+const { sdb, get } = statedb(fallback_module)
+
+const light_tx_receipt = require('light_tx_receipt')
+
+
+module.exports = light_tx_row
+
+async function light_tx_row (opts = {}) {
+  const { id, sdb } = await get(opts.sid)
+  const { drive } = sdb
+
+  const on = {
+    style: inject,
+    data: ondata
+  }
+
+  const el = document.createElement('div')
+  const shadow = el.attachShadow({ mode: 'closed' })
+
+  shadow.innerHTML = `
+    <div class="transaction-row"></div>
+    <div class="tx-overlay hidden">
+      <div class="tx-body"></div>
+    </div>
+    <style></style>
+  `
+
+  const style = shadow.querySelector('style')
+  const row = shadow.querySelector('.transaction-row')
+  const overlay = shadow.querySelector('.tx-overlay')
+  const tx_body = shadow.querySelector('.tx-body')
+
+  const subs = await sdb.watch(onbatch)
+
+  let receipt_mounted = false
+
+  row.addEventListener('click', async () => {
+    overlay.classList.remove('hidden')
+
+    if (!receipt_mounted) {
+      const receipt_view_comp = await light_tx_receipt(subs[0], {
+        onClose: () => overlay.classList.add('hidden')
+      })
+      tx_body.append(receipt_view_comp)
+      receipt_mounted = true
+    }
+  })
+
+  return el
+
+  function fail (data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
+
+  async function onbatch (batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(path => drive.get(path).then(file => file.raw))
+      )
+      const func = on[type] || fail
+      await func(data, type)
+    }
+  }
+
+  function inject (data) {
+    style.textContent = data[0]
+  }
+
+  function get_date_label (dateString) {
+    const today = new Date()
+    const target = new Date(dateString)
+
+    const diffInDays = Math.floor(
+      (today.setHours(0, 0, 0, 0) - target.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)
+    )
+
+    if (diffInDays === 0) return 'Today'
+    if (diffInDays === 1) return 'Yesterday'
+
+    return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
+  }
+
+  function shorten_tid (tid) {
+    if (tid.length > 14) {
+      return tid.slice(0, 8) + '...' + tid.slice(-4)
+    }
+    return tid
+  }
+
+  function generate_avatar (seed) {
+    return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(seed)}`
+  }
+
+  function is_random_string (str) {
+    if (!str) return true
+    if (/[0-9@#$_-]/.test(str)) return true
+    if (str.length > 12 && !/\s/.test(str)) return true
+
+    const upper = (str.match(/[A-Z]/g) || []).length
+    const lower = (str.match(/[a-z]/g) || []).length
+    if ((upper > 4 && lower > 4) && !/\s/.test(str)) return true
+
+    return false
+  }
+
+  async function ondata (data) {
+    let { avatar, tid, ttime, tamount, dateString } = data[0] || {}
+
+    if (!tid) tid = "No id found"
+
+    if (!avatar) {
+      if (is_random_string(tid)) {
+        avatar = generate_avatar(tid)
+      } else {
+        avatar = 'https://cdn-icons-png.flaticon.com/512/847/847969.png'
+      }
+    }
+
+    const display_tid = shorten_tid(tid)
+    const date_label = get_date_label(dateString || new Date().toISOString())
+
+    row.innerHTML = `
+      <div class="transaction-detail">
+        <div class="transaction-avatar">
+          <img src="${avatar}" alt="avatar" />
+        </div>
+        <div class="transaction-data">
+          <div class="transaction-id">${display_tid}</div>
+          <div class="transaction-time">${ttime || '—'}</div>
+          <div class="transaction-date">${date_label}</div>
+        </div>
+      </div>  
+      <div class="transaction-amount">
+        <span>${tamount || '0'} ₿</span>
+      </div> 
+    `
+  }
+}
+
+function fallback_module () {
+  return {
+    api: fallback_instance,
+    _:{
+      light_tx_receipt: { $: '' },
+    }
+  }
+  function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
+    const light_tx_receipt = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+        0: {
+          value: [
+                { label: "Paid By", value: "Cypher" },
+                { label: "Recipient", value: "Luis fedrick - 1FfmbHfn...455p" },
+                { label: "Label", value: "Work Payment" },
+                { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
+                { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+                { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
+                { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
+                { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
+                { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
+              ]
+            },
+    }
+    return {
+        drive: {
+          'style/':{
+            'style.css':{
+              '$ref': 'light_tx_row.css'
+            }
+          },
+          'data/': {
+            'opts.json': {
+              raw: opts || {}
+            }
+          }
+        },
+        _: {
+          light_tx_receipt
+        }
+    }
+  }
+}
+
+}).call(this)}).call(this,"/src/node_modules/light_tx_row/light_tx_row.js")
+},{"STATE":1,"light_tx_receipt":26}],28:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -3948,84 +4186,71 @@ async function lightning_buttons(opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="lightning-buttons-container">
-        <div class="pay-create-buttons">
-            <div id="pay-button-container">
-              <div class="pay-dropdown hidden"></div>
-            </div> 
-            <div id="create-button-container">
-              <div class="create-dropdown hidden"></div>
-            </div> 
-        </div>
+      <div class="pay-create-buttons">
+        <div id="pay-button-container"></div>
+        <div id="create-button-container"></div>
+      </div>
     </div>
+    <div class="overlay pay-overlay hidden"></div>
+    <div class="overlay create-overlay hidden"></div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const pay_dropdown = shadow.querySelector('.pay-dropdown')
-  const create_dropdown = shadow.querySelector('.create-dropdown')
+  const pay_container = shadow.querySelector('#pay-button-container')
+  const create_container = shadow.querySelector('#create-button-container')
+  const pay_overlay = shadow.querySelector('.pay-overlay')
+  const create_overlay = shadow.querySelector('.create-overlay')
 
   const subs = await sdb.watch(onbatch)
 
-  // -------------------- Protocol setup --------------------
+  // -------------------- Protocol --------------------
   let sendUp = () => {}
   if (protocol) {
-    sendUp = protocol(message => {
-      console.log('[lightning_buttons -> home_contents]:', message)
-    })
+    sendUp = protocol(msg => console.log('[lightning_buttons]:', msg))
   }
 
-  // -------------------- Create buttons --------------------
+  // -------------------- Buttons --------------------
   const pay_button = await general_button(subs[0], button_protocol('pay_general'))
   const create_button = await general_button(subs[1], button_protocol('create_general'))
 
-  shadow.querySelector('#pay-button-container').prepend(pay_button)
-  shadow.querySelector('#create-button-container').prepend(create_button)
+  pay_container.appendChild(pay_button)
+  create_container.appendChild(create_button)
 
   pay_button._action = 'pay_message'
   create_button._action = 'create_message'
 
   let pay_el = null, create_el = null
 
-  // -------------------- Helpers --------------------
-  function close_all_dropdowns(except) {
-    if (except !== 'pay') pay_dropdown.classList.add('hidden')
-    if (except !== 'create') create_dropdown.classList.add('hidden')
+  function close_all_overlays(except) {
+    if (except !== 'pay') pay_overlay.classList.add('hidden')
+    if (except !== 'create') create_overlay.classList.add('hidden')
   }
-
-  function handle_outside_click(event) {
-    const target = event.target
-    const inside = pay_dropdown.contains(target) || create_dropdown.contains(target)
-    const onButton = pay_button.contains(target) || create_button.contains(target)
-    if (!inside && !onButton) close_all_dropdowns(null)
-  }
-  shadow.addEventListener('click', handle_outside_click)
 
   // -------------------- Button Clicks --------------------
-  pay_button.onclick = async (e) => {
+  pay_button.onclick = async e => {
     e.stopPropagation()
-    if (pay_button._action !== 'pay_message') return
-    if (!pay_dropdown.classList.contains('hidden')) { pay_dropdown.classList.add('hidden'); return }
-    close_all_dropdowns('pay')
+    close_all_overlays('pay')
     if (!pay_el) {
-      pay_el = await pay_invoice(subs[2], { onClose: () => pay_dropdown.classList.add('hidden') })
-      pay_dropdown.appendChild(pay_el)
+      pay_el = await pay_invoice(subs[2], {
+        onClose: () => pay_overlay.classList.add('hidden')
+      })
+      pay_overlay.appendChild(pay_el)
     }
-    pay_dropdown.classList.remove('hidden')
-
+    pay_overlay.classList.remove('hidden')
     sendUp({ from: 'lightning_buttons', type: 'pay', data: null })
   }
 
-  create_button.onclick = async (e) => {
+  create_button.onclick = async e => {
     e.stopPropagation()
-    if (create_button._action !== 'create_message') return
-    if (!create_dropdown.classList.contains('hidden')) { create_dropdown.classList.add('hidden'); return }
-    close_all_dropdowns('create')
+    close_all_overlays('create')
     if (!create_el) {
-      create_el = await create_invoice(subs[3], { onClose: () => create_dropdown.classList.add('hidden') })
-      create_dropdown.appendChild(create_el)
+      create_el = await create_invoice(subs[3], {
+        onClose: () => create_overlay.classList.add('hidden')
+      })
+      create_overlay.appendChild(create_el)
     }
-    create_dropdown.classList.remove('hidden')
-
+    create_overlay.classList.remove('hidden')
     sendUp({ from: 'lightning_buttons', type: 'create', data: null })
   }
 
@@ -4033,14 +4258,13 @@ async function lightning_buttons(opts = {}, protocol) {
   _.pay_general?.({ type: 'button_name', data: { name: 'Pay Invoice', action: 'pay_message' } })
   _.create_general?.({ type: 'button_name', data: { name: 'Create Invoice', action: 'create_message' } })
 
-  const action = { pay_message, create_message }
   return el
 
   // -------------------- Helpers --------------------
   function fail(data, type) { throw new Error('Invalid message type', { cause: { data, type } }) }
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
+      const data = await Promise.all(paths.map(p => drive.get(p).then(f => f.raw)))
       const handler = on[type] || fail
       handler(data, type)
     }
@@ -4048,13 +4272,9 @@ async function lightning_buttons(opts = {}, protocol) {
   function inject(data) { style.textContent = data[0] }
   async function ondata(data) { const buttonData = data[0]?.value || {} }
   function button_protocol(key) { return send => { _[key] = send; return send } }
-
-  // -------------------- Action Handlers --------------------
-  function pay_message(data, type) { sendUp({ from: 'lightning_buttons', type: 'pay', data }) }
-  function create_message(data, type) { sendUp({ from: 'lightning_buttons', type: 'create', data }) }
 }
 
-// ------------------ Fallback for STATE ------------------
+// ------------------ Fallback ------------------
 function fallback_module() {
   return {
     api,
@@ -4067,13 +4287,16 @@ function fallback_module() {
     const create_invoice = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 3: '' }
 
     return {
-      drive: { 'style/': { 'lightning_buttons.css': { '$ref': 'lightning_buttons.css' } }, 'data/': { 'opts.json': { raw: opts } } },
+      drive: {
+        'style/': { 'lightning_buttons.css': { '$ref': 'lightning_buttons.css' } },
+        'data/': { 'opts.json': { raw: opts } }
+      },
       _: { general_button, pay_invoice, create_invoice }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/lightning_buttons/lightning_buttons.js")
-},{"STATE":1,"create_invoice":15,"general_button":19,"pay_invoice":30}],28:[function(require,module,exports){
+},{"STATE":1,"create_invoice":14,"general_button":18,"pay_invoice":31}],29:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4211,7 +4434,7 @@ function fallback_module() {
       0: {
         value: [
           {
-            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=",
             name: 'Mark Kevin',
             message: 'Payment Received successfully',
             time: '3 hr',
@@ -4296,11 +4519,13 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/menu/menu.js")
-},{"STATE":1,"contacts_list":14,"details_menu":17,"home_contents":20,"more_menu":29}],29:[function(require,module,exports){
+},{"STATE":1,"contacts_list":13,"details_menu":16,"home_contents":19,"more_menu":30}],30:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
+
+const btc_nodes = require('btc_nodes')
 
 module.exports = more_menu
 
@@ -4308,33 +4533,58 @@ async function more_menu(opts = {}) {
   const { sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata,
-    icons: iconject,
-  }
+  const on = { style: inject, data: ondata, icons: iconject }
 
   const el = document.createElement('div')
-  const shadow = el.attachShadow({ mode: 'closed' })
+  const shadow = el.attachShadow({ mode: 'open' })
 
   let icons = []
 
   shadow.innerHTML = `
     <div class="more-menu-container"></div>
+    <div class="nodes-container hidden"></div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const row = shadow.querySelector('.more-menu-container')
+  const menuContainer = shadow.querySelector('.more-menu-container')
+  const nodesContainer = shadow.querySelector('.nodes-container')
 
-  await sdb.watch(onbatch)
+  const subs = await sdb.watch(onbatch)
+
+  // Render menu options
+  ondata()
+
+  let nodesMounted = false
+
+  // Event delegation: click on Nodes
+  menuContainer.addEventListener('click', async (e) => {
+    const target = e.target.closest('.option-container')
+    if (!target) return
+
+    const label = target.querySelector('.option-label')?.textContent
+    if (label === 'Nodes') {
+      nodesContainer.classList.remove('hidden')
+
+      if (!nodesMounted) {
+        const nodesComponent = await btc_nodes(subs[0], {
+          onClose: () => nodesContainer.classList.add('hidden')
+        })
+        nodesContainer.append(nodesComponent)
+        nodesMounted = true
+      }
+    }
+  })
+
   return el
+
+  function fail(data, type) {
+    throw new Error('invalid message', { cause: { data, type } })
+  }
 
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
-      )
+      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
       const func = on[type] || fail
       await func(data, type)
     }
@@ -4344,67 +4594,55 @@ async function more_menu(opts = {}) {
     style.textContent = data[0]
   }
 
-  async function ondata() {
-    row.innerHTML = `
+  function iconject(data) {
+    icons = data
+    ondata()
+  }
+
+  function ondata() {
+    menuContainer.innerHTML = `
       <div class="container-title">
         <div class="title">More</div>
-        <div class="close-icon">${icons[0]}</div>
       </div>
       <div class="option-container">
-        <div class="dot-icon">${icons[1]}</div>
+        <div class="dot-icon">${icons[1] || ''}</div>
         <div class="option-label">Nodes</div>
       </div>
       <div class="option-container">
-        <div class="dot-icon">${icons[1]}</div>
+        <div class="dot-icon">${icons[1] || ''}</div>
         <div class="option-label">Peers</div>
       </div>
     `
-
-    const closeBtn = row.querySelector('.close-icon')
-    if (closeBtn) {
-      closeBtn.onclick = () => {
-        const dropdown = el.parentNode
-        if (dropdown) {
-          dropdown.classList.add('hidden')
-        }
-      }
-    }
-  }
-
-  function fail(data, type) {
-    throw new Error('invalid message', { cause: { data, type } })
-  }
-
-  function iconject(data) {
-    icons = data
   }
 }
 
 function fallback_module() {
   return {
-    api: fallback_instance
+    api: fallback_instance,
+    _: { btc_nodes: { $: '' } }
   }
 
   function fallback_instance(opts) {
+    const btc_nodes = {
+      mapping: { icons: 'icons', style: 'style', data: 'data' },
+      0: {}
+    }
+
     return {
       drive: {
         'icons/': {
           'x.svg': { '$ref': 'x.svg' },
-          'dot.svg': { '$ref': 'dot.svg' },
+          'dot.svg': { '$ref': 'dot.svg' }
         },
-        'style/': {
-          'style.css': { '$ref': 'more_menu.css' },
-        },
-        'data/': {
-          'opts.json': { raw: opts }
-        }
-      }
+        'style/': { 'style.css': { '$ref': 'more_menu.css' } },
+        'data/': { 'opts.json': { raw: opts } }
+      },
+      _: { btc_nodes }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/more_menu/more_menu.js")
-},{"STATE":1}],30:[function(require,module,exports){
+},{"STATE":1,"btc_nodes":6}],31:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4412,6 +4650,7 @@ const { sdb, get } = statedb(fallback_module)
 
 const pay_button = require('button')
 const invoice_input = require('input_field')
+const pay_invoice_confirmation = require('pay_invoice_confirmation')
 
 module.exports = pay_invoice
 
@@ -4442,20 +4681,24 @@ async function pay_invoice(opts = {}) {
       <div class="invoice-input"></div>
       <div class="pay_button"></div>
     </div>
+    <div class="confirmation-container hidden"></div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const pay_button_component = shadow.querySelector('.pay_button')
+  const button_container = shadow.querySelector('.pay_button')
   const invoice_input_component = shadow.querySelector('.invoice-input')
+  const confirmation_container = shadow.querySelector('.confirmation-container')
 
   const subs = await sdb.watch(onbatch)
 
   const button_component = await pay_button(subs[0])
   const invoice_component = await invoice_input(subs[1])
 
-  pay_button_component.append(button_component)
+  button_container.append(button_component)
   invoice_input_component.append(invoice_component)
+
+  let invoice_mounted = false 
 
   const closeBtn = shadow.querySelector('.x-icon')
   if (closeBtn) {
@@ -4466,6 +4709,18 @@ async function pay_invoice(opts = {}) {
       }
     }
   }
+
+  button_container.addEventListener('click', async () => {
+    confirmation_container.classList.remove('hidden')
+
+      if (!invoice_mounted) {
+      const invoice = await pay_invoice_confirmation(subs[2], {
+        onClose: () => confirmation_container.classList.add('hidden')
+      })
+      confirmation_container.append(invoice)
+      invoice_mounted = true
+    }
+  })
 
   return el
 
@@ -4504,6 +4759,7 @@ function fallback_module() {
     _: {
       'button': { $: '' },
       'input_field': { $: '' },
+      'pay_invoice_confirmation': { $: '' },
     }
   }
 
@@ -4531,6 +4787,23 @@ function fallback_module() {
       }    
     }
 
+    const pay_invoice_confirmation = {
+      mapping: {
+        style: 'style',
+        data: 'data',
+        icons: 'icons'
+      },
+      2: {
+        value: [
+              { label: "Amount", value: "0.0030 BTC", convert: true },
+              { label: "Fee", value: "0.0001 BTC", convert: true },
+              { label: "Recipient Address", value: "7RwmbHfn...455p" },
+              { label: "Processing time", value: "< 5 minutes" },
+              { label: "Total (inc. fee)", value: "0.0031 BTC ",  icon: "lightning.svg", convert: true }
+            ]
+      },  
+    }
+
     return {
       drive: {
         'icons/': {
@@ -4554,14 +4827,15 @@ function fallback_module() {
       },
       _: {
         button,
-        input_field
+        input_field,
+        pay_invoice_confirmation
       }
     }
   }
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice/pay_invoice.js")
-},{"STATE":1,"button":9,"input_field":23}],31:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":22,"pay_invoice_confirmation":32}],32:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4572,7 +4846,7 @@ const send_button = require('button')
 
 module.exports = pay_invoice_confirmation
 
-async function pay_invoice_confirmation(opts = {}) {
+async function pay_invoice_confirmation(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -4608,7 +4882,7 @@ async function pay_invoice_confirmation(opts = {}) {
   const style = shadow.querySelector('style')
   const rows_el = shadow.querySelector('.receipt-rows')
   const send_button_container = shadow.querySelector('.send-button')
-
+  const close_icon = shadow.querySelector('.close-icon')
 
   const subs = await sdb.watch(onbatch)
 
@@ -4622,6 +4896,12 @@ async function pay_invoice_confirmation(opts = {}) {
     const row = await receipt_row(subs[i]) 
     rows_el.append(row)
   }
+
+
+  // close on click
+  close_icon.addEventListener('click', () => {
+    if (onClose) onClose()
+  })
 
   return el
 
@@ -4715,7 +4995,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/pay_invoice_confirmation/pay_invoice_confirmation.js")
-},{"STATE":1,"button":9,"receipt_row":34}],32:[function(require,module,exports){
+},{"STATE":1,"button":9,"receipt_row":35}],33:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const state_db = STATE(__filename)
@@ -4833,6 +5113,8 @@ function fallback_module() {
   }
 
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
         'icons/': {
@@ -4846,14 +5128,14 @@ function fallback_module() {
           }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {}   }
         }
       }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/pending_request/pending_request.js")
-},{"STATE":1}],33:[function(require,module,exports){
+},{"STATE":1}],34:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -4948,7 +5230,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/qr_code/qr_code.js")
-},{"STATE":1,"vanillaqr":54}],34:[function(require,module,exports){
+},{"STATE":1,"vanillaqr":55}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5126,14 +5408,14 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/receipt_row/receipt_row.js")
-},{"STATE":1,"btc_usd_rate":8}],35:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],36:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const address_input = require('input_field')
-const qr_code = require('qr_code') 
+const qr_code = require('qr_code')
 
 module.exports = receive_btc
 
@@ -5144,7 +5426,7 @@ async function receive_btc(opts = {}) {
   const on = {
     style: inject,
     data: ondata,
-    icons: iconject,
+    icons: iconject
   }
 
   const el = document.createElement('div')
@@ -5154,8 +5436,16 @@ async function receive_btc(opts = {}) {
 
   shadow.innerHTML = `
     <div class="receive-btc-container">
-      <div class="btc-icon"></div> 
-      <div class="qr-code"></div> 
+      <div class="receive-btc-close">
+        <div class="x-icon"></div>
+      </div>
+      <div class="receive-btc-header">
+        <div class="title-container">
+          <div class="receive-btc-title">Receive BTC</div>
+          <div class="btc-icon"></div>
+        </div>
+      </div>
+      <div class="qr-code"></div>
       <div class="address-input"></div>
     </div>
     <style></style>
@@ -5166,13 +5456,20 @@ async function receive_btc(opts = {}) {
   const qr_code_component = shadow.querySelector('.qr-code')
 
   const subs = await sdb.watch(onbatch)
-  
+
   const qr_component = await qr_code(subs[0])
   const address_component = await address_input(subs[1])
 
-  address_input_component.append(address_component)
   qr_code_component.append(qr_component)
+  address_input_component.append(address_component)
 
+  const closeBtn = shadow.querySelector('.x-icon')
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      const dropdown = el.parentNode
+      if (dropdown) dropdown.classList.add('hidden')
+    }
+  }
 
   return el
 
@@ -5182,7 +5479,7 @@ async function receive_btc(opts = {}) {
 
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
+      const data = await Promise.all(paths.map(path => drive.get(path).then(f => f.raw)))
       const func = on[type] || fail
       await func(data, type)
     }
@@ -5195,77 +5492,51 @@ async function receive_btc(opts = {}) {
   function iconject(data) {
     dricons = data
     const btc_icon = shadow.querySelector('.btc-icon')
-    btc_icon.innerHTML = dricons[0]
+    const x_icon = shadow.querySelector('.x-icon')
+    btc_icon.innerHTML = dricons[0] || ''
+    x_icon.innerHTML = dricons[1] || '✖' // fallback X if icon missing
   }
 
-  async function ondata(data) {
-
-  }
+  async function ondata(data) {}
 }
-
 
 function fallback_module() {
   return {
     api,
     _: {
       'input_field': { $: '' },
-      'qr_code': { $: '' },
+      'qr_code': { $: '' }
     }
   }
 
   function api(opts) {
     const qr_code = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-      },
-      0: {
-        address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT', 
-      }    
+      mapping: { style: 'style', data: 'data' },
+      0: { address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT' }
     }
 
     const input_field = {
-      mapping: {
-        style: 'style',
-        data: 'data',
-        icons: 'icons'
-      },
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
       1: {
         header: 'Your bitcoin address',
         placeholder: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
         address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT',
         icon: 'apple'
-      }    
+      }
     }
 
     return {
       drive: {
-        'icons/': {
-          'btc.svg': {
-            '$ref': 'btc.svg'
-          },
-        },
-        'style/': {
-          'receive_btc.css': {
-            '$ref': 'receive_btc.css'
-          }
-        },
-        'data/': {
-          'opts.json': {
-            raw: opts
-          }
-        }
+        'icons/': { 'btc.svg': { '$ref': 'btc.svg' }, 'x.svg': { '$ref': 'x.svg' } },
+        'style/': { 'receive_btc.css': { '$ref': 'receive_btc.css' } },
+        'data/': { 'opts.json': { raw: opts } }
       },
-      _: {
-        qr_code,
-        input_field
-      }
+      _: { qr_code, input_field }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/receive_btc/receive_btc.js")
-},{"STATE":1,"input_field":23,"qr_code":33}],36:[function(require,module,exports){
+},{"STATE":1,"input_field":22,"qr_code":34}],37:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5431,6 +5702,8 @@ function fallback_module () {
     api: fallback_instance,
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
         'style/': {
@@ -5522,14 +5795,14 @@ function fallback_module () {
           }
         },
         'data/': {
-          'opts.json': { raw: opts },
+          'opts.json': { raw: opts || {}},
         }
       }
     }
   }
 }
 }).call(this)}).call(this,"/src/node_modules/req_card/req_card.js")
-},{"STATE":1,"btc_usd_rate":8}],37:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],38:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5656,7 +5929,8 @@ function fallback_module() {
   }
 
   function api(opts) {
-    
+      if (!opts) opts = {}
+      if (!opts.value) opts.value = {}
     const button = {
       mapping: {
         style: 'style',
@@ -5716,7 +5990,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts ||{}
           }
         }
       },
@@ -5730,7 +6004,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/request_btc/request_btc.js")
-},{"STATE":1,"button":9,"req_card":36,"templates":48}],38:[function(require,module,exports){
+},{"STATE":1,"button":9,"req_card":37,"templates":49}],39:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -5856,6 +6130,7 @@ async function request_light(opts = {}) {
 }
 
 function fallback_module() {
+
   return {
     api,
     _: {
@@ -5867,7 +6142,8 @@ function fallback_module() {
   }
 
   function api(opts) {
-    
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     const button = {
       mapping: {
         style: 'style',
@@ -5943,7 +6219,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -5958,7 +6234,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/request_light/request_light.js")
-},{"STATE":1,"button":9,"input_field":23,"req_card":36,"templates":48}],39:[function(require,module,exports){
+},{"STATE":1,"button":9,"input_field":22,"req_card":37,"templates":49}],40:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6077,7 +6353,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/search_bar/search_bar.js")
-},{"STATE":1}],40:[function(require,module,exports){
+},{"STATE":1}],41:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6204,7 +6480,8 @@ function fallback_module() {
   }
 
   function api(opts) {
-    
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     const button = {
       mapping: {
         style: 'style',
@@ -6265,7 +6542,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -6279,7 +6556,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_btc/send_btc.js")
-},{"STATE":1,"btc_input_card":5,"button":9,"templates":48}],41:[function(require,module,exports){
+},{"STATE":1,"btc_input_card":5,"button":9,"templates":49}],42:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6292,14 +6569,17 @@ const share_invoice_via = require('share_invoice_via')
 
 module.exports = send_invoice_modal
 
-async function send_invoice_modal(opts = {}) {
+async function send_invoice_modal(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
   const on = {
     style: inject,
-    data: ondata
+    data: ondata,
+    icons: iconject
   }
+
+  let dricons = []
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
@@ -6307,7 +6587,10 @@ async function send_invoice_modal(opts = {}) {
   shadow.innerHTML = `
     <div class="send-to-container"> 
       <div class="contact-list-container">
-        <div class="contact-list-header">Send to</div>
+        <div class="modal-header">
+          <div class="contact-list-header">Send to</div>
+          <div class="close-btn">x</div>
+        </div>
         <div class="top-bar"></div>
       </div>
       <div class="contacts-container"></div>
@@ -6320,9 +6603,14 @@ async function send_invoice_modal(opts = {}) {
   const contacts_container = shadow.querySelector('.contacts-container')
   const top_bar = shadow.querySelector('.top-bar')
   const invoice_section = shadow.querySelector('.invoice-share-section')
+  const close_icon = shadow.querySelector('.close-btn')
 
   const subs = await sdb.watch(onbatch)
-  
+
+  close_icon.addEventListener('click', () => {
+    if (onClose) onClose()
+  })
+
   if (subs.length > 0) {
     const search = await search_bar(subs[0])
     const button = await square_button(subs[1])
@@ -6356,6 +6644,11 @@ async function send_invoice_modal(opts = {}) {
   }
 
   async function ondata(data) {
+  }
+
+  function iconject(data) {
+    dricons = data
+    close_icon.innerHTML = dricons[0]
   }
 }
 
@@ -6416,6 +6709,11 @@ function fallback_module() {
 
     return {
       drive: {
+        'icons/': {  
+          'x.svg': { 
+            '$ref': 'x.svg' 
+          } 
+        },
         'style/': {
           'send_invoice_modal.css': {
             '$ref': 'send_invoice_modal.css'
@@ -6438,7 +6736,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_invoice_modal/send_invoice_modal.js")
-},{"STATE":1,"search_bar":39,"send_to_contact":42,"share_invoice_via":43,"square_button":44}],42:[function(require,module,exports){
+},{"STATE":1,"search_bar":40,"send_to_contact":43,"share_invoice_via":44,"square_button":45}],43:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6575,7 +6873,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/send_to_contact/send_to_contact.js")
-},{"STATE":1}],43:[function(require,module,exports){
+},{"STATE":1}],44:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6677,7 +6975,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/share_invoice_via/share_invoice_via.js")
-},{"STATE":1}],44:[function(require,module,exports){
+},{"STATE":1}],45:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6793,7 +7091,7 @@ function fallback_module () {
 }
 
 }).call(this)}).call(this,"/src/node_modules/square_button/square_button.js")
-},{"STATE":1}],45:[function(require,module,exports){
+},{"STATE":1}],46:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6931,7 +7229,7 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_account/switch_account.js")
-},{"STATE":1}],46:[function(require,module,exports){
+},{"STATE":1}],47:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -6960,27 +7258,27 @@ async function switch_request(opts = {}, protocol) {
 
   shadow.innerHTML = `
     <div class="parent-wrapper">
-      <div class="pop-up-btc hidden"></div>
-      <div class="pop-up-light hidden"></div>
       <div class="switch-account-container">
         <div class="account-content"></div>
       </div>
     </div>
+    <div class="request-btc hidden"></div>
+    <div class="request-light hidden"></div>
 
     <style></style>
   `
 
-  const popup = shadow.querySelector('.pop-up')
   const content = shadow.querySelector('.account-content')
   const style = shadow.querySelector('style')
-
+  const req_btc_el = shadow.querySelector('.request-btc')
+  const req_light_el = shadow.querySelector('.request-light')
+  
   const subs = await sdb.watch(onbatch)
 
-  const req_btc_comp = await request_btc(subs[0])
-  const req_light_comp = await request_light(subs[1])
+  let btc_mounted = false
+  let light_mounted = false
 
-  shadow.querySelector('.pop-up-btc').prepend(req_btc_comp)
-  shadow.querySelector('.pop-up-light').prepend(req_light_comp)
+
 
   return el
 
@@ -7010,38 +7308,35 @@ async function switch_request(opts = {}, protocol) {
         <div class="lightning-icon">${dricons[2] || '⚡'} Lightning</div>
       </div>
     `
+    const btc_container = content.querySelector('.btc-container')
+    const lightning_container = content.querySelector('.lightning-container')
 
-    content.querySelector('.btc-container').onclick = toggle_btc_request
-    content.querySelector('.lightning-container').onclick = toggle_light_request
+    btc_container.addEventListener('click', async () => {
+      req_btc_el.classList.remove('hidden')
+
+      if (!btc_mounted) {
+        const history = await request_btc(subs[0], {
+          onClose: () => req_btc_el.classList.add('hidden')
+        })
+        req_btc_el.append(history)
+        btc_mounted = true
+      }
+    })
+  
+    lightning_container.addEventListener('click', async () => {
+      req_light_el.classList.remove('hidden')
+
+      if (!light_mounted) {
+        const history = await request_light(subs[1], {
+          onClose: () => req_light_el.classList.add('hidden')
+        })
+        req_light_el.append(history)
+        light_mounted = true
+      }
+    })
   }
 
 
-  function openPopup(component) {
-    showSendBtc = true
-    popup.classList.remove("hidden")
-    popup.style.display = "flex"
-
-    popup.innerHTML = ""
-    popup.appendChild(component)
-  }
-
-  function closePopup() {
-    showSendBtc = false
-    popup.classList.add("hidden")
-    popup.style.display = "none"
-    popup.innerHTML = ""
-  }
-
-  // Called by your BTC/Lightning icons
-  function toggle_btc_request() {
-    if (showSendBtc) return closePopup()
-    openPopup(req_btc_comp)
-  }
-
-  function toggle_light_request() {
-    if (showSendBtc) return closePopup()
-    openPopup(req_light_comp)
-  }
 
   function iconject(data) {
     dricons = data
@@ -7065,6 +7360,8 @@ function fallback_module() {
   }
 
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     const request_btc = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: {}
@@ -7086,7 +7383,7 @@ function fallback_module() {
           'style.css': { '$ref': 'switch_request.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {}}
         }
       },
       _: { request_btc, request_light}
@@ -7094,7 +7391,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_request/switch_request.js")
-},{"STATE":1,"request_btc":37,"request_light":38}],47:[function(require,module,exports){
+},{"STATE":1,"request_btc":38,"request_light":39}],48:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7120,36 +7417,28 @@ async function switch_send(opts = {}, protocol) {
 
   let dricons = []
   let showSendBtc = false
-  let send_btc_comp = null
 
   shadow.innerHTML = `
     <div class="parent-wrapper">
-      <div class="pop-up"></div>
-
       <div class="switch-account-container">
         <div class="account-content"></div>
       </div>
     </div>
+    <div class="send-btc hidden"></div>
+    <div class="send-light hidden"></div>
 
     <style></style>
   `
 
-  const popup = shadow.querySelector('.pop-up')
-  const container = shadow.querySelector('.switch-account-container')
   const content = shadow.querySelector('.account-content')
   const style = shadow.querySelector('style')
+  const send_btc_el = shadow.querySelector('.send-btc')
+  const send_light_el = shadow.querySelector('.send-light')
 
-  popup.style.display = "none"
-
-  // ONLY ONE SUBS EVER
   const subs = await sdb.watch(onbatch)
 
-  // Build send_btc ONE time
-  send_btc_comp = await send_btc(subs[0])
-  send_btc_comp.classList.add("send-btc")
-
-  const pending_req_comp = await pending_request(subs[1])
-  pending_req_comp.classList.add("pending-requests")
+  let btc_mounted = false
+  let light_mounted = false
 
   return el
 
@@ -7168,7 +7457,6 @@ async function switch_send(opts = {}, protocol) {
   async function ondata(data) {
     const { btc, lightning } = data[0] || {}
 
-    // If popup is open (send_btc visible), do NOT overwrite BTC/Lightning UI
     if (showSendBtc) return
 
     content.innerHTML = `
@@ -7182,46 +7470,35 @@ async function switch_send(opts = {}, protocol) {
         <div class="lightning-amount">${lightning ? parseFloat(lightning).toFixed(4) : '0.0000'}</div>
       </div>
     `
+    const btc_container = content.querySelector('.btc-container')
+    const lightning_container = content.querySelector('.lightning-container')
+ 
+    btc_container.addEventListener('click', async () => {
+      send_btc_el.classList.remove('hidden')
 
-    // BTC CLICK → toggle popup visibility
-    content.querySelector('.btc-container').onclick = () => {
-      toggle_send_btc()
-    }
+      if (!btc_mounted) {
+        const send_btc_component = await send_btc(subs[0], {
+          onClose: () => send_btc_el.classList.add('hidden')
+        })
+        send_btc_el.append(send_btc_component)
+        btc_mounted = true
+      }
+    })
+  
+    lightning_container.addEventListener('click', async () => {
+      send_light_el.classList.remove('hidden')
 
-    content.querySelector('.lightning-container').onclick = () => {
-      togglet_pending_req()
-    }
+      if (!light_mounted) {
+        const send_light = await pending_request(subs[1], {
+          onClose: () => send_light_el.classList.add('hidden')
+        })
+        send_light_el.append(send_light)
+        light_mounted = true
+      }
+    })
+
+
   }
-
-  // Toggle open/close of send_btc
-  function toggle_send_btc() {
-    showSendBtc = !showSendBtc
-    popup.classList.remove('hidden')
-
-    if (showSendBtc) {
-      popup.innerHTML = ""
-      popup.appendChild(send_btc_comp)
-      popup.style.display = "flex"
-    } else {
-      popup.style.display = "none"
-      popup.innerHTML = ""
-    }
-  }
-
-  function togglet_pending_req() {
-    showSendBtc = !showSendBtc
-    popup.classList.remove('hidden')
-
-    if (showSendBtc) {
-      popup.innerHTML = ""
-      popup.appendChild(pending_req_comp)
-      popup.style.display = "flex"
-    } else {
-      popup.style.display = "none"
-      popup.innerHTML = ""
-    }
-  }
-
 
   function iconject(data) {
     dricons = data
@@ -7245,6 +7522,9 @@ function fallback_module() {
   }
 
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const send_btc = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: {}
@@ -7266,7 +7546,7 @@ function fallback_module() {
           'style.css': { '$ref': 'switch_send.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       },
       _: { send_btc, pending_request }
@@ -7274,7 +7554,7 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/switch_send/switch_send.js")
-},{"STATE":1,"pending_request":32,"send_btc":40}],48:[function(require,module,exports){
+},{"STATE":1,"pending_request":33,"send_btc":41}],49:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7366,6 +7646,8 @@ function fallback_module() {
     api
   }
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     return {
       drive: {
         'style/': {
@@ -7413,7 +7695,7 @@ function fallback_module() {
         
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -7422,7 +7704,7 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/templates/templates.js")
-},{"STATE":1,"btc_usd_rate":8}],49:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],50:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7545,77 +7827,66 @@ function fallback_module () {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/total_wealth/total_wealth.js")
-},{"STATE":1,"btc_usd_rate":8}],50:[function(require,module,exports){
+},{"STATE":1,"btc_usd_rate":8}],51:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
-
 const transaction_row = require('transaction_row')
 
 module.exports = transaction_history
 
-async function transaction_history (opts = {}) {
+async function transaction_history(opts = {}, { onClose } = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
-  const on = {
-    style: inject,
-    data: ondata
-  }
+  const on = { style: inject, data: ondata }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="transaction-history-container">
-      <div class="transaction-history-header"> Transactions History </div>
+    <div class="transaction-history">
+      <div class="transaction-history-header">
+        <span>Transaction History</span>
+        <button class="history-close">✕</button>
+      </div>
+      <div class="transaction-history-body"></div>
     </div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const containerEl = shadow.querySelector('.transaction-history-container')
+  const container = shadow.querySelector('.transaction-history')
+  const body = shadow.querySelector('.transaction-history-body')
+  const closeBtn = shadow.querySelector('.history-close')
 
-  
   const subs = await sdb.watch(onbatch)
-  
+  console.log ('test')
 
+  // hide overlay on close
+  closeBtn.addEventListener('click', () => {
+    if (onClose) onClose()
+  })
+
+  // build grouped list
   const grouped = {}
-
-  // const sub_drive = sdb.get(subs[0].sid)
-  // console.log('sub_drive', sub_drive.list('style/'))
-  // console.log('sub_drive', sub_drive.list('/data'))
-  // for (const sub of subs) {
-
-  //   const opts_file = await sdb.get(sub.sid)
-  //   console.log("opts_file",opts_file)
-
-  //   const tx = opts_file.raw || {}
-
-  //   const date = (tx.date || sub.date || 'Unknown').trim() 
-
-  //   if (!grouped[date]) grouped[date] = []
-  //   grouped[date].push({tx, sub_drive})
-  // }
-  
   subs.forEach(sub => {
-    const date = (sub.date || 'Unknown').trim() 
+    const date = (sub.date || 'Unknown').trim()
     if (!grouped[date]) grouped[date] = []
     grouped[date].push(sub)
   })
-  
+
   for (const date in grouped) {
     const dateEl = document.createElement('div')
     dateEl.className = 'transaction-date'
-    dateEl.innerHTML = `<span>${date}</span>`
-    containerEl.appendChild(dateEl)
+    dateEl.textContent = date
+    body.appendChild(dateEl)
 
     for (const sub of grouped[date]) {
       const row = await transaction_row(sub)
-      containerEl.appendChild(row)
+      body.appendChild(row)
     }
   }
-
 
   return el
 
@@ -7623,22 +7894,25 @@ async function transaction_history (opts = {}) {
     throw new Error('invalid message', { cause: { data, type } })
   }
 
-  async function onbatch (batch) {
-    for (const { type, paths } of batch){
-      const data = await Promise.all(paths.map(path => drive.get(path).then(file => file.raw)))
-      const func = on[type] || fail
-      await func(data, type)
+  async function onbatch(batch) {
+    for (const { type, paths } of batch) {
+      const data = await Promise.all(
+        paths.map(p => drive.get(p).then(f => f.raw))
+      )
+      const fn = on[type] || fail
+      await fn(data)
     }
   }
 
-  function inject (data) {
+  function inject(data) {
     style.textContent = data[0]
   }
 
   async function ondata(data) {
+    const { dateString} = data[0]
+    console.log ("Hello",data[0])
   }
 }
-
 
 function fallback_module () {
   return {
@@ -7681,64 +7955,69 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_history/transaction_history.js")
-},{"STATE":1,"transaction_row":53}],51:[function(require,module,exports){
+},{"STATE":1,"transaction_row":54}],52:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
 
 const transaction_row = require('transaction_row')
-const transaction_history = require('transaction_history') 
+const transaction_history = require('transaction_history')
 
 module.exports = transaction_list
 
-
-async function transaction_list(opts = {}) {
+async function transaction_list(opts = {}, protocol) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
-  const on = {
-    style: inject,
-    data: ondata
-  }
+  const on = { style: inject, data: ondata }
 
   const el = document.createElement('div')
   const shadow = el.attachShadow({ mode: 'open' })
 
   shadow.innerHTML = `
-    <!-- <div class="component-label">Transaction List</div> -->
     <div class="transaction-list-container">
-      <div class="transaction-list-header">  
-        <div class="transaction-list-title"> Transactions </div>
-        <div class="transaction-list-see-all"> See all</div>
+      <div class="transaction-list-header">
+        <div class="transaction-list-title">Transactions</div>
+        <div class="transaction-list-see-all">See all</div>
       </div>
+      <div class="transaction-list-body"></div>
     </div>
+
+    <div class="transaction-overlay hidden">
+      <div class="transaction-history-body"></div>
+    </div>
+
     <style></style>
   `
 
   const style = shadow.querySelector('style')
-  const container_el = shadow.querySelector('.transaction-list-container')
-  const see_all_btn = shadow.querySelector('.transaction-list-see-all')
+  const listBody = shadow.querySelector('.transaction-list-body')
+  const seeAllBtn = shadow.querySelector('.transaction-list-see-all')
+  const overlay = shadow.querySelector('.transaction-overlay')
+  const historyBody = shadow.querySelector('.transaction-history-body')
+
+  let historyMounted = false
 
   const subs = await sdb.watch(onbatch)
 
+  // render small list
   subs.slice(1, 5).forEach(async sub => {
-      container_el.append(await transaction_row(sub))
+    listBody.append(await transaction_row(sub))
   })
 
-  see_all_btn.addEventListener('click', async () => {
-    const history_component = await transaction_history(subs[0])
+  // open overlay
+  seeAllBtn.addEventListener('click', async () => {
+    overlay.classList.remove('hidden')
 
-    // find the home_page root host element
-    let homePageHost = el.getRootNode().host
-
-    if (homePageHost) {
-      homePageHost.replaceWith(history_component)
+    if (!historyMounted) {
+      const history = await transaction_history(subs[0], {
+        onClose: () => overlay.classList.add('hidden')
+      })
+      historyBody.append(history)
+      historyMounted = true
     }
   })
-
-
-
 
   return el
 
@@ -7749,19 +8028,18 @@ async function transaction_list(opts = {}) {
   async function onbatch(batch) {
     for (const { type, paths } of batch) {
       const data = await Promise.all(
-        paths.map(path => drive.get(path).then(file => file.raw))
+        paths.map(p => drive.get(p).then(f => f.raw))
       )
-      const func = on[type] || fail
-      await func(data, type)
+      const fn = on[type] || fail
+      await fn(data)
     }
   }
 
   function inject(data) {
-    style.textContent =  data[0]
+    style.textContent = data[0]
   }
 
-  async function ondata(data) {
-  }
+  function ondata() {}
 }
 
 function fallback_module () {
@@ -7789,11 +8067,6 @@ function fallback_module () {
           },
           {
             dateString: "2025-08-01",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
-          },
-          {
-            dateString: "2025-08-01",
             tid: "Mark Kevin",
             ttime: "03:45 PM",
             tamount: "- 0.00421",
@@ -7801,20 +8074,10 @@ function fallback_module () {
           },
           {
             dateString: "2025-07-31",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          },
-          {
-            dateString: "2025-07-31",
             tid: "Luis fedrick",
             ttime: "11:30 AM",
             tamount: "+ 0.02456",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-          },
-          {
-            dateString: "2025-07-31",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
             dateString: "2025-07-28",
@@ -7824,34 +8087,20 @@ function fallback_module () {
             avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
           {
-            dateString: "2025-08-01",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          },
-          {
             dateString: "2025-07-28",
             tid: "Luis fedrick",
             ttime: "11:30 AM",
             tamount: "+ 0.02456",
             avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
-          {
-            dateString: "2025-07-29",
-            ttime: "02:15 PM",
-            tamount: "+ 0.03271",
-          },
+        
           {
             dateString: "2025-07-30",
             tid: "Mark Kevin",
             ttime: "03:45 PM",
             tamount: "- 0.00421",
-            avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
+            avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
           },
-          {
-            dateString: "2025-05-10",
-            ttime: "04:45 PM",
-            tamount: "- 0.03791",
-          }
         ]
       }
     }
@@ -7889,7 +8138,7 @@ function fallback_module () {
 
 
 }).call(this)}).call(this,"/src/node_modules/transaction_list/transaction_list.js")
-},{"STATE":1,"transaction_history":50,"transaction_row":53}],52:[function(require,module,exports){
+},{"STATE":1,"transaction_history":51,"transaction_row":54}],53:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -7899,7 +8148,7 @@ const receipt_row = require('receipt_row')
 
 module.exports = transaction_receipt
 
-async function transaction_receipt(opts = {}) {
+async function transaction_receipt(opts = {}, {onClose} = {}) {
   const { id, sdb } = await get(opts.sid)
   const { drive } = sdb
 
@@ -7915,7 +8164,6 @@ async function transaction_receipt(opts = {}) {
   const shadow = el.attachShadow({ mode: 'closed' })
 
   shadow.innerHTML = `
-    <div class="component-label">Transaction Receipt</div>
     <div class="receipt-card">
       <div class="receipt-header">
         <div class="title-container">
@@ -7938,6 +8186,11 @@ async function transaction_receipt(opts = {}) {
     const row = await receipt_row(subs[i]) 
     rows_el.append(row)
   }
+  const close_icon = shadow.querySelector('.close-icon')
+
+  close_icon.addEventListener('click', () => {
+    if (onClose) onClose()
+  })
 
   return el
 
@@ -8014,11 +8267,14 @@ function fallback_module() {
 }
 
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
-},{"STATE":1,"receipt_row":34}],53:[function(require,module,exports){
+},{"STATE":1,"receipt_row":35}],54:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 const { sdb, get } = statedb(fallback_module)
+
+const transaction_receipt = require('transaction_receipt')
+
 
 module.exports = transaction_row
 
@@ -8036,12 +8292,32 @@ async function transaction_row (opts = {}) {
 
   shadow.innerHTML = `
     <div class="transaction-row"></div>
+    <div class="tx-overlay hidden">
+      <div class="tx-body"></div>
+    </div>
     <style></style>
   `
 
   const style = shadow.querySelector('style')
   const row = shadow.querySelector('.transaction-row')
-  await sdb.watch(onbatch)
+  const overlay = shadow.querySelector('.tx-overlay')
+  const tx_body = shadow.querySelector('.tx-body')
+
+  const subs = await sdb.watch(onbatch)
+
+  let receipt_mounted = false
+
+  row.addEventListener('click', async () => {
+    overlay.classList.remove('hidden')
+
+    if (!receipt_mounted) {
+      const receipt_view_comp = await transaction_receipt(subs[0], {
+        onClose: () => overlay.classList.add('hidden')
+      })
+      tx_body.append(receipt_view_comp)
+      receipt_mounted = true
+    }
+  })
 
   return el
 
@@ -8136,25 +8412,51 @@ async function transaction_row (opts = {}) {
 
 function fallback_module () {
   return {
-    api
+    api: fallback_instance,
+    _:{
+      transaction_receipt: { $: '' },
+    }
   }
-  function api (opts) {
+  function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
+    const transaction_receipt = {
+      mapping: { style: 'style', data: 'data', icons: 'icons' },
+       0: {
+        value: [
+              { label: "Sent By", value: "Cypher" },
+              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
+              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
+              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
+              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
+              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
+            ]
+          },
+    }
     return {
-      drive: {
-        'style/': {
-          'style.css': { '$ref': 'transaction_row.css' }
-        },
-        'data/': {
-          'opts.json': {
-            raw: opts
+        drive: {
+          'style/':{
+            'style.css':{
+              '$ref': 'transaction_row.css'
+            }
+          },
+          'data/': {
+            'opts.json': {
+              raw: opts || {}
+            }
           }
+        },
+        _: {
+          transaction_receipt
         }
-      }
     }
   }
 }
+
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
-},{"STATE":1}],54:[function(require,module,exports){
+},{"STATE":1,"transaction_receipt":53}],55:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
 //VanillaQR Function constructor
 //pass an object with customizable options
@@ -9197,7 +9499,7 @@ VanillaQR.N4 = 10;
 
 module.exports = { VanillaQR };
 
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
@@ -9346,22 +9648,14 @@ function fallback_module() {
   }
 }
 }).call(this)}).call(this,"/src/node_modules/wallet_button/wallet_button.js")
-},{"STATE":1,"general_button":19,"switch_account":45}],56:[function(require,module,exports){
+},{"STATE":1,"general_button":18,"switch_account":46}],57:[function(require,module,exports){
 (function (__filename){(function (){
 const STATE = require('STATE')
 const statedb = STATE(__filename)
 statedb.admin()
 const { sdb, get } = statedb(fallback_module)
 
-const transaction_history = require('../src/node_modules/transaction_history')
-const chat_view = require('../src/node_modules/chat_view')
-const transaction_receipt = require('../src/node_modules/transaction_receipt')
 const home_page = require('../src/node_modules/home_page')
-const send_invoice_modal = require('../src/node_modules/send_invoice_modal')
-const btc_nodes = require('../src/node_modules/btc_nodes')
-const create_invoice_confirmation = require('../src/node_modules/create_invoice_confirmation')
-const pay_invoice_confirmation = require('../src/node_modules/pay_invoice_confirmation')
-const light_transaction_receipt = require('../src/node_modules/light_tx_receipt')
 
 
 document.title = 'flamingo wallet'
@@ -9411,16 +9705,6 @@ async function main () {
   const subs = await sdb.watch(onbatch)
 
   const home_page_component = await home_page(subs[0], protocol)
-  const btc_nodes_component = await btc_nodes(subs[2], protocol)
-  const transaction_history_component = await transaction_history(subs[4], protocol)
-  const light_transaction_receipt_component = await light_transaction_receipt(subs[6], protocol)
-  const chat_view_compoent = await chat_view(subs[8],protocol)
-  const create_invoice_confirmation_component = await create_invoice_confirmation(subs[10], protocol)
-  const pay_invoice_confirmation_component = await pay_invoice_confirmation(subs[12], protocol)
-  const send_invoice_modal_component = await send_invoice_modal(subs[14], protocol)
-  const transaction_receipt_component = await transaction_receipt(subs[16], protocol)
-
- 
 
   const page = document.createElement('div')
   page.innerHTML = `
@@ -9429,43 +9713,9 @@ async function main () {
         <div class="component-label" style="padding-bottom:10px;">Home Page</div>
         <div id="home-page-container"></div> 
       </div>
-      <div id="chat-view-container"></div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">send_invoice_modal</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="send-to-container"></div> 
-      </div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Transaction History</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="transaction-history-container"></div> 
-      </div> 
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Create Invoice Confirmation</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="create-invoice-confirmation-container"></div> 
-      </div> 
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">Pay Invoice Confirmation</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="pay-invoice-confirmation-container"></div> 
-      </div> 
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">lightning transaction Receipt</div>  
-        <div style="width: 400px; font-weight: 500px; margin-right: 50px;"id="light-transaction-receipt-container"></div> 
-      </div> 
-      <div id="transaction-receipt-container"></div>
-      <div style="font-size: 18px; font-weight: bold; font-family: Arial, sans-serif; margin-block: 10px;"> 
-        <div class="component-label" style="padding-bottom:10px;">btc nodes</div>  
-        <div id="btc-nodes-container"></div>
-      </div>
     </div>
   `
   page.querySelector('#home-page-container').appendChild(home_page_component)
-  page.querySelector('#send-to-container').appendChild(send_invoice_modal_component)
-  page.querySelector('#transaction-history-container').appendChild(transaction_history_component)
-  page.querySelector('#chat-view-container').appendChild(chat_view_compoent)
-  page.querySelector('#transaction-receipt-container').appendChild(transaction_receipt_component)
-  page.querySelector('#btc-nodes-container').appendChild(btc_nodes_component)
-  page.querySelector('#create-invoice-confirmation-container').appendChild(create_invoice_confirmation_component)
-  page.querySelector('#pay-invoice-confirmation-container').appendChild(pay_invoice_confirmation_component)
-  page.querySelector('#light-transaction-receipt-container').appendChild(light_transaction_receipt_component)
 
 
   document.body.append(page)
@@ -9492,247 +9742,8 @@ function fallback_module () {
             data: 'data'
           }
         },
-     '../src/node_modules/btc_nodes': {
-        $: '',
-        0: '',
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-    '../src/node_modules/transaction_history': {
-      $: '',
-      0: {
-      value: [
-              {
-                dateString: "2025-08-01",
-                tid: "Luis fedrick",
-                ttime: "11:30 AM",
-                tamount: "+ 0.02456",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-              },
-              {
-                dateString: "2025-08-01",
-                tid: "ajd83hs9fk3l02msdkf",
-                ttime: "02:15 PM",
-                tamount: "+ 0.03271",
-              },
-              {
-                dateString: "2025-08-01",
-                tid: "Mark Kevin",
-                ttime: "03:45 PM",
-                tamount: "- 0.00421",
-                avatar: "https://images.stockcake.com/public/a/1/3/a13b303a-a843-48e3-8c87-c0ac0314a282_large/intense-male-portrait-stockcake.jpg"
-              },
-              {
-                dateString: "2025-07-31",
-                tid: "XyzA1b2C3d4E5f6G7",
-                ttime: "04:45 PM",
-                tamount: "- 0.03791",
-              },
-              {
-                dateString: "2025-07-31",
-                tid: "Luis fedrick",
-                ttime: "11:30 AM",
-                tamount: "+ 0.02456",
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-              },
-              {
-                dateString: "2025-07-31",
-                tid: "92hd82hsja7sd8h3jsd2",
-                ttime: "02:15 PM",
-                tamount: "+ 0.03271",
-              },
-              {
-                dateString: "2025-07-28",
-                tid: "Mark Kevin",
-                ttime: "03:45 PM",
-                tamount: "- 0.00421",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3"
-              },
-              {
-                dateString: "2025-08-01",
-                ttime: "04:45 PM",
-                tamount: "- 0.03791",
-              },
-              {
-                dateString: "2025-07-28",
-                tid: "Luis fedrick",
-                ttime: "11:30 AM",
-                tamount: "+ 0.02456",
-                avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3"
-              },
-              {
-                dateString: "2025-07-29",
-                tid: "jK83hf02sd93ls0dn4fj",
-                ttime: "02:15 PM",
-                tamount: "+ 0.03271",
-              },
-              {
-                dateString: "2025-07-30",
-                tid: "Mark Kevin",
-                ttime: "03:45 PM",
-                tamount: "- 0.00421",
-                avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3"
-              },
-              {
-                dateString: "2025-05-10",
-                tid: "r8t7y6u5i4o3p2a1s0d9f8g7",
-                ttime: "04:45 PM",
-                tamount: "- 0.03791",
-              }
-            ]
-          },
-          mapping: {
-            style: 'style',
-            data: 'data'
-          }
-        },
-        '../src/node_modules/light_tx_receipt': {
-          $: '',
-          0: {
-          value: [
-                { label: "Paid By", value: "Cypher" },
-                { label: "Recipient", value: "Luis fedrick - 1FfmbHfn...455p" },
-                { label: "Label", value: "Work Payment" },
-                { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
-                { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-                { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
-                { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
-                { label: "Lightning Invoice", value: "lnbc625u1p5x5nc6pp5v93dv3x7d4e8wg6ud0gp5h93cmysznsrsxv9zz2va0td83pp95lsdqqcqzysxqrrsssp53qtuxu9mh9daajju22l9ka6qvq0x430d5fdm0c5q3j0lvmwhn23s9qxpqysgq2r88trs6ksy88605ff87668sgcrj6ze37h99vmpky6z3j5l0j2msgukypgnk8uqfecq8rv8a3tst6ela7d4j5spj280nl4pan6nvj9qpk57fp9" },
-                { label: "Total Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
-              ]
-            },
-          mapping: {
-            style: 'style',
-            data: 'data',
-            icons: 'icons'
-          }
-        },
-        '../src/node_modules/chat_view': {
-          $: '',
-          0: {
-            value: {
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-              name: "David Clark",
-              code: "1FfmbHfn...455p",
-              amount: 0.0054,
-              date: "25 June 2025",
-              status: "expired", 
-              is_me: false
-            }
-          },
-          mapping: {
-            style: 'style',
-            data: 'data'
-          }
-        },
-          '../src/node_modules/create_invoice_confirmation': {
-        $: '',
-        0: {
-        value: [
-              { label: "Label", value: "Work Payment" },
-              { label: "Note", value: "This is the month of may invoice and i also updated everything too" },
-              { label: "Amount", value: "0.0020 BTC",  icon: "lightning.svg", convert: true }
-            ]
-          },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      '../src/node_modules/pay_invoice_confirmation': {
-        $: '',
-        0: {
-        value: [
-              { label: "Amount", value: "0.0030 BTC", convert: true },
-              { label: "Fee", value: "0.0001 BTC", convert: true },
-              { label: "Recipient Address", value: "7RwmbHfn...455p" },
-              { label: "Processing time", value: "< 5 minutes" },
-              { label: "Total (inc. fee)", value: "0.0031 BTC ",  icon: "lightning.svg", convert: true }
-            ]
-          },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },   
-      '../src/node_modules/send_invoice_modal': {
-        $: '',
-        0: {
-          value: [
-            {
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.VIRWK2jj8b2cHBaymZC5AgHaHa?w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3",
-              name: 'Mark Kevin',
-              message: 'Payment Received successfully',
-              time: '3 hr',
-              unread: 5,
-              online: true,
-              lightining: true
-            },
-            {
-              avatar: "https://tse2.mm.bing.net/th/id/OIP.255ajP8y6dHwTTO8QbBzqwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
-              name: 'David Clark',
-              message: 'You have a new message from Mark',
-              time: '1 hr',
-              unread: 5,
-              online: false,
-              lightining: false
-            },
-            {
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.bdn3Kne-OZLwGM8Uoq5-7gHaHa?w=512&h=512&rs=1&pid=ImgDetMain&o=7&rm=3",
-              name: 'David Clark',
-              message: 'Received funds',
-              time: '1 hr',
-              unread: 0,
-              online: true,
-              lightining: true
-            },
-            {
-              avatar: "https://tse4.mm.bing.net/th/id/OIP.7XLV6q-D_hA-GQh_eJu52AHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
-              name: 'Sara Ahmed',
-              message: 'Invoice sent',
-              time: '2 hr',
-              unread: 0,
-              online: false,
-              lightining: false
-            }
-          ]
-        },
-        mapping: {
-          style: 'style',
-          data: 'data'
-        }
-      },
-    
-    
-   
-      '../src/node_modules/transaction_receipt': {
-        $: '',
-        0: {
-        value: [
-              { label: "Sent By", value: "Cypher" },
-              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
-              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
-              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
-              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
-            ]
-          },
-        mapping: {
-          style: 'style',
-          data: 'data',
-          icons: 'icons'
-        }
-      },
-      
-      
     }
   }
 }
 }).call(this)}).call(this,"/web/page.js")
-},{"../src/node_modules/btc_nodes":6,"../src/node_modules/chat_view":11,"../src/node_modules/create_invoice_confirmation":16,"../src/node_modules/home_page":21,"../src/node_modules/light_tx_receipt":26,"../src/node_modules/pay_invoice_confirmation":31,"../src/node_modules/send_invoice_modal":41,"../src/node_modules/transaction_history":50,"../src/node_modules/transaction_receipt":52,"STATE":1}]},{},[56]);
+},{"../src/node_modules/home_page":20,"STATE":1}]},{},[57]);
