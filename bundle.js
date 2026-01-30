@@ -125,12 +125,16 @@ async function action_buttons(opts = {}, protocol) {
 
 // -------------------- Fallback for STATE --------------------
 function fallback_module() {
+  
   return {
     api,
     _: { 'general_button': { $: '' }, 'send_btc': { $: '' }, 'receive_btc': { $: '' } }
   }
 
-  function api(opts = {}) {
+  function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const general_button = { mapping: { style: 'style', data: 'data' }, 0: {}, 1: {} }
     const send_btc = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: '' }
     const receive_btc = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 3: '' }
@@ -138,7 +142,7 @@ function fallback_module() {
     return {
       drive: {
         'style/': { 'action_buttons.css': { '$ref': 'action_buttons.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts  || {}} }
       },
       _: { general_button, send_btc, receive_btc }
     }
@@ -305,6 +309,8 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
 
     const gen_invite_code = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
@@ -328,7 +334,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           },
         }
       },
@@ -446,7 +452,9 @@ function fallback_module() {
   }
 
   function api(opts) {
-    
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const button = {
       mapping: {
         style: 'style',
@@ -490,7 +498,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -734,123 +742,12 @@ function fallback_module () {
   function fallback_instance (opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'style/': {
           'style.css': {
-            raw: `
-              .btc-card {
-                background: #f9f9f9;
-                border: 1px solid #ccc;
-                border-radius: 8px;
-                padding: 16px;
-                width: 100%;
-                box-sizing: border-box;
-                margin-top: 15px;
-                margin-bottom: 10px;
-              }
-
-              .header {
-                display: flex;
-                gap: 10px;
-                font-size: 14px;
-                font-weight: bold;
-                margin-bottom: 10px;
-              }
-
-              .toggle {
-                cursor: pointer;
-                color: #888;
-                padding-bottom: 2px;
-              }
-
-              .toggle.active {
-                color: #000;
-                border-bottom: 2px solid #000;
-              }
-
-              .main-area{
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                min-height: 110px;              
-              }
-              
-              .amount-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 6px;
-                gap: 6px;
-              }
-
-              .amount-input {
-                font-size: 30px;
-                font-weight: 500;
-                flex: 1;
-                text-align: left;
-                border: none;
-                outline: none;
-                background: transparent;
-                min-width: 0; 
-              }
-
-              .actions {
-                display: flex;
-                gap: 6px;
-                align-items: center;
-                flex-shrink: 0;
-              }
-
-              .btn {
-                border: none;
-                background: #000;
-                color: #fff;
-                padding: 3px 8px;
-                font-size: 12px;
-                cursor: pointer;
-                border-radius: 3px;
-              }
-
-              .close-btn {
-                background: #000;
-                border: none;
-                color: #fff;
-                font-size: 12px;
-                cursor: pointer;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-              }
-
-              .divider {
-                width: 100%;
-                height: 1px;
-                background-color: #000; 
-                margin: 2px 0; 
-              }
-
-              .error {
-                color: #666; /* same as balance text */
-                font-size: 13px;
-                padding-block: 6px;
-              }
-
-              .balance {
-                font-size: 12px;
-                color: #666;
-                padding-bottom:10px;
-              }
-          
-              .usd-text {
-                font-size: 14px;
-                margin-top: auto;
-              }
-            `
+            '$ref': 'btc_input_card.css'
           }
         },
         'data/': {
@@ -893,7 +790,6 @@ async function btc_nodes (opts = {}, { onClose } = {}) {
   const style = shadow.querySelector('style')
   const container = shadow.querySelector('.nodes-card')
 
-  
   await sdb.watch(onbatch)
 
   return el
@@ -963,6 +859,9 @@ function fallback_module () {
     api: fallback_instance,
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -973,7 +872,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           },
         }
       }
@@ -1097,6 +996,7 @@ function fallback_module() {
   function fallback_instance(opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     return {
       drive: {
         'icons/': {
@@ -1203,31 +1103,12 @@ function fallback_module () {
   function fallback_instance (opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     return {
       drive: {
-      
         'style/': {
           'style.css': {
-            raw: `
-              .btn {
-                width: 100%; /* Fill the container */
-                height: 50px;
-                background-color: #000;
-                color: #fff; /* Make text color white */
-                border: none;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: background 0.3s;
-                margin: 0px;
-              }
-
-              .btn:hover {
-                background-color: #3f3f3fff;
-              }
-            `
+            '$ref': 'button.css'
           }
         },
         'data/': {
@@ -1392,6 +1273,7 @@ function fallback_module () {
   function fallback_instance (opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     return {
       drive: {
        'icons/': {
@@ -1957,7 +1839,9 @@ async function contacts_list(opts = {}) {
   }
 
 }
+
 function fallback_module() {
+
   return {
     api,
     _: {
@@ -1969,6 +1853,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const search_bar = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 0: {} }
     const square_button = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 1: {} }
     const add_contact_popup = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: {} }
@@ -2141,7 +2028,9 @@ function fallback_module() {
   }
 
   function api(opts) {
-    
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const button = {
       mapping: {
         style: 'style',
@@ -2232,7 +2121,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -2363,6 +2252,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+    
     const button = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 0: { label: 'Send' } }
     const send_invoice_modal = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 1: {
        value: [
@@ -2416,7 +2308,7 @@ function fallback_module() {
       drive: {
         'icons/': { 'lightning.svg': { '$ref': 'lightning.svg' }, 'x.svg': { '$ref': 'x.svg' } },
         'style/': { 'create_invoice_confirmation.css': { '$ref': 'create_invoice_confirmation.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { button, send_invoice_modal, receipt_row}
     }
@@ -2525,6 +2417,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const input_field = {
       mapping: {
         style: 'style',
@@ -2557,7 +2452,7 @@ function fallback_module() {
           'details_menu.css': {'$ref': 'details_menu.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts  || {} }
         }
       },
       _: { input_field, button }
@@ -2661,6 +2556,8 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     
     const input_field = {
       mapping: {
@@ -2693,7 +2590,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -2819,7 +2716,10 @@ function fallback_module () {
     api: fallback_instance
   }
 
-  function fallback_instance (opts = {}) {
+  function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'style/': {
@@ -2829,7 +2729,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -2966,6 +2866,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const home_page_header = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: { wallet: 'btc', amount: '0.9616' }
@@ -3001,8 +2904,27 @@ function fallback_module() {
     }
 
     return {
-      drive: { 'style/': { 'home_contents.css': { '$ref': 'home_contents.css' } }, 'data/': { 'opts.json': { raw: opts } } },
-      _: { home_page_header, action_buttons, transaction_list, total_wealth, lightning_buttons, wallet_button, light_page_header, light_tx_list }
+      drive: { 
+        'style/': { 
+          'home_contents.css': { 
+            '$ref': 'home_contents.css' } 
+        }, 
+        'data/': { 
+          'opts.json': { 
+            raw: opts || {} 
+          } 
+        } 
+      },
+      _: { 
+        home_page_header, 
+        action_buttons, 
+        transaction_list, 
+        total_wealth, 
+        lightning_buttons, 
+        wallet_button, 
+        light_page_header, 
+        light_tx_list 
+      }
     }
   }
 }
@@ -3059,6 +2981,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const menu = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: ''
@@ -3069,7 +2994,7 @@ function fallback_module() {
         'style/': {
           'home_page.css': { '$ref': 'home_page.css' }
         },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { menu }
     }
@@ -3168,6 +3093,9 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -3180,45 +3108,12 @@ function fallback_module () {
         },
         'style/': {
           'style.css': {
-            raw: `
-              .header-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                font-family: Arial, sans-serif;
-              }
-
-              .heading {
-                font-size: 16px;
-                font-weight: 600;
-                margin-bottom: 12px;
-                text-align: center;
-              }
-
-              .wallet-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                justify-content: center;
-              }
-
-              .icon-slot svg {
-                width: 32px;
-                height: 32px;
-              }
-
-              .wallet-amount {
-                font-size: 28px;
-                font-weight: bold;
-              }
-            `
+            '$ref': 'home_page_header.css'
           }
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -3342,6 +3237,7 @@ function fallback_module () {
   function fallback_instance (opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     return {
       drive: {
         'icons/': {
@@ -3349,63 +3245,7 @@ function fallback_module () {
         },
         'style/': {
           'style.css': {
-            raw: `
-              .input-field-container{
-                box-sizing: border-box;
-              }
-              .contact-header {
-                font-size: 16px;
-                color: #666;
-                margin-bottom: 8px;
-              }
-
-              .input-field {
-                width: 100%;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                border: 1px solid #ccc; 
-                border-radius: 6px; 
-                background-color: #f7f7f7ff; 
-                box-sizing: border-box;
-
-              }
-
-              .input-icon {
-                width: 20px;
-                height: 20px;
-                cursor: pointer;
-              }
-
-              .search-input {
-                flex: 1;
-                padding: 15px 12px;
-                font-size: 18px;
-                outline: none;
-                border: 0;
-                background-color: #f7f7f7ff; 
-                border-radius: 6px; 
-                transition: all 0.3s ease;
-              }
-
-              .search-input::placeholder {
-                color: #555; 
-              }
-
-              .search-input:hover {
-                background-color: #eeeeee; 
-              }
-
-              .search-input:focus {
-                border-color: #666;
-                background-color: #ffffff; 
-              }
-              
-              .icon{
-                padding: 5px;
-                cursor: pointer;
-              }
-            `
+            '$ref': 'input_field.css'
           }
         },
         'data/': {
@@ -3511,6 +3351,9 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -3523,45 +3366,12 @@ function fallback_module () {
         },
         'style/': {
           'style.css': {
-            raw: `
-              .header-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                font-family: Arial, sans-serif;
-              }
-
-              .heading {
-                font-size: 16px;
-                font-weight: 600;
-                margin-bottom: 12px;
-                text-align: center;
-              }
-
-              .wallet-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                justify-content: center;
-              }
-
-              .icon-slot svg {
-                width: 32px;
-                height: 32px;
-              }
-
-              .wallet-amount {
-                font-size: 28px;
-                font-weight: bold;
-              }
-            `
+            '$ref': 'light_page_header.css'
           }
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -3663,6 +3473,9 @@ function fallback_module () {
     } 
   }
   function api(opts){
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const light_tx_row = {
       mapping: {
         style: 'style',
@@ -3681,7 +3494,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json':{
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -3791,6 +3604,9 @@ function fallback_module () {
     } 
   }
   function api(opts){
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const light_tx_history = {
       mapping: {
         style: 'style',
@@ -3829,7 +3645,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json':{
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -3940,6 +3756,8 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
     
     const receipt_row = {
       mapping: {
@@ -3962,7 +3780,7 @@ function fallback_module() {
           'light_tx_receipt.css': { '$ref': 'light_tx_receipt.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       },
       _: { receipt_row }
@@ -4281,7 +4099,10 @@ function fallback_module() {
     _: { 'general_button': { $: '' }, 'pay_invoice': { $: '' }, 'create_invoice': { $: '' } }
   }
 
-  function api(opts = {}) {
+  function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+ 
     const general_button = { mapping: { style: 'style', data: 'data' }, 0: {}, 1: {} }
     const pay_invoice = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 2: '' }
     const create_invoice = { mapping: { style: 'style', data: 'data', icons: 'icons' }, 3: '' }
@@ -4289,7 +4110,7 @@ function fallback_module() {
     return {
       drive: {
         'style/': { 'lightning_buttons.css': { '$ref': 'lightning_buttons.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { general_button, pay_invoice, create_invoice }
     }
@@ -4424,6 +4245,9 @@ function fallback_module() {
   }
 
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+ 
     const home_contents = {
       mapping: { style: 'style', data: 'data' },
       0: { text: '🏠 Home Content Loaded' }
@@ -4512,7 +4336,7 @@ function fallback_module() {
           'more.svg': { '$ref': 'more.svg' }
         },
         'style/': { 'menu.css': { '$ref': 'menu.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { home_contents, contacts_list, details_menu, more_menu }
     }
@@ -4617,12 +4441,16 @@ async function more_menu(opts = {}) {
 }
 
 function fallback_module() {
+
   return {
     api: fallback_instance,
     _: { btc_nodes: { $: '' } }
   }
 
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+ 
     const btc_nodes = {
       mapping: { icons: 'icons', style: 'style', data: 'data' },
       0: {}
@@ -4635,7 +4463,7 @@ function fallback_module() {
           'dot.svg': { '$ref': 'dot.svg' }
         },
         'style/': { 'style.css': { '$ref': 'more_menu.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { btc_nodes }
     }
@@ -4764,6 +4592,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+ 
     const button = {
       mapping: {
         style: 'style',
@@ -4821,7 +4652,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -4955,6 +4786,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+ 
     const button = {
       mapping: {
         style: 'style',
@@ -4986,7 +4820,7 @@ function fallback_module() {
           'pay_invoice_confirmation.css': { '$ref': 'pay_invoice_confirmation.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       },
       _: { button, receipt_row }
@@ -5115,6 +4949,7 @@ function fallback_module() {
   function fallback_instance(opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     return {
       drive: {
         'icons/': {
@@ -5212,6 +5047,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'style/': {
@@ -5221,7 +5059,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -5390,6 +5228,9 @@ function fallback_module() {
     api: fallback_instance
   }
   function fallback_instance(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -5401,7 +5242,7 @@ function fallback_module() {
           'receipt_row.css': { '$ref':'receipt_row.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       }
     }
@@ -5510,6 +5351,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+ 
     const qr_code = {
       mapping: { style: 'style', data: 'data' },
       0: { address: '1BoatSLRHtKNngkdXEeobR76b53LETtpyT' }
@@ -5529,7 +5373,7 @@ function fallback_module() {
       drive: {
         'icons/': { 'btc.svg': { '$ref': 'btc.svg' }, 'x.svg': { '$ref': 'x.svg' } },
         'style/': { 'receive_btc.css': { '$ref': 'receive_btc.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {} } }
       },
       _: { qr_code, input_field }
     }
@@ -5704,94 +5548,12 @@ function fallback_module () {
   function fallback_instance (opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'style/': {
           'style.css': {
-            raw: `
-              .btc-card {
-                background: #f9f9f9;
-                border: 1px solid #ccc;
-                border-radius: 8px;
-                padding: 16px;
-                width: 100%;
-                box-sizing: border-box;
-                margin-top: 15px;
-                margin-bottom: 10px;
-              }
-
-              .header {
-                display: flex;
-                gap: 10px;
-                font-size: 14px;
-                font-weight: bold;
-                margin-bottom: 10px;
-              }
-
-              .toggle {
-                cursor: pointer;
-                color: #888;
-                padding-bottom: 2px;
-              }
-
-              .toggle.active {
-                color: #000;
-                border-bottom: 2px solid #000;
-              }
-
-              .main-area{
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                min-height: 110px;              
-              }
-              
-              .amount-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 6px;
-                gap: 6px;
-              }
-
-              .amount-input {
-                font-size: 30px;
-                font-weight: 500;
-                flex: 1;
-                text-align: left;
-                border: none;
-                outline: none;
-                background: transparent;
-                min-width: 0; 
-              }
-
-              .actions {
-                display: flex;
-                gap: 6px;
-                align-items: center;
-                flex-shrink: 0;
-              }
-
-              .close-btn {
-                background: #000;
-                border: none;
-                color: #fff;
-                font-size: 12px;
-                cursor: pointer;
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-              }
-
-              .usd-text {
-                font-size: 14px;
-                margin-top: auto;
-              }
-            `
+            '$ref': 'req_card.css'
           }
         },
         'data/': {
@@ -5929,8 +5691,9 @@ function fallback_module() {
   }
 
   function api(opts) {
-      if (!opts) opts = {}
-      if (!opts.value) opts.value = {}
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const button = {
       mapping: {
         style: 'style',
@@ -5990,7 +5753,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts ||{}
+            raw: opts || {}
           }
         }
       },
@@ -6144,6 +5907,7 @@ function fallback_module() {
   function api(opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     const button = {
       mapping: {
         style: 'style',
@@ -6304,6 +6068,9 @@ function fallback_module () {
     api: fallback_instance
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
         drive: {
           'icons/':{
@@ -6313,38 +6080,12 @@ function fallback_module () {
           },
           'style/':{
             'style.css':{
-              raw: `
-              .search-bar {
-                display: flex;
-                align-items: center;  
-                justify-content: center; 
-                margin-top: 15px;
-                width: 330px;
-                border: 1px solid gray;
-                height: 50px;
-                border-radius: 12px;
-                margin-bottom: 16px;
-              }
-
-              .search-input {
-                flex: 1;
-                padding: 12px;
-                font-size: 16px;
-                color: #555;
-              }
-              .search-icon {
-                padding: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-              }
-              `
+              '$ref': 'search_bar.css'
             }
           },
           'data/': {
             'opts.json': {
-              raw: opts
+              raw: opts || {}
             }
           }
         }
@@ -6482,6 +6223,7 @@ function fallback_module() {
   function api(opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     const button = {
       mapping: {
         style: 'style',
@@ -6664,6 +6406,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const search_bar = {
       mapping: {
         style: 'style',
@@ -6721,7 +6466,7 @@ function fallback_module() {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -6850,6 +6595,9 @@ function fallback_module () {
     api: fallback_instance,
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
         drive: {
           'icons/': {
@@ -6864,7 +6612,7 @@ function fallback_module () {
           },
           'data/': {
             'opts.json': {
-              raw: opts
+              raw: opts || {}
             }
           }
         }
@@ -6952,6 +6700,9 @@ function fallback_module () {
     api: fallback_instance,
   }
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -6968,7 +6719,7 @@ function fallback_module () {
           }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       }
     }
@@ -7046,6 +6797,9 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -7055,34 +6809,12 @@ function fallback_module () {
         },
         'style/': {
           'style.css': {
-            raw: `
-              .square-btn {
-                width: 50px;
-                height: 50px;
-                background-color: #000;
-                border: none;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: background 0.3s;
-                margin: 0px;
-              }
-
-              .square-btn:hover {
-                background-color: #3f3f3fff;
-              }
-
-              .square-btn svg {
-                stroke: #fff;
-              }
-            `
+            '$ref': 'square_button.css'
           }
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -7211,6 +6943,9 @@ function fallback_module () {
   }
 
   function fallback_instance (opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/': {
@@ -7222,7 +6957,7 @@ function fallback_module () {
           'style.css': { '$ref': 'switch_account.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: opts || {} }
         }
       },
     }
@@ -7362,6 +7097,7 @@ function fallback_module() {
   function fallback_instance(opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+
     const request_btc = {
       mapping: { style: 'style', data: 'data', icons: 'icons' },
       0: {}
@@ -7383,7 +7119,7 @@ function fallback_module() {
           'style.css': { '$ref': 'switch_request.css' }
         },
         'data/': {
-          'opts.json': { raw: opts || {}}
+          'opts.json': { raw: opts || {} }
         }
       },
       _: { request_btc, request_light}
@@ -7648,48 +7384,12 @@ function fallback_module() {
   function api(opts) {
     if (!opts) opts = {}
     if (!opts.value) opts.value = {}
+    
     return {
       drive: {
         'style/': {
           'style.css': {
-            raw: `
-              .template-container {
-                display: flex;
-                justify-content: space-between;
-                gap: 12px;
-                width: 100%;
-                border: 1px solid #ccc; 
-                border-radius: 6px; 
-                background-color: #f7f7f7ff; 
-                padding-inline: 15px;
-                padding-block: 10px;
-                box-sizing: border-box
-              }
-              .template-item {
-                display: flex;
-                align-items: center;
-                padding: 8px;
-                border-bottom: 1px solid #ddd;
-              }
-              .template-left {
-                display: flex;
-                flex-direction: column;
-              }
-              .template-title {
-                font-size: 18px;
-              }
-              .template-right {
-                text-align: right;
-              }
-              .btc-amount {
-                font-size: 16px;
-                font-weight: bold;
-              }
-              .usd-amount {
-                font-size: 12px;
-                color: gray;
-              }
-            `
+            '$ref': 'templates.css'
           }
         },
         
@@ -7801,7 +7501,10 @@ function fallback_module () {
     api: fallback_instance
   }
 
-  function fallback_instance (opts = {}) {
+  function fallback_instance (opts ) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     return {
       drive: {
         'icons/':{
@@ -7819,7 +7522,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json': {
-            raw: opts
+            raw: opts || {}
           }
         }
       }
@@ -7924,6 +7627,9 @@ function fallback_module () {
     } 
   }
   function api(opts){
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const transaction_row = {
       mapping: {
         style: 'style',
@@ -7942,7 +7648,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json':{
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -8051,6 +7757,9 @@ function fallback_module () {
     } 
   }
   function api(opts){
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const transaction_history = {
       mapping: {
         style: 'style',
@@ -8124,7 +7833,7 @@ function fallback_module () {
         },
         'data/': {
           'opts.json':{
-            raw: opts
+            raw: opts || {}
           }
         }
       },
@@ -8235,8 +7944,17 @@ function fallback_module() {
     }
   }
 
-  function api(opts) {
-    
+ function api(opts = {}) {
+    // Default row when nothing is provided
+    const defaultValue = [
+      { label: "Default Label", value: "Default value" }
+    ]
+
+    // Use defaults if opts.value is missing or not an array
+    const value = Array.isArray(opts.value) && opts.value.length
+      ? opts.value
+      : defaultValue
+
     const receipt_row = {
       mapping: {
         style: 'style',
@@ -8244,28 +7962,28 @@ function fallback_module() {
         icons: 'icons'
       }
     }
-    opts.value.forEach((row, index) => {
+
+    value.forEach((row, index) => {
       receipt_row[index] = row
     })
 
     return {
       drive: {
         'icons/': {
-          'btc.svg': { '$ref': 'btc.svg' },
-          'x.svg': { '$ref': 'x.svg' }
+          'btc.svg': { $ref: 'btc.svg' },
+          'x.svg': { $ref: 'x.svg' }
         },
         'style/': {
-          'transaction_receipt.css': { '$ref': 'transaction_receipt.css' }
+          'transaction_receipt.css': { $ref: 'transaction_receipt.css' }
         },
         'data/': {
-          'opts.json': { raw: opts }
+          'opts.json': { raw: { ...opts, value } }
         }
       },
       _: { receipt_row }
     }
   }
 }
-
 }).call(this)}).call(this,"/src/node_modules/transaction_receipt/transaction_receipt.js")
 },{"STATE":1,"receipt_row":35}],54:[function(require,module,exports){
 (function (__filename){(function (){
@@ -8417,44 +8135,62 @@ function fallback_module () {
       transaction_receipt: { $: '' },
     }
   }
-  function fallback_instance (opts) {
-    if (!opts) opts = {}
-    if (!opts.value) opts.value = {}
+  function fallback_instance(opts = {}) {
+  const defaultReceipt = {
+    value: [
+      { label: "Sent By", value: "Cypher" },
+      { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
+      { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
+      { label: "Transaction Fees", value: "0.0001 BTC", convert: true },
+      { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
+      {
+        label: "Blockchain Explorer",
+        value: "https://mempool.space/tx/your_txid_here",
+        link: true
+      },
+      {
+        label: "Total Amount",
+        value: "0.0020 BTC",
+        icon: "btc.svg",
+        convert: true
+      }
+    ]
+  }
 
-    const transaction_receipt = {
-      mapping: { style: 'style', data: 'data', icons: 'icons' },
-       0: {
-        value: [
-              { label: "Sent By", value: "Cypher" },
-              { label: "Sent To", value: "Luis fedrick - 1FfmbHfn...455p" },
-              { label: "Time & Date", value: "30 June 2025, 09:32 AM" },
-              { label: "Transaction Fees", value: "0.0001 BTC" , convert: true},
-              { label: "Recipient Receives", value: "0.0019 BTC", convert: true },
-              { label: "Blockchain Explorer", value: "https://mempool.space/tx/your_txid_here",  link: true },
-              { label: "Total Amount", value: "0.0020 BTC",  icon: "btc.svg", convert: true }
-            ]
-          },
-    }
-    return {
-        drive: {
-          'style/':{
-            'style.css':{
-              '$ref': 'transaction_row.css'
-            }
-          },
-          'data/': {
-            'opts.json': {
-              raw: opts || {}
-            }
-          }
-        },
-        _: {
-          transaction_receipt
+  // First-time use → 3 defaults
+  const receipts = Array.isArray(opts.value)
+    ? opts.value
+    : [
+        defaultReceipt
+      ]
+
+  const transaction_receipt = {
+    mapping: { style: 'style', data: 'data', icons: 'icons' }
+  }
+
+  receipts.forEach((receipt, index) => {
+    transaction_receipt[index] = receipt
+  })
+
+  return {
+    drive: {
+      'style/': {
+        'style.css': {
+          '$ref': 'transaction_row.css'
         }
+      },
+      'data/': {
+        'opts.json': {
+          raw: { ...opts, value: receipts }
+        }
+      }
+    },
+    _: {
+      transaction_receipt
     }
   }
 }
-
+}
 }).call(this)}).call(this,"/src/node_modules/transaction_row/transaction_row.js")
 },{"STATE":1,"transaction_receipt":53}],55:[function(require,module,exports){
 //https://github.com/chuckfairy/VanillaQR.js
@@ -9628,6 +9364,9 @@ function fallback_module() {
   }
 
   function api(opts) {
+    if (!opts) opts = {}
+    if (!opts.value) opts.value = {}
+
     const general_button = {
       mapping: { style: 'style', data: 'data' },
       0: {} // wallet button
@@ -9641,7 +9380,7 @@ function fallback_module() {
     return {
       drive: {
         'style/': { 'wallet_button.css': { '$ref': 'wallet_button.css' } },
-        'data/': { 'opts.json': { raw: opts } }
+        'data/': { 'opts.json': { raw: opts || {}} }
       },
       _: { general_button, switch_account }
     }
